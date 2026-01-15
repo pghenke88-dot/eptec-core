@@ -1,9 +1,104 @@
-<footer style="margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
-    <p>&copy; 2024 EPTEC Business-Guard</p>
-    <a href="javascript:void(0)" 
-       onclick="showAgb()" 
-       id="footer-agb-link" 
-       style="color: #004a99; text-decoration: none;">
-       Allgemeine Geschäftsbedingungen (AGB)
-    </a>
-</footer>
+{
+  "brand": "EPTEC",
+  "system": "Business-Guard",
+  "language": "Deutsch",
+  "lang": "Deutsch",
+  "last_update": "2024-05-22",
+  "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)",
+  "status_msg": "System-Status: Aktiv",
+  "config": {
+    "currency": "EUR",
+    "region": "Europa"
+  },
+  "translations": {
+    "select_language": "Sprache wählen",
+    "contact_support": "Support kontaktieren",
+    "buy_now": "Jetzt starten"
+  },
+  "plans": {
+    "f1": {
+      "name": "Business-Guard F1",
+      "tagline": "Der ideale Einstieg für kleine Unternehmen",
+      "price_basis": "19.90",
+      "price_premium": "34.90",
+      "features": [
+        "Basis Sicherheits-Überwachung",
+        "Echtzeit-Benachrichtigungen",
+        "Support via E-Mail",
+        "1 Benutzerzugang"
+      ]
+    },
+    "f2": {
+      "name": "Business-Guard F2",
+      "tagline": "Volle Kontrolle für wachsende Betriebe",
+      "price_basis": "24.90",
+      "price_premium": "49.90",
+      "features": [
+        "Erweiterte KI-Analyse",
+        "Priorisierter 24/7 Support",
+        "Unbegrenzte Benutzerzugänge",
+        "Cloud-Backup inklusive",
+        "Schnittstellen-Anbindung (API)"
+      ]
+    }
+  },
+  "app_routing": {
+    "verlag_app": {
+      "steps": [
+        "Modul-Auswahl",
+        "Wortlaut-Prüfung",
+        "Rechts-Check",
+        "Download"
+      ],
+      "allowed_folders": [
+        "verlage",
+        "rechtsprechung/DE"
+      ]
+    }
+  },
+  "frameworks": {
+    "verlag": {
+      "modules": {
+        "MOD_I": {
+          "id": "I",
+          "title": "Vertragsgrundlagen & Rechteübertragung",
+          "doc_path": "docs/verlage/modul_I_"
+        }
+      }
+    }
+  },
+  "framework_logic": {
+    "MOD_I": {
+      "title": "Vertragsgrundlagen",
+      "content_ref": "doc/verlage/modul_I_de.md",
+      "checkpoints": [
+        {
+          "id": "CP1_URHEBER",
+          "label": "Urheberrechtsklausel",
+          "ideal_text": "Der Urheber überträgt dem Verlag...",
+          "law_ref": "doc/rechtsprechung/DE/urhg_1.md"
+        }
+      ]
+    }
+  },
+  "module_logic": {
+    "M1_V_01": {
+      "topic": "Abrechnungsfrist",
+      "framework_text": "Abrechnung erfolgt binnen 14 Tagen.",
+      "argumentation": {
+        "law": "§ 286 BGB (Verzug)",
+        "reasoning": "Eine unangemessene Benachteiligung ist unwirksam."
+      }
+    }
+  },
+  "export_templates": {
+    "argumentation_pdf": {
+      "title": "Rechtliche Legitimierung & Änderungsbedarf",
+      "structure": [
+        "checkpoint_id",
+        "conflict_description",
+        "law_reference"
+      ]
+    }
+  }
+}
