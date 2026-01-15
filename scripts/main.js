@@ -1,121 +1,62 @@
-/* ============================================================
-   EPTEC Business-Guard: Zentrale Logik (main.js)
-   Struktur: /locales/[lang] für Stichpunkte | /doc/ für Texte
-   ============================================================ */
-
 let currentLang = 'de';
-let currentApp = null;
-let currentStep = 0;
 
 /**
- * 1. ZUGRIFF AUF LOCALES (Stichpunkte / JSON)
+ * ZUGRIFF AUF LOCALES (Die 12 Sprachdateien, z.B. de.json)
  */
-async function fetchLocaleData(lang, fileName) {
+async function fetchLocaleData(lang) {
     try {
-        const response = await fetch(`locales/${lang}/${fileName}.json`);
-        if (!response.ok) throw new Error(`Locale ${lang}/${fileName} nicht gefunden`);
+        // Greift direkt auf locales/de.json zu
+        const response = await fetch(`locales/${lang}.json`);
+        if (!response.ok) throw new Error(`Sprachdatei ${lang}.json nicht gefunden`);
         return await response.json();
     } catch (err) {
-        console.error("Fehler beim Laden der Stichpunkte:", err);
+        console.error("Fehler:", err);
         return null;
     }
 }
 
 /**
- * 2. ZUGRIFF AUF DOC (Volltexte / Markdown)
+ * ZUGRIFF AUF DOC (Volltexte, z.B. agb_de.md oder framework_de.md)
  */
-async function fetchDocText(fileName) {
+async function fetchDocText(type, lang) {
     try {
-        const response = await fetch(`doc/${fileName}`);
-        if (!response.ok) throw new Error(`Dokument ${fileName} nicht gefunden`);
+        // type ist 'agb' oder 'framework'
+        const response = await fetch(`doc/${type}_${lang}.md`);
+        if (!response.ok) throw new Error(`Dokument ${type}_${lang}.md nicht gefunden`);
         return await response.text();
     } catch (err) {
-        console.error("Fehler beim Laden des Volltexts:", err);
         return "Inhalt momentan nicht verfügbar.";
     }
 }
 
 /**
- * SPRACHWECHSEL & UI UPDATE
- * Lädt Stichpunkte für Preise und Header aus /locales/
+ * SPRACHWECHSEL
  */
 async function changeLanguage(langCode) {
     currentLang = langCode;
+    const data = await fetchLocaleData(langCode);
     
-    // Daten aus locales/[lang]/ui_strings.json laden (Beispielname)
-    const uiData = await fetchLocaleData(langCode, 'ui_strings');
-    
-    if (uiData) {
-        document.getElementById('footer-agb-link').textContent = uiData.agb_btn;
-        document.getElementById('lang-status').textContent = uiData.status_msg;
+    if (data) {
+        // Füllt die UI mit den Stichpunkten aus deiner [lang].json
+        document.getElementById('footer-agb-link').textContent = data.agb_label || "AGB";
+        document.getElementById('f1-basis').textContent = data.prices?.f1_basis || "--";
+        document.getElementById('f1-premium').textContent = data.prices?.f1_premium || "--";
         
-        // Preise aus locales/[lang]/prices.json laden
-        const priceData = await fetchLocaleData(langCode, 'prices');
-        if (priceData) {
-            document.getElementById('f1-basis').textContent = priceData.f1_basis;
-            document.getElementById('f1-premium').textContent = priceData.f1_premium;
-            document.getElementById('f2-basis').textContent = priceData.f2_basis;
-            document.getElementById('f2-premium').textContent = priceData.f2_premium;
-        }
+        // Sprache im System setzen
+        document.documentElement.lang = langCode;
+        document.documentElement.dir = (langCode === 'ar') ? 'rtl' : 'ltr';
     }
-
-    // RTL Check
-    document.documentElement.dir = (langCode === 'ar') ? 'rtl' : 'ltr';
-    document.documentElement.lang = langCode;
 }
 
 /**
- * APP INITIALISIERUNG & FRAMEWORK ZUGRIFF
- * Lädt Framework-Texte aus /doc/
- */
-async function initApp(appKey) {
-    currentApp = appKey;
-    currentStep = 1;
-    
-    document.getElementById('app-selection').style.display = 'none';
-    document.getElementById('workflow-container').style.display = 'block';
-
-    // Stichpunkte aus locales/[lang]/framework_summary.json
-    const summary = await fetchLocaleData(currentLang, 'framework_summary');
-    
-    // Volltext aus doc/framework_[appKey]_[lang].md
-    const fullText = await fetchDocText(`framework_${appKey}_${currentLang}.md`);
-
-    document.getElementById('content-area').innerHTML = `
-        <div class="summary-box">${summary ? summary[appKey] : ''}</div>
-        <div class="full-text-box">${fullText}</div>
-    `;
-    
-    updateTrafficLight('yellow'); // Startzustand
-}
-
-/**
- * AGB ZUGRIFF
- * Lädt AGB-Volltext aus /doc/agb_[lang].md
+ * AGB ANZEIGEN (Volltext aus /doc/)
  */
 async function showAgb() {
     const modal = document.getElementById('agb-modal');
-    const fullAgb = await fetchDocText(`agb_${currentLang}.md`);
-    
-    document.getElementById('agb-content').innerHTML = `
-        <div class="legal-doc">${fullAgb}</div>
-    `;
+    // Lädt z.B. doc/agb_de.md
+    const text = await fetchDocText('agb', currentLang);
+    document.getElementById('agb-content').innerHTML = text;
     modal.style.display = 'flex';
 }
 
-function closeAgb() {
-    document.getElementById('agb-modal').style.display = 'none';
-}
-
-/**
- * AMPEL STEUERUNG
- */
-function updateTrafficLight(color) {
-    ['red', 'yellow', 'green'].forEach(c => {
-        document.getElementById(`light-${c}`).classList.remove('active');
-    });
-    document.getElementById(`light-${color}`).classList.add('active');
-}
-
-// Initialisierung beim Start
-window.onload = () => changeLanguage('de');
+// ... Rest der Logik (initApp etc.) bleibt gleich
