@@ -1,4 +1,7 @@
 {
+  "brand": "EPTEC",
+  "system": "Business-Guard",
+  "language": "Deutsch",
   "framework_logic": {
     "MOD_I": {
       "title": "Vertragsgrundlagen",
@@ -11,6 +14,16 @@
           "law_ref": "doc/rechtsprechung/DE/urhg_1.md"
         }
       ]
+    }
+  },
+  "plans": {
+    "f1": {
+      "price_basis": "19.90",
+      "price_premium": "34.90"
+    },
+    "f2": {
+      "price_basis": "24.90",
+      "price_premium": "49.90"
     }
   }
 }
