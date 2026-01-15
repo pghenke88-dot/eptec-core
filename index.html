@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPTEC Business-Guard</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/ui_elements.css">
 </head>
 <body>
 
@@ -13,7 +14,7 @@
     <p id="lang-status">Wähle deine Sprache / Choose your language</p>
 </header>
 
-<div class="language-picker" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+<div class="language-picker">
     <button onclick="changeLanguage('de')">DE</button>
     <button onclick="changeLanguage('en')">EN</button>
     <button onclick="changeLanguage('cn')">CN</button> 
@@ -49,14 +50,62 @@
 
     <main id="workflow-container" style="display:none;">
         <div id="step-indicator">Schritt 1: Modulwahl</div>
-        <div id="content-area"></div>
-        <div id="action-bar" style="margin-top: 20px;">
-            <button id="prevBtn" onclick="prevStep()">Zurück</button>
+        
+        <div id="content-area">
+            <div class="traffic-light-container" id="ampel-display" style="display:none;">
+                <div class="traffic-light">
+                    <div id="light-red" class="light red"></div>
+                    <div id="light-yellow" class="light yellow"></div>
+                    <div id="light-green" class="light green"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="action-bar">
+            <button id="prevBtn" onclick="prevStep()" disabled>Zurück</button>
             <button id="nextBtn" onclick="nextStep()">Weiter</button>
-            <button id="downloadBtn" onclick="generatePDF()" style="display:none;">Framework als PDF laden</button>
+            <button id="downloadBtn" onclick="generatePDF()" style="display:none;">PDF laden</button>
         </div>
     </main>
 </div>
 
+<div id="agb-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeAgb()">&times;</span>
+        <div id="agb-content">
+            </div>
+    </div>
+</div>
+
 <footer style="margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
-    <p id="footer-copyright">&
+    <p id="footer-copyright">&copy; 2024 EPTEC Business-Guard</p>
+    <a href="javascript:void(0)" 
+       onclick="showAgb()" 
+       id="footer-agb-link"
+       style="color: #004a99; text-decoration: none; font-weight: bold;">
+       Allgemeine Geschäftsbedingungen (AGB)
+    </a>
+</footer>
+
+<script id="multi-lang-assets" type="application/json">
+{
+  "languages": {
+    "de": {
+      "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)",
+      "status_msg": "System-Status: Aktiv",
+      "plans": { "f1": { "basis": "19.90", "premium": "34.90" }, "f2": { "basis": "24.90", "premium": "49.90" } }
+    },
+    "en": {
+      "agb_btn": "Terms and Conditions (T&C)",
+      "status_msg": "System Status: Active",
+      "plans": { "f1": { "basis": "19.90", "premium": "34.90" }, "f2": { "basis": "24.90", "premium": "49.90" } }
+    }
+    /* ... restliche 10 Sprachen analog ergänzen ... */
+  }
+}
+</script>
+
+<script src="scripts/main.js"></script>
+
+</body>
+</html>
