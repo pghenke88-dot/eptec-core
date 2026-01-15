@@ -1,6 +1,10 @@
 {
   "brand": "EPTEC",
   "system": "Business-Guard",
+  "language": "English",
+  "lang": "English",
+  "agb_btn": "Terms & Legal",
+  "status_msg": "Check System Status",
   "plans": {
     "f1": {
       "price_basis": "19.90",
@@ -10,7 +14,5 @@
       "price_basis": "24.90",
       "price_premium": "49.90"
     }
-  },
-  "language": "English"
+  }
 }
-{"lang": "English", "agb_btn": "Terms & Legal", "status_msg": "Check System Status"}
