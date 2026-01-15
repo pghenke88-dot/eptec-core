@@ -20,3 +20,10 @@ async function changeLanguage(lang) {
 
 // Beim ersten Start Deutsch laden
 window.onload = () => changeLanguage('de');
+// Ergänzung für die AGB-Steuerung
+function showAgb() {
+    // Das System prüft, welche Sprache gerade aktiv ist
+    const currentLang = localStorage.getItem('selectedLanguage') || 'de';
+    // Der Motor öffnet die passende Datei, z.B. docs/agb_cn.md
+    window.open(`docs/agb_${currentLang}.md`, '_blank');
+}
