@@ -1,2 +1,18 @@
-{ "brand": "EPTEC", "system": "Business-Guard", "language": "Italiano", "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } } }
-{"lang": "Italiano", "agb_btn": "Termini e Condizioni", "status_msg": "Verifica stato"}
+{
+  "brand": "EPTEC",
+  "system": "Business-Guard",
+  "language": "Italiano",
+  "lang": "Italiano",
+  "agb_btn": "Termini e Condizioni",
+  "status_msg": "Verifica stato",
+  "plans": {
+    "f1": {
+      "price_basis": "19.90",
+      "price_premium": "34.90"
+    },
+    "f2": {
+      "price_basis": "24.90",
+      "price_premium": "49.90"
+    }
+  }
+}
