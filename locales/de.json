@@ -1,17 +1,42 @@
 {
   "brand": "EPTEC",
   "system": "Business-Guard",
+  "language": "Deutsch",
+  "last_update": "2024-05-22",
+  "config": {
+    "currency": "EUR",
+    "region": "Europa"
+  },
   "plans": {
     "f1": {
-      "name": "Global Security F1",
+      "name": "Business-Guard F1",
+      "tagline": "Der ideale Einstieg für kleine Unternehmen",
       "price_basis": "19.90",
-      "price_premium": "34.90"
+      "price_premium": "34.90",
+      "features": [
+        "Basis Sicherheits-Überwachung",
+        "Echtzeit-Benachrichtigungen",
+        "Support via E-Mail",
+        "1 Benutzerzugang"
+      ]
     },
     "f2": {
-      "name": "Global Security F2",
+      "name": "Business-Guard F2",
+      "tagline": "Volle Kontrolle für wachsende Betriebe",
       "price_basis": "24.90",
-      "price_premium": "49.90"
+      "price_premium": "49.90",
+      "features": [
+        "Erweiterte KI-Analyse",
+        "Priorisierter 24/7 Support",
+        "Unbegrenzte Benutzerzugänge",
+        "Cloud-Backup inklusive",
+        "Schnittstellen-Anbindung (API)"
+      ]
     }
   },
-  "translations": "Deutsch"
+  "translations": {
+    "select_language": "Sprache wählen",
+    "contact_support": "Support kontaktieren",
+    "buy_now": "Jetzt starten"
+  }
 }
