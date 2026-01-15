@@ -1,12 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPTEC Business-Guard</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <h1 class="brand">EPTEC System Aktiv</h1>
-    <p>Die Sprachdaten werden aus den Ordnern geladen.</p>
-    <script src="scripts/main.js"></script>
+
+<header>
+    <h1 id="brand-title">EPTEC Business-Guard</h1>
+    <p id="lang-status">Lädt...</p>
+</header>
+
+<div class="language-picker">
+    <button onclick="changeLanguage('de')">DE</button>
+    <button onclick="changeLanguage('en')">EN</button>
+    <button onclick="changeLanguage('it')">IT</button>
+    <button onclick="changeLanguage('es')">ES</button>
+    <button onclick="changeLanguage('fr')">FR</button>
+    <button onclick="changeLanguage('nl')">NL</button>
+    <button onclick="changeLanguage('pl')">PL</button>
+    <button onclick="changeLanguage('pt')">PT</button>
+    <button onclick="changeLanguage('ro')">RO</button>
+    <button onclick="changeLanguage('tr')">TR</button>
+    <button onclick="changeLanguage('ja')">JA</button>
+    <button onclick="changeLanguage('zh')">ZH</button>
+</div>
+
+<div class="price-container">
+    <div class="card">
+        <h3>Plan F1</h3>
+        <p>Basis: <span id="f1-basis" class="price">--</span></p>
+        <p>Premium: <span id="f1-premium" class="price">--</span></p>
+    </div>
+    <div class="card">
+        <h3>Plan F2</h3>
+        <p>Basis: <span id="f2-basis" class="price">--</span></p>
+        <p>Premium: <span id="f2-premium" class="price">--</span></p>
+    </div>
+</div>
+
+<script src="scripts/main.js"></script>
 </body>
 </html>
