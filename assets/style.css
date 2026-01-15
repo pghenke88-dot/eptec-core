@@ -1,2 +1,66 @@
-body { font-family: sans-serif; background: #f4f4f4; color: #333; }
-.brand { color: #004a99; font-weight: bold; }
+:root {
+    --eptec-blue: #004a99;
+    --dark: #1a1a1a;
+    --light: #f8f9fa;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    background: var(--light);
+    color: var(--dark);
+    text-align: center;
+}
+
+header {
+    background: var(--eptec-blue);
+    color: white;
+    padding: 2rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.language-picker {
+    margin: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    border: 1px solid var(--eptec-blue);
+    background: white;
+    color: var(--eptec-blue);
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: var(--eptec-blue);
+    color: white;
+}
+
+.price-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    width: 250px;
+    border-top: 5px solid var(--eptec-blue);
+}
+
+.price {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--eptec-blue);
+}
