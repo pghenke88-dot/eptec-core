@@ -10,13 +10,14 @@
 
 <header>
     <h1 id="brand-title">EPTEC Business-Guard</h1>
-    <p id="lang-status">Lädt...</p>
+    <p id="lang-status">Wähle deine Sprache / Choose your language</p>
 </header>
 
-<div class="language-picker">
+<div class="language-picker" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px;">
     <button onclick="changeLanguage('de')">DE</button>
     <button onclick="changeLanguage('en')">EN</button>
-    <button onclick="changeLanguage('cn')">CN</button> <button onclick="changeLanguage('it')">IT</button>
+    <button onclick="changeLanguage('cn')">CN</button> 
+    <button onclick="changeLanguage('it')">IT</button>
     <button onclick="changeLanguage('es')">ES</button>
     <button onclick="changeLanguage('fr')">FR</button>
     <button onclick="changeLanguage('nl')">NL</button>
@@ -47,7 +48,7 @@
     </section>
 
     <main id="workflow-container" style="display:none;">
-        <div id="step-indicator"> Schritt 1: Modulwahl </div>
+        <div id="step-indicator">Schritt 1: Modulwahl</div>
         <div id="content-area"></div>
         <div id="action-bar">
             <button id="prevBtn" onclick="prevStep()">Zurück</button>
@@ -56,6 +57,15 @@
         </div>
     </main>
 </div>
+
+<footer style="margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
+    <p>&copy; 2024 EPTEC Business-Guard</p>
+    <a href="javascript:void(0)" 
+       onclick="showAgb()" 
+       style="color: #004a99; text-decoration: none; font-weight: bold;">
+       Allgemeine Geschäftsbedingungen (AGB)
+    </a>
+</footer>
 
 <script src="scripts/main.js"></script>
 </body>
