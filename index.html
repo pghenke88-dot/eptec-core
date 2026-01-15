@@ -49,7 +49,7 @@
     </section>
 
     <main id="workflow-container" style="display:none;">
-        <div id="step-indicator">Schritt 1: Modulwahl</div>
+        <div id="step-indicator">Initialisierung...</div>
         
         <div id="content-area">
             <div class="traffic-light-container" id="ampel-display" style="display:none;">
@@ -59,7 +59,7 @@
                     <div id="light-green" class="light green"></div>
                 </div>
             </div>
-        </div>
+            </div>
 
         <div id="action-bar">
             <button id="prevBtn" onclick="prevStep()" disabled>Zurück</button>
@@ -83,27 +83,9 @@
        onclick="showAgb()" 
        id="footer-agb-link"
        style="color: #004a99; text-decoration: none; font-weight: bold;">
-       Allgemeine Geschäftsbedingungen (AGB)
+       AGB
     </a>
 </footer>
-
-<script id="multi-lang-assets" type="application/json">
-{
-  "languages": {
-    "de": {
-      "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)",
-      "status_msg": "System-Status: Aktiv",
-      "plans": { "f1": { "basis": "19.90", "premium": "34.90" }, "f2": { "basis": "24.90", "premium": "49.90" } }
-    },
-    "en": {
-      "agb_btn": "Terms and Conditions (T&C)",
-      "status_msg": "System Status: Active",
-      "plans": { "f1": { "basis": "19.90", "premium": "34.90" }, "f2": { "basis": "24.90", "premium": "49.90" } }
-    }
-    /* ... restliche 10 Sprachen analog ergänzen ... */
-  }
-}
-</script>
 
 <script src="scripts/main.js"></script>
 
