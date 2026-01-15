@@ -40,3 +40,38 @@
     "buy_now": "Jetzt starten"
   }
 }
+{
+  "app_routing": {
+    "verlag_app": {
+      "steps": ["Modul-Auswahl", "Wortlaut-Prüfung", "Rechts-Check", "Download"],
+      "allowed_folders": ["verlage", "rechtsprechung/DE"]
+    }
+  },
+  "frameworks": {
+    "verlag": {
+      "modules": {
+        "MOD_I": {
+          "id": "I",
+          "title": "Vertragsgrundlagen & Rechteübertragung",
+          "doc_path": "docs/verlage/modul_I_"
+        }
+      }
+    }
+  },
+  "module_logic": {
+    "M1_V_01": {
+      "topic": "Abrechnungsfrist",
+      "framework_text": "Abrechnung erfolgt binnen 14 Tagen.",
+      "argumentation": {
+        "law": "§ 286 BGB (Verzug)",
+        "reasoning": "Eine unangemessene Benachteiligung ist unwirksam."
+      }
+    }
+  },
+  "export_templates": {
+    "argumentation_pdf": {
+      "title": "Rechtliche Legitimierung & Änderungsbedarf",
+      "structure": ["checkpoint_id", "conflict_description", "law_reference"]
+    }
+  }
+}
