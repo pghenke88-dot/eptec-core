@@ -44,3 +44,19 @@
 <script src="scripts/main.js"></script>
 </body>
 </html>
+<div id="app-root">
+    <section id="app-selection">
+        <button onclick="initApp('verlag')">EPTEC Verlags-Framework (App 1)</button>
+        <button onclick="initApp('eskalation')">EPTEC Eskalations-Modul (App 2)</button>
+    </section>
+
+    <main id="workflow-container" style="display:none;">
+        <div id="step-indicator"> Schritt 1: Modulwahl </div>
+        <div id="content-area"></div>
+        <div id="action-bar">
+            <button id="prevBtn" onclick="prevStep()">Zurück</button>
+            <button id="nextBtn" onclick="nextStep()">Weiter</button>
+            <button id="downloadBtn" onclick="generatePDF()">Framework als PDF laden</button>
+        </div>
+    </main>
+</div>
