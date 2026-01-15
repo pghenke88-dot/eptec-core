@@ -1,0 +1,16 @@
+{
+  "framework_logic": {
+    "MOD_I": {
+      "title": "Vertragsgrundlagen",
+      "content_ref": "doc/verlage/modul_I_de.md",
+      "checkpoints": [
+        {
+          "id": "CP1_URHEBER",
+          "label": "Urheberrechtsklausel",
+          "ideal_text": "Der Urheber überträgt dem Verlag...",
+          "law_ref": "doc/rechtsprechung/DE/urhg_1.md"
+        }
+      ]
+    }
+  }
+}
