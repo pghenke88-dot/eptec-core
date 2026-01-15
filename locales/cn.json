@@ -1,2 +1,18 @@
-{ "brand": "EPTEC", "system": "Business-Guard", "language": "中文", "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } } }
-{"lang": "简体中文", "agb_btn": "条款与法律信息", "status_msg": "检查系统状态"}
+{
+  "brand": "EPTEC",
+  "system": "Business-Guard",
+  "language": "中文",
+  "lang": "简体中文",
+  "agb_btn": "条款与法律信息",
+  "status_msg": "检查系统状态",
+  "plans": {
+    "f1": {
+      "price_basis": "19.90",
+      "price_premium": "34.90"
+    },
+    "f2": {
+      "price_basis": "24.90",
+      "price_premium": "49.90"
+    }
+  }
+}
