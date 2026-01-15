@@ -2,7 +2,10 @@
   "brand": "EPTEC",
   "system": "Business-Guard",
   "language": "Deutsch",
+  "lang": "Deutsch",
   "last_update": "2024-05-22",
+  "agb_btn": "AGB & Rechtliches",
+  "status_msg": "System-Status: Aktiv",
   "config": {
     "currency": "EUR",
     "region": "Europa"
@@ -38,9 +41,7 @@
     "select_language": "Sprache wählen",
     "contact_support": "Support kontaktieren",
     "buy_now": "Jetzt starten"
-  }
-}
-{
+  },
   "app_routing": {
     "verlag_app": {
       "steps": ["Modul-Auswahl", "Wortlaut-Prüfung", "Rechts-Check", "Download"],
@@ -75,4 +76,3 @@
     }
   }
 }
-{"lang": "Deutsch", "agb_btn": "AGB & Rechtliches", "status_msg": "System-Status prüfen"}
