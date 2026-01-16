@@ -4,17 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPTEC CORE - Methode Henke 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="ui-elements.css">
+    
     <style>
+        /* Lokale Ergänzungen für die Portal-Atmosphäre */
         :root {
             --gold: #d4af37;
             --dark-oak: #2c1e14;
-            --grass-green: #1a472a;
             --glass: rgba(255, 255, 255, 0.1);
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Georgia', serif; background: #000; color: white; overflow: hidden; }
 
-        /* --- LOADING SCREEN (Das goldene Schloss) --- */
+        /* LOADING SCREEN */
         #loader {
             position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; align-items: center; justify-content: center;
@@ -22,61 +25,25 @@
         .spinning-lock { font-size: 50px; animation: rotate 3s infinite linear; color: var(--gold); }
         @keyframes rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 
-        /* --- ATMOSPHÄRE: LICHTSTRAHLEN --- */
-        .sun-beams {
-            position: absolute; top: -100px; left: -100px; width: 400px; height: 800px;
-            background: rgba(255, 255, 255, 0.05); transform: rotate(45deg);
-            filter: blur(50px); pointer-events: none; z-index: 5;
-        }
-
-        /* --- DIE WIESE (MEADOW) --- */
+        /* WIESE (MEADOW) */
         .meadow {
             height: 100vh; background: radial-gradient(circle at center, #2e5d32, #0d2b1a);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: filter 2s ease;
         }
 
-        /* --- DER TUNNEL (WURMLOCH-EFFEKT) --- */
         .tunnel-active { filter: blur(50px) brightness(1.5) scale(2); }
 
-        /* --- PORTAL-DESIGN (Die Türen) --- */
+        /* PORTAL & BUTTONS */
         .door-frame {
             border: 2px solid var(--gold); padding: 20px; border-radius: 15px;
             background: var(--glass); backdrop-filter: blur(5px);
-            transition: all 0.5s; cursor: pointer; text-align: center;
+            transition: all 0.5s; cursor: pointer; text-align: center; min-width: 150px;
         }
         .door-frame:hover { box-shadow: 0 0 30px var(--gold); transform: translateY(-10px); }
 
-        /* --- DER SITZUNGSSAAL (RAUM 2) --- */
-        .room-2-bg {
-            display: none; height: 100vh; background: var(--dark-oak);
-            background-image: url('data:image/png;base64,iVBOR...'); /* Platzhalter für Holztextur */
-            position: relative;
-        }
-        .dielen-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            background: repeating-linear-gradient(90deg, transparent, transparent 120px, rgba(0,0,0,0.4) 121px);
-        }
-
-        /* --- ADMIN KUGEL --- */
-        .admin-orb {
-            position: fixed; top: 20px; right: 20px; width: 25px; height: 25px;
-            background: radial-gradient(circle, var(--gold), transparent);
-            border-radius: 50%; display: none; filter: blur(2px); animation: waver 4s infinite alternate;
-        }
-        @keyframes waver { from { transform: translate(0,0); } to { transform: translate(5px, 10px); } }
-
-        /* --- PROFIL (Der Kalender oben links) --- */
-        .profile-calendar {
-            position: absolute; top: 20px; left: 20px; width: 50px; height: 50px;
-            background: #fff; color: #000; border-radius: 8px; border-top: 15px solid #d32f2f;
-            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
-        }
-
-        /* --- AMPEL & SPIEGEL --- */
-        .ampel-box { background: #111; border: 3px solid #333; padding: 20px; border-radius: 50px; }
-        .bulb { width: 40px; height: 40px; border-radius: 50%; margin: 10px; opacity: 0.2; }
-        .bulb.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
+        /* HILFSKLASSE FÜR LOGIC */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body onload="initApp()">
@@ -85,65 +52,105 @@
         <div class="spinning-lock">🔒</div>
     </div>
 
-    <section id="meadow-view" class="meadow" style="display:none;">
+    <section id="meadow-view" class="meadow">
         <div class="sun-beams"></div>
-        <div class="profile-calendar" onclick="toggleProfile()">17</div>
-        <h1>Portal-Wiese</h1>
+        <div class="profile-calendar" onclick="alert('Session 2026 aktiv')">17</div>
+        <h1 style="color: var(--gold); text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);">EPTEC PORTAL</h1>
         <div style="display: flex; gap: 40px;">
-            <div class="door-frame" onclick="enterRoom('R1')">⚒ Werkstatt</div>
-            <div class="door-frame" onclick="enterRoom('R2')">🛡 Sitzungssaal</div>
+            <div class="door-frame" onclick="enterRoom('room-1-view')">⚒ WERKSTATT</div>
+            <div class="door-frame" onclick="enterRoom('room-2-view')">🛡 SITZUNGSSAAL</div>
         </div>
     </section>
 
-    <section id="room-2-view" class="room-2-bg">
-        <div class="dielen-overlay"></div>
-        <div class="admin-orb" id="admin-kugel" onclick="adminTeleport()"></div>
-        
-        <div style="display:flex; justify-content: space-around; align-items: center; height: 100%;">
-            <div class="door-frame">PARTNER A</div>
+    <section id="room-1-view" class="room-view workshop-ambient hidden">
+        <div class="wooden-desk">
+            <h2 id="framework-title" style="color: var(--gold); font-family: 'Courier New', monospace;">FRAMEWORK ANALYSE</h2>
+            <div class="engraved-matrix">
+                <p>Initialisiere Matrix...</p>
+            </div>
+        </div>
+        <button class="btn-exit" onclick="exitToMeadow()">Zurück zur Wiese</button>
+    </section>
 
-            <div class="center-stage">
-                <div class="ampel-box">
-                    <div id="bulb-1" class="bulb" style="background: yellow;"></div>
-                    <div id="bulb-5" class="bulb" style="background: red;"></div>
-                </div>
-                <div id="spiegel-nachricht" style="margin-top:20px; border:1px solid var(--gold); padding:20px;">
-                    <i>Der Spiegel der Wahrheit ist bereit...</i>
+    <section id="room-2-view" class="room-view control-ambient hidden">
+        <div class="admin-orb" id="admin-kugel"></div>
+        
+        <div class="service-cart">
+            <h3 style="color:var(--dark-oak)">DOKUMENTE</h3>
+            <button onclick="EPTEC_BRAIN.switchFramework('betrieb')">Betrieb</button>
+            <button onclick="EPTEC_BRAIN.switchFramework('agentur')">Agentur</button>
+        </div>
+
+        <div class="center-stage" style="text-align: center;">
+            <div class="traffic-light-container">
+                <div class="traffic-light">
+                    <div id="bulb-1" class="light yellow" onclick="EPTEC_BRAIN.Control.setAmpel(1)"></div>
+                    <div id="bulb-3" class="light yellow" onclick="EPTEC_BRAIN.Control.setAmpel(3)"></div>
+                    <div id="bulb-5" class="light red" onclick="EPTEC_BRAIN.Control.setAmpel(5)"></div>
                 </div>
             </div>
+            <div id="spiegel-nachricht">
+                <i>Der Spiegel der Wahrheit erwartet Ihre Eingabe...</i>
+            </div>
+        </div>
 
-            <div class="door-frame">PARTNER B</div>
+        <div class="corner-plant">
+            🌿
+            <div class="hidden-archive" onclick="EPTEC_BRAIN.Compliance.exportAnnexK()">ANNEX K EXPORT</div>
         </div>
-        
-        <div style="position:absolute; bottom:20px; right:20px; cursor:pointer;" onclick="EPTEC_BRAIN.Compliance.exportAnnexK()">
-            🌿 <small>Annex K</small>
-        </div>
+        <button class="btn-exit" onclick="exitToMeadow()">Zurück zur Wiese</button>
     </section>
 
-    <audio id="snd-wind" loop src="audio/wind.mp3"></audio>
-    <audio id="snd-wurmloch" src="audio/tunnel.mp3"></audio>
+    <script type="application/json" id="multi-lang-assets">
+    {
+      "languages": {
+        "de": { "agb_btn": "Haftungsausschluss", "status_msg": "SYSTEM BEREIT" },
+        "en": { "agb_btn": "Legal Terms", "status_msg": "SYSTEM READY" }
+      },
+      "kisten": {
+        "betrieb": {
+          "name": "Framework Betrieb",
+          "languages": ["de", "en"],
+          "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Annex A", "Annex B", "Annex C"]
+        },
+        "agentur": {
+          "name": "Agency Framework",
+          "languages": ["en"],
+          "structure": ["Part I", "Part II", "Annex J", "Annex K", "Annex L", "Annex M"]
+        }
+      }
+    }
+    </script>
 
     <script src="logic.js"></script>
     <script>
         function initApp() {
             setTimeout(() => {
                 document.getElementById('loader').style.display = 'none';
-                document.getElementById('meadow-view').style.display = 'flex';
-                // Sound starten
-                document.getElementById('snd-wind').play();
-            }, 3000);
+            }, 2000);
         }
 
-        function enterRoom(room) {
+        function enterRoom(roomID) {
             const meadow = document.getElementById('meadow-view');
             meadow.classList.add('tunnel-active');
-            document.getElementById('snd-wurmloch').play();
             
             setTimeout(() => {
-                meadow.style.display = 'none';
-                if(room === 'R2') document.getElementById('room-2-view').style.display = 'block';
+                meadow.classList.add('hidden');
                 meadow.classList.remove('tunnel-active');
-            }, 2000);
+                
+                const target = document.getElementById(roomID);
+                target.classList.remove('hidden');
+                
+                // Triggere die Matrix-Logik in Logic.js
+                if(roomID === 'room-1-view') {
+                    EPTEC_BRAIN.Workshop.render();
+                }
+            }, 1000);
+        }
+
+        function exitToMeadow() {
+            document.querySelectorAll('.room-view').forEach(r => r.classList.add('hidden'));
+            document.getElementById('meadow-view').classList.remove('hidden');
         }
     </script>
 </body>
