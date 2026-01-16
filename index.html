@@ -4,20 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPTEC CORE - Methode Henke 2026</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="ui-elements.css">
-    
     <style>
-        /* Lokale Ergänzungen für die Portal-Atmosphäre */
         :root {
             --gold: #d4af37;
             --dark-oak: #2c1e14;
+            --grass-green: #1a472a;
             --glass: rgba(255, 255, 255, 0.1);
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Georgia', serif; background: #000; color: white; overflow: hidden; }
 
-        /* LOADING SCREEN */
+        /* --- LOADING SCREEN --- */
         #loader {
             position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; align-items: center; justify-content: center;
@@ -25,24 +22,59 @@
         .spinning-lock { font-size: 50px; animation: rotate 3s infinite linear; color: var(--gold); }
         @keyframes rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 
-        /* WIESE (MEADOW) */
+        /* --- ATMOSPHÄRE --- */
+        .sun-beams {
+            position: absolute; top: -100px; left: -100px; width: 400px; height: 800px;
+            background: rgba(255, 255, 255, 0.05); transform: rotate(45deg);
+            filter: blur(50px); pointer-events: none; z-index: 5;
+        }
+
+        /* --- DIE WIESE --- */
         .meadow {
             height: 100vh; background: radial-gradient(circle at center, #2e5d32, #0d2b1a);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: filter 2s ease;
         }
-
         .tunnel-active { filter: blur(50px) brightness(1.5) scale(2); }
 
-        /* PORTAL & BUTTONS */
+        /* --- PORTALE --- */
         .door-frame {
             border: 2px solid var(--gold); padding: 20px; border-radius: 15px;
             background: var(--glass); backdrop-filter: blur(5px);
-            transition: all 0.5s; cursor: pointer; text-align: center; min-width: 150px;
+            transition: all 0.5s; cursor: pointer; text-align: center;
         }
         .door-frame:hover { box-shadow: 0 0 30px var(--gold); transform: translateY(-10px); }
 
-        /* HILFSKLASSE FÜR LOGIC */
+        /* --- DER SITZUNGSSAAL --- */
+        .room-2-bg {
+            display: none; height: 100vh; background: var(--dark-oak);
+            position: relative;
+        }
+        .dielen-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(90deg, transparent, transparent 120px, rgba(0,0,0,0.4) 121px);
+        }
+
+        /* --- ADMIN KUGEL --- */
+        .admin-orb {
+            position: fixed; top: 20px; right: 20px; width: 25px; height: 25px;
+            background: radial-gradient(circle, var(--gold), transparent);
+            border-radius: 50%; display: none; filter: blur(2px); animation: waver 4s infinite alternate;
+        }
+        @keyframes waver { from { transform: translate(0,0); } to { transform: translate(5px, 10px); } }
+
+        /* --- PROFIL --- */
+        .profile-calendar {
+            position: absolute; top: 20px; left: 20px; width: 50px; height: 50px;
+            background: #fff; color: #000; border-radius: 8px; border-top: 15px solid #d32f2f;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
+        }
+
+        /* --- AMPEL & SPIEGEL --- */
+        .ampel-box { background: #111; border: 3px solid #333; padding: 20px; border-radius: 50px; }
+        .bulb { width: 40px; height: 40px; border-radius: 50%; margin: 10px; opacity: 0.2; }
+        .bulb.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
+
         .hidden { display: none !important; }
     </style>
 </head>
@@ -54,64 +86,55 @@
 
     <section id="meadow-view" class="meadow">
         <div class="sun-beams"></div>
-        <div class="profile-calendar" onclick="alert('Session 2026 aktiv')">17</div>
-        <h1 style="color: var(--gold); text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);">EPTEC PORTAL</h1>
+        <div class="profile-calendar">17</div>
+        <h1 style="color: var(--gold);">EPTEC Business-Guard</h1>
         <div style="display: flex; gap: 40px;">
-            <div class="door-frame" onclick="enterRoom('room-1-view')">⚒ WERKSTATT</div>
-            <div class="door-frame" onclick="enterRoom('room-2-view')">🛡 SITZUNGSSAAL</div>
+            <div class="door-frame" onclick="enterRoom('R1')">⚒ Werkstatt</div>
+            <div class="door-frame" onclick="enterRoom('R2')">🛡 Sitzungssaal</div>
         </div>
     </section>
 
-    <section id="room-1-view" class="room-view workshop-ambient hidden">
-        <div class="wooden-desk">
-            <h2 id="framework-title" style="color: var(--gold); font-family: 'Courier New', monospace;">FRAMEWORK ANALYSE</h2>
-            <div class="engraved-matrix">
-                <p>Initialisiere Matrix...</p>
-            </div>
-        </div>
-        <button class="btn-exit" onclick="exitToMeadow()">Zurück zur Wiese</button>
-    </section>
-
-    <section id="room-2-view" class="room-view control-ambient hidden">
+    <section id="room-2-view" class="room-2-bg">
+        <div class="dielen-overlay"></div>
         <div class="admin-orb" id="admin-kugel"></div>
         
-        <div class="service-cart">
-            <h3 style="color:var(--dark-oak)">DOKUMENTE</h3>
-            <button onclick="EPTEC_BRAIN.switchFramework('betrieb')">Betrieb</button>
-            <button onclick="EPTEC_BRAIN.switchFramework('agentur')">Agentur</button>
-        </div>
+        <div style="display:flex; justify-content: space-around; align-items: center; height: 100%;">
+            <div class="door-frame">PARTNER A</div>
 
-        <div class="center-stage" style="text-align: center;">
-            <div class="traffic-light-container">
-                <div class="traffic-light">
-                    <div id="bulb-1" class="light yellow" onclick="EPTEC_BRAIN.Control.setAmpel(1)"></div>
-                    <div id="bulb-3" class="light yellow" onclick="EPTEC_BRAIN.Control.setAmpel(3)"></div>
-                    <div id="bulb-5" class="light red" onclick="EPTEC_BRAIN.Control.setAmpel(5)"></div>
+            <div class="center-stage">
+                <div class="ampel-box">
+                    <div id="bulb-1" class="bulb" style="background: yellow;"></div>
+                    <div id="bulb-5" class="bulb" style="background: red;"></div>
+                </div>
+                <div id="spiegel-nachricht" style="margin-top:20px; border:1px solid var(--gold); padding:20px; background: rgba(0,0,0,0.5);">
+                    <i>Der Spiegel der Wahrheit ist bereit...</i>
                 </div>
             </div>
-            <div id="spiegel-nachricht">
-                <i>Der Spiegel der Wahrheit erwartet Ihre Eingabe...</i>
-            </div>
-        </div>
 
-        <div class="corner-plant">
-            🌿
-            <div class="hidden-archive" onclick="EPTEC_BRAIN.Compliance.exportAnnexK()">ANNEX K EXPORT</div>
+            <div class="door-frame">PARTNER B</div>
         </div>
-        <button class="btn-exit" onclick="exitToMeadow()">Zurück zur Wiese</button>
+        
+        <div style="position:absolute; bottom:20px; left:20px; cursor:pointer;" onclick="exitToMeadow()">
+            🚪 Zurück zur Wiese
+        </div>
     </section>
 
     <script type="application/json" id="multi-lang-assets">
     {
       "languages": {
-        "de": { "agb_btn": "Haftungsausschluss", "status_msg": "SYSTEM BEREIT" },
-        "en": { "agb_btn": "Legal Terms", "status_msg": "SYSTEM READY" }
+        "de": {
+          "agb_btn": "AGB & Haftung",
+          "agb_content": "### 1. Geltungsbereich\nDiese AGB gelten für EPTEC Business-Guard.\n### 2. Leistungen (Pläne F1 & F2)\n- F1 Basis/Premium\n- F2 Basis/Premium\n### 4. Haftungsausschluss\nEPTEC haftet nur für grob fahrlässige oder vorsätzliche Schäden.",
+          "status_msg": "SYSTEM BEREIT",
+          "nf1_template": "# EPTEC - NF1\nBetreff: Fehlende Abrechnungsdaten\nGemäß § 32d UrhG fordere ich Auskunft...",
+          "nf2_template": "# EPTEC - NF2\nStatus: Eskalation verstärkt\nLetzte Frist gemäß § 32d UrhG..."
+        }
       },
       "kisten": {
         "betrieb": {
           "name": "Framework Betrieb",
-          "languages": ["de", "en"],
-          "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Annex A", "Annex B", "Annex C"]
+          "languages": ["de"],
+          "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G", "Annex H", "Annex I", "Annex J", "Annex K", "Annex L", "Annex M", "Annex N", "Annex O", "Annex P", "Annex Q"]
         },
         "agentur": {
           "name": "Agency Framework",
@@ -127,30 +150,23 @@
         function initApp() {
             setTimeout(() => {
                 document.getElementById('loader').style.display = 'none';
-            }, 2000);
+            }, 3000);
         }
 
-        function enterRoom(roomID) {
+        function enterRoom(room) {
             const meadow = document.getElementById('meadow-view');
             meadow.classList.add('tunnel-active');
             
             setTimeout(() => {
-                meadow.classList.add('hidden');
+                meadow.style.display = 'none';
+                if(room === 'R2') document.getElementById('room-2-view').style.display = 'block';
                 meadow.classList.remove('tunnel-active');
-                
-                const target = document.getElementById(roomID);
-                target.classList.remove('hidden');
-                
-                // Triggere die Matrix-Logik in Logic.js
-                if(roomID === 'room-1-view') {
-                    EPTEC_BRAIN.Workshop.render();
-                }
-            }, 1000);
+            }, 2000);
         }
 
         function exitToMeadow() {
-            document.querySelectorAll('.room-view').forEach(r => r.classList.add('hidden'));
-            document.getElementById('meadow-view').classList.remove('hidden');
+            document.getElementById('room-2-view').style.display = 'none';
+            document.getElementById('meadow-view').style.display = 'flex';
         }
     </script>
 </body>
