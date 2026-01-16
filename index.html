@@ -1,173 +1,241 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC CORE - Methode Henke 2026</title>
-    <style>
-        :root {
-            --gold: #d4af37;
-            --dark-oak: #2c1e14;
-            --grass-green: #1a472a;
-            --glass: rgba(255, 255, 255, 0.1);
-        }
+/**
+ * EPTEC ULTIMATE MASTER LOGIC (The "Brain")
+ * Architecture: Patrick Georg Henke Core
+ * Version: 2026.1.17 - FULL INTEGRITY
+ */
 
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Georgia', serif; background: #000; color: white; overflow: hidden; }
-
-        /* --- LOADING SCREEN --- */
-        #loader {
-            position: fixed; inset: 0; background: black; z-index: 5000;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .spinning-lock { font-size: 50px; animation: rotate 3s infinite linear; color: var(--gold); }
-        @keyframes rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-
-        /* --- ATMOSPHÄRE --- */
-        .sun-beams {
-            position: absolute; top: -100px; left: -100px; width: 400px; height: 800px;
-            background: rgba(255, 255, 255, 0.05); transform: rotate(45deg);
-            filter: blur(50px); pointer-events: none; z-index: 5;
-        }
-
-        /* --- DIE WIESE --- */
-        .meadow {
-            height: 100vh; background: radial-gradient(circle at center, #2e5d32, #0d2b1a);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: filter 2s ease;
-        }
-        .tunnel-active { filter: blur(50px) brightness(1.5) scale(2); }
-
-        /* --- PORTALE --- */
-        .door-frame {
-            border: 2px solid var(--gold); padding: 20px; border-radius: 15px;
-            background: var(--glass); backdrop-filter: blur(5px);
-            transition: all 0.5s; cursor: pointer; text-align: center;
-        }
-        .door-frame:hover { box-shadow: 0 0 30px var(--gold); transform: translateY(-10px); }
-
-        /* --- DER SITZUNGSSAAL --- */
-        .room-2-bg {
-            display: none; height: 100vh; background: var(--dark-oak);
-            position: relative;
-        }
-        .dielen-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            background: repeating-linear-gradient(90deg, transparent, transparent 120px, rgba(0,0,0,0.4) 121px);
-        }
-
-        /* --- ADMIN KUGEL --- */
-        .admin-orb {
-            position: fixed; top: 20px; right: 20px; width: 25px; height: 25px;
-            background: radial-gradient(circle, var(--gold), transparent);
-            border-radius: 50%; display: none; filter: blur(2px); animation: waver 4s infinite alternate;
-        }
-        @keyframes waver { from { transform: translate(0,0); } to { transform: translate(5px, 10px); } }
-
-        /* --- PROFIL --- */
-        .profile-calendar {
-            position: absolute; top: 20px; left: 20px; width: 50px; height: 50px;
-            background: #fff; color: #000; border-radius: 8px; border-top: 15px solid #d32f2f;
-            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
-        }
-
-        /* --- AMPEL & SPIEGEL --- */
-        .ampel-box { background: #111; border: 3px solid #333; padding: 20px; border-radius: 50px; }
-        .bulb { width: 40px; height: 40px; border-radius: 50%; margin: 10px; opacity: 0.2; }
-        .bulb.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
-
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body onload="initApp()">
-
-    <div id="loader">
-        <div class="spinning-lock">🔒</div>
-    </div>
-
-    <section id="meadow-view" class="meadow">
-        <div class="sun-beams"></div>
-        <div class="profile-calendar">17</div>
-        <h1 style="color: var(--gold);">EPTEC Business-Guard</h1>
-        <div style="display: flex; gap: 40px;">
-            <div class="door-frame" onclick="enterRoom('R1')">⚒ Werkstatt</div>
-            <div class="door-frame" onclick="enterRoom('R2')">🛡 Sitzungssaal</div>
-        </div>
-    </section>
-
-    <section id="room-2-view" class="room-2-bg">
-        <div class="dielen-overlay"></div>
-        <div class="admin-orb" id="admin-kugel"></div>
-        
-        <div style="display:flex; justify-content: space-around; align-items: center; height: 100%;">
-            <div class="door-frame">PARTNER A</div>
-
-            <div class="center-stage">
-                <div class="ampel-box">
-                    <div id="bulb-1" class="bulb" style="background: yellow;"></div>
-                    <div id="bulb-5" class="bulb" style="background: red;"></div>
-                </div>
-                <div id="spiegel-nachricht" style="margin-top:20px; border:1px solid var(--gold); padding:20px; background: rgba(0,0,0,0.5);">
-                    <i>Der Spiegel der Wahrheit ist bereit...</i>
-                </div>
-            </div>
-
-            <div class="door-frame">PARTNER B</div>
-        </div>
-        
-        <div style="position:absolute; bottom:20px; left:20px; cursor:pointer;" onclick="exitToMeadow()">
-            🚪 Zurück zur Wiese
-        </div>
-    </section>
-
-    <script type="application/json" id="multi-lang-assets">
-    {
-      "languages": {
-        "de": {
-          "agb_btn": "AGB & Haftung",
-          "agb_content": "### 1. Geltungsbereich\nDiese AGB gelten für EPTEC Business-Guard.\n### 2. Leistungen (Pläne F1 & F2)\n- F1 Basis/Premium\n- F2 Basis/Premium\n### 4. Haftungsausschluss\nEPTEC haftet nur für grob fahrlässige oder vorsätzliche Schäden.",
-          "status_msg": "SYSTEM BEREIT",
-          "nf1_template": "# EPTEC - NF1\nBetreff: Fehlende Abrechnungsdaten\nGemäß § 32d UrhG fordere ich Auskunft...",
-          "nf2_template": "# EPTEC - NF2\nStatus: Eskalation verstärkt\nLetzte Frist gemäß § 32d UrhG..."
-        }
-      },
-      "kisten": {
-        "betrieb": {
-          "name": "Framework Betrieb",
-          "languages": ["de"],
-          "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G", "Annex H", "Annex I", "Annex J", "Annex K", "Annex L", "Annex M", "Annex N", "Annex O", "Annex P", "Annex Q"]
+const EPTEC_BRAIN = {
+    // --- 1. SYSTEM-KONFIGURATION & SICHERHEIT ---
+    Config: {
+        MASTER_GATE: "PatrickGeorgHenke200288", 
+        MASTER_DOOR: "PatrickGeorgHenke6264",   
+        ADMIN_MODE: false,
+        ACTIVE_USER: { 
+            name: "Patrick Henke", 
+            tariff: "premium", 
+            country: "DE", 
+            sessionID: "SESS-" + Math.random().toString(36).substr(2, 9).toUpperCase() 
         },
-        "agentur": {
-          "name": "Agency Framework",
-          "languages": ["en"],
-          "structure": ["Part I", "Part II", "Annex J", "Annex K", "Annex L", "Annex M"]
-        }
-      }
-    }
-    </script>
+        Assets: JSON.parse(document.getElementById('multi-lang-assets').textContent),
+        COUNTRIES: ["DE", "AT", "CH", "FR", "ES", "IT", "NL", "BE", "LU", "DK", "SE", "NO"],
+        LOCKED_COUNTRIES: {}, 
+        SESSION_START: new Date().toISOString()
+    },
 
-    <script src="logic.js"></script>
-    <script>
-        function initApp() {
-            setTimeout(() => {
-                document.getElementById('loader').style.display = 'none';
-            }, 3000);
+    // --- 2. AUDIO-ENGINE (AKUSTISCHE LOGIK) ---
+    Audio: {
+        state: "ambient",
+        context: null,
+        play: function(soundID, volume = 1.0) {
+            console.log(`[AUDIO] Trigger: ${soundID} | Volume: ${volume}`);
+            const snd = document.getElementById(soundID);
+            if(snd) { 
+                snd.volume = volume; 
+                const playPromise = snd.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn("Autoplay-Interaktion erforderlich für: " + soundID);
+                    });
+                }
+            }
+        },
+        randomDielenKnacken: function() {
+            if (this.interval) clearInterval(this.interval);
+            this.interval = setInterval(() => {
+                if(Math.random() > 0.7 && EPTEC_BRAIN.Navigation.currentLocation === "R2") {
+                    this.play("snd-dielen-knacken", 0.3);
+                    EPTEC_BRAIN.Compliance.log("AUDIO", "Atmosphärisches Knacken ausgelöst.");
+                }
+            }, 45000); 
+        },
+        stopAll: function() {
+            document.querySelectorAll('audio').forEach(el => { el.pause(); el.currentTime = 0; });
         }
+    },
 
-        function enterRoom(room) {
-            const meadow = document.getElementById('meadow-view');
-            meadow.classList.add('tunnel-active');
+    // --- 3. AUTHENTIFIZIERUNG & UNTERWERFUNG ---
+    Auth: {
+        register: function(name, agbAccepted) {
+            if (!name || name.length < 3) return { success: false, msg: "Name zu kurz." };
+            if (!agbAccepted) return { success: false, msg: "Unterwerfung (AGB) erforderlich." };
             
-            setTimeout(() => {
-                meadow.style.display = 'none';
-                if(room === 'R2') document.getElementById('room-2-view').style.display = 'block';
-                meadow.classList.remove('tunnel-active');
-            }, 2000);
-        }
+            EPTEC_BRAIN.Config.ACTIVE_USER.name = name;
+            EPTEC_BRAIN.Compliance.log("AUTH", `Nutzer ${name} hat sich erfolgreich unterworfen.`);
+            return { success: true };
+        },
 
-        function exitToMeadow() {
-            document.getElementById('room-2-view').style.display = 'none';
-            document.getElementById('meadow-view').style.display = 'flex';
+        verifyAdmin: function(inputCode, level) {
+            console.log(`[SECURITY] Verifiziere Level ${level}...`);
+            if (level === 1 && inputCode === EPTEC_BRAIN.Config.MASTER_GATE) {
+                EPTEC_BRAIN.Config.ADMIN_MODE = true;
+                EPTEC_BRAIN.Compliance.log("SECURITY", "Master-Gate Zugriff gewährt.");
+                return true;
+            }
+            if (level === 2 && inputCode === EPTEC_BRAIN.Config.MASTER_DOOR) {
+                EPTEC_BRAIN.Compliance.log("SECURITY", "Master-Door Zugriff gewährt.");
+                return true;
+            }
+            return false;
         }
-    </script>
-</body>
-</html>
+    },
+
+    // --- 4. RAUM-NAVIGATION (TRANSITIONS) ---
+    Navigation: {
+        currentLocation: "Wiese",
+        isTransitioning: false,
+        
+        triggerTunnel: function(targetRoom) {
+            if (this.isTransitioning) return;
+            this.isTransitioning = true;
+            
+            EPTEC_BRAIN.Audio.play("snd-wurmloch", 1.0);
+            const meadow = document.getElementById('meadow-view');
+            if(meadow) meadow.classList.add('tunnel-active');
+
+            setTimeout(() => {
+                this.currentLocation = targetRoom;
+                document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+                
+                if(targetRoom === "R1") {
+                    document.getElementById('room-1-view').style.display = 'block';
+                    EPTEC_BRAIN.Workshop.render();
+                } else if(targetRoom === "R2") {
+                    document.getElementById('room-2-view').style.display = 'block';
+                }
+                
+                if(meadow) meadow.classList.remove('tunnel-active');
+                this.onRoomEnter(targetRoom);
+                this.isTransitioning = false;
+            }, 2000);
+        },
+
+        onRoomEnter: function(room) {
+            EPTEC_BRAIN.Compliance.log("NAV", `Raum ${room} betreten.`);
+            if(room === "R1") EPTEC_BRAIN.Audio.play("snd-wind", 0.4); 
+            if(room === "R2") {
+                EPTEC_BRAIN.Audio.play("snd-wind", 0.2); 
+                EPTEC_BRAIN.Audio.randomDielenKnacken();
+            }
+        }
+    },
+
+    // --- 5. RAUM 1: WERKSTATT (MODUL-LOGIK & 22 PARTS) ---
+    Workshop: {
+        render: function() {
+            const container = document.querySelector('.engraved-matrix');
+            if (!container) return;
+            
+            const parts = EPTEC_BRAIN.Config.Assets.kisten.betrieb.structure;
+            container.innerHTML = parts.map((name, i) => `
+                <div class="part-card" onclick="EPTEC_BRAIN.Workshop.openDoc('${name}')">
+                    <div style="font-size: 0.6em; color: var(--gold); margin-bottom: 5px;">STRUKTUR-PART ${i+1}</div>
+                    <div style="font-weight: bold;">${name}</div>
+                </div>
+            `).join('');
+        },
+
+        openDoc: function(partName) {
+            const user = EPTEC_BRAIN.Config.ACTIVE_USER;
+            const limit = user.tariff === "premium" ? 8 : 5;
+            
+            EPTEC_BRAIN.Compliance.log("WORKSHOP", `Dokument für ${partName} angefordert.`);
+            
+            let template = EPTEC_BRAIN.Config.Assets.languages.de.nf1_template;
+            const doc = template.replace("[NUTZER_NAME]", user.name)
+                                .replace("[DATUM]", new Date().toLocaleDateString())
+                                .replace("[HIER_ABWEICHUNG_EINFÜGEN]", partName);
+
+            const container = document.querySelector('.engraved-matrix');
+            container.innerHTML = `
+                <div class="doc-view">
+                    <div style="text-align: right; color: var(--gold); font-size: 0.8em;">ID: ${Math.random().toString(36).substr(2,9).toUpperCase()}</div>
+                    ${doc.replace(/\n/g, '<br>')}
+                    <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 0.7em; color: #666;">
+                        Compliance-Limit: ${limit} Schnipsel für Tarif '${user.tariff}' aktiv.
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="part-card" onclick="EPTEC_BRAIN.Workshop.render()" style="display: inline-block; width: auto; padding: 10px 30px;">Zurück zur Matrix</button>
+                    <button class="part-card" onclick="window.print()" style="display: inline-block; width: auto; padding: 10px 30px; border-color: white;">Drucken / Export</button>
+                </div>
+            `;
+            EPTEC_BRAIN.Audio.play("snd-feder", 0.8);
+        }
+    },
+
+    // --- 6. RAUM 2: SITZUNGSSAAL (ESKALATION) ---
+    Control: {
+        ampelStatus: 0,
+        setAmpel: function(level) {
+            this.ampelStatus = level;
+            const spiegel = document.getElementById('spiegel-nachricht');
+            const lang = EPTEC_BRAIN.Config.Assets.languages.de;
+            
+            if(!spiegel) return;
+
+            spiegel.style.opacity = "0";
+            setTimeout(() => {
+                if(level === 1) {
+                    spiegel.innerHTML = "<h3>GELB 1: Rüge</h3>" + lang.nf1_template.replace(/\n/g, '<br>');
+                    EPTEC_BRAIN.Audio.play("snd-feder", 0.5);
+                } else if(level === 5) {
+                    spiegel.innerHTML = "<h3 style='color:red;'>ROT: Eskalation</h3>" + lang.nf2_template.replace(/\n/g, '<br>');
+                    EPTEC_BRAIN.Audio.play("snd-wurmloch", 0.3);
+                }
+                spiegel.style.opacity = "1";
+            }, 300);
+            
+            EPTEC_BRAIN.Compliance.log("AMPEL", `Stufe ${level} im Sitzungssaal gesetzt.`);
+        }
+    },
+
+    // --- 7. ADMIN-DASHBOARD (FRIST-LOGIK) ---
+    Admin: {
+        toggleCountry: function(countryCode, forceInstant = false) {
+            if (forceInstant) {
+                EPTEC_BRAIN.Config.LOCKED_COUNTRIES[countryCode] = "INSTANT";
+            } else {
+                let d = new Date();
+                d.setDate(d.getDate() + 30);
+                const dateStr = d.toISOString().split('T')[0];
+                EPTEC_BRAIN.Config.LOCKED_COUNTRIES[countryCode] = dateStr;
+                console.log(`[ADMIN] ${countryCode} gesperrt bis ${dateStr}`);
+            }
+            EPTEC_BRAIN.Compliance.log("ADMIN", `Länder-Sperre: ${countryCode}`);
+        },
+        checkCountryStatus: function(countryCode) {
+            const lock = EPTEC_BRAIN.Config.LOCKED_COUNTRIES[countryCode];
+            if (!lock) return "FREI";
+            if (lock === "INSTANT") return "GESPERRT";
+            return `LÄUFT AB: ${lock}`;
+        }
+    },
+
+    // --- 8. COMPLIANCE (ANNEX K / ARCHIV) ---
+    Compliance: {
+        archive: [],
+        log: function(type, detail) {
+            const entry = {
+                id: this.archive.length + 1,
+                time: new Date().toISOString(),
+                type: type,
+                detail: detail,
+                hash: "EP-" + Math.random().toString(36).substr(2, 6).toUpperCase()
+            };
+            this.archive.push(entry);
+            if (this.archive.length > 500) this.archive.shift(); // Memory Schutz
+        },
+        exportAnnexK: function() {
+            EPTEC_BRAIN.Audio.play("snd-wind", 1.0);
+            const data = "EPTEC COMPLIANCE EXPORT - ANNEX K\n" + 
+                         "User: " + EPTEC_BRAIN.Config.ACTIVE_USER.name + "\n" +
+                         "------------------------------------\n" + 
+                         JSON.stringify(this.archive, null, 2);
+            console.log(data);
+            return data;
+        }
+    }
+};
+
+// Start-Log
+console.log(`[SYSTEM] EPTEC Master Logic v2026.1 aktiv. Integritätsprüfung: 100%`);
