@@ -1,146 +1,122 @@
 /**
- * FRAMEWORK CORE SCRIPT
- * Steuert App 1 (Wunderland) & App 2 (Professional)
- * Fokus: Haftungsausschluss, Modul-Hierarchie, Secret Register
+ * FRAMEWORK OPERATING SYSTEM - CORE LOGIC
+ * Steuert Sprachen, Sounds und Inhalte
  */
 
-const app = {
-    // 1. INITIALER STATUS
-    state: {
-        legalAccepted: false,
-        currentLang: 'de',
-        activeApp: 1,
-        activeKiste: null, // 'betrieb' oder 'agentur'
-        secretLog: [],
-        maxSnippets: 5,
-        selectedSnippets: []
-    },
+// Globale Variablen für den Status der App
+let currentLang = 'de';
+let languageData = {};
 
-    // 2. START & HAFTUNG
-    acceptLegal: function() {
-        this.state.legalAccepted = true;
-        document.getElementById('legal-overlay').style.display = 'none';
-        this.logCompliance("Systemstart: Haftungsausschluss akzeptiert (Deutsches Recht).");
-        this.playSound('start');
-    },
+// 1. START-SEQUENZ
+// Wartet, bis die Seite komplett geladen ist
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Framework gestartet...");
+    setLanguage('de'); // Standard beim Start: Deutsch
+    loadFooter();      // Lädt die footer.html aus den Assets
+});
 
-    // 3. SPRACH- & SOUND-LOGIK
-    setLanguage: function(lang) {
-        this.state.currentLang = lang;
-        document.body.className = `lang-${lang} mode-app${this.state.activeApp}`;
-        this.logCompliance(`Sprache gewechselt zu: ${lang.toUpperCase()}`);
-        this.playSound('switch');
-    },
-
-    playSound: function(effect) {
-        // Pfad-Logik: assets/sounds/[sprache]/[effekt].mp3
-        const audio = new Audio(`assets/sounds/${this.state.currentLang}/${effect}.mp3`);
-        audio.play().catch(e => console.log("Sound-Platzhalter: " + effect));
-    },
-
-    // 4. NAVIGATION APP 1 & 2
-    switchApp: function(num) {
-        if (!this.state.legalAccepted) return;
-        this.state.activeApp = num;
-        document.getElementById('view-app1').classList.toggle('hidden', num !== 1);
-        document.getElementById('view-app2').classList.toggle('hidden', num !== 2);
-        this.logCompliance(`Wechsel zu App ${num}`);
-    },
-
-    // 5. KISTEN-LOGIK (PART X -> SUB-MODULE C)
-    openKiste: function(kisteName) {
-        this.state.activeKiste = kisteName;
-        const breadcrumb = document.getElementById('breadcrumb');
-        breadcrumb.innerText = `Navigation: ${kisteName.toUpperCase()}`;
+// 2. SPRACH-ENGINE (Lädt JSON und wechselt Pfade)
+async function setLanguage(lang) {
+    currentLang = lang;
+    
+    try {
+        // Versuche die passende Sprachdatei zu laden
+        const response = await fetch(`${lang}.json`);
+        if (!response.ok) throw new Error(`Sprachdatei ${lang}.json nicht gefunden`);
         
-        this.logCompliance(`Kiste geöffnet: ${kisteName}`);
-        this.renderModuleList(kisteName);
-    },
-
-    renderModuleList: function(kiste) {
-        const selector = document.getElementById('module-selector');
-        selector.innerHTML = ''; // Reset
-
-        // Diese Liste wird später aus der de.json / en.json gespeist
-        // Hier beispielhaft für die Struktur:
-        const demoModules = ["Präambel", "Part 0", "Part I", "Part X", "Annex A", "Annex J (Compliance)"];
+        languageData = await response.json();
         
-        demoModules.forEach(mod => {
-            let btn = document.createElement('button');
-            btn.className = 'module-btn';
-            btn.innerText = mod;
-            btn.onclick = () => this.selectModule(mod);
-            selector.appendChild(btn);
-        });
-    },
-
-    selectModule: function(modId) {
-        // Logik für Untermodule (z.B. Part X -> C)
-        if (modId === "Part X") {
-            this.renderSubModules(["Sub-C", "Sub-D"]);
-        } else {
-            this.logCompliance(`Modul gewählt: ${modId}`);
-            this.triggerAliceEffect(modId);
-        }
-    },
-
-    renderSubModules: function(subs) {
-        const selector = document.getElementById('module-selector');
-        selector.innerHTML = '<p>Untermodule wählen:</p>';
-        subs.forEach(s => {
-            let btn = document.createElement('button');
-            btn.innerText = s;
-            btn.onclick = () => this.triggerAliceEffect(s);
-            selector.appendChild(btn);
-        });
-    },
-
-    // 6. ALICE-EFFEKT (SCHNIPSEL)
-    triggerAliceEffect: function(modId) {
-        this.playSound('magic');
-        const slotContainer = document.getElementById('slots');
+        // Aktualisiere alle Texte auf der Oberfläche
+        updateInterfaceTexts();
         
-        // Schnipsel "fliegen" ins Feld (max 5)
-        if (this.state.selectedSnippets.length < this.state.maxSnippets) {
-            let snip = document.createElement('div');
-            snip.className = 'snippet-item';
-            snip.innerText = `${modId} - Baustein`;
-            slotContainer.appendChild(snip);
-            this.state.selectedSnippets.push(modId);
-        } else {
-            alert("Maximal 5 Bausteine erlaubt!");
-        }
-    },
+        // Aktiviere den Button in der UI (optisches Feedback)
+        console.log("Sprache erfolgreich gewechselt zu: " + lang);
+    } catch (error) {
+        console.error("Kritischer Fehler beim Sprachwechsel:", error);
+        alert("Fehler beim Laden der Sprache. Bitte de.json prüfen.");
+    }
+}
 
-    // 7. APP 2: SECRET REGISTER & COMPLIANCE (ANNEX J-M)
-    logCompliance: function(action) {
-        const timestamp = new Date().toISOString();
-        const entry = `[${timestamp}] ${action}`;
-        this.state.secretLog.push(entry);
-        
-        const ticker = document.getElementById('live-ticker');
-        if (ticker) ticker.innerText = `Log: ${action}`;
-    },
+// 3. UI-REPRODUKTION
+// Schreibt die Texte aus der JSON in die HTML-Elemente
+function updateInterfaceTexts() {
+    const preambleBox = document.getElementById('preamble-display');
+    const mainTitle = document.getElementById('main-title');
+    
+    if (languageData.preamble) {
+        preambleBox.innerText = languageData.preamble;
+    }
+    if (languageData.framework_name) {
+        mainTitle.innerText = languageData.framework_name;
+    }
+}
 
-    exportSecretRegister: function() {
-        const blob = new Blob([this.state.secretLog.join('\n')], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Secret_Register_Protokoll.txt`;
-        a.click();
-        this.logCompliance("Secret Register exportiert.");
-    },
+// 4. KISTEN-LOGIK (Interaktion mit den Parts I-XI)
+function loadContent(partId) {
+    console.log("Part angeklickt: " + partId);
 
-    // 8. STRIPE / ZAHLUNG
-    redirectToStripe: function() {
-        this.logCompliance("Umleitung zu Stripe Checkout...");
-        // Hier kommt dein Stripe-Link rein:
-        window.location.href = "https://checkout.stripe.com/pay/dein_link";
+    // SOUND-SYSTEM
+    // Nutzt deine Struktur: assets/sounds de/
+    const soundPath = `assets/sounds ${currentLang}/click.mp3`;
+    const audio = new Audio(soundPath);
+    
+    audio.play().catch(err => {
+        console.warn("Sound-Hinweis: click.mp3 fehlt im Ordner sounds " + currentLang);
+    });
+
+    // MODAL-SYSTEM (Pop-up Fenster)
+    const modal = document.getElementById('content-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+
+    // Text aus der JSON-Struktur ziehen
+    const textContent = languageData.parts[partId];
+
+    modalTitle.innerText = "Part " + partId;
+    modalBody.innerHTML = textContent || "Inhalt wird vorbereitet...";
+    
+    // Modal einblenden (CSS Klasse modal-hidden wird entfernt)
+    modal.classList.remove('modal-hidden');
+}
+
+// 5. ANNEX-LOGIK (A bis I)
+function loadAnnex(annexId) {
+    const soundPath = `assets/sounds ${currentLang}/click.mp3`;
+    new Audio(soundPath).play().catch(() => {});
+
+    const modal = document.getElementById('content-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+
+    // Text aus dem Annex-Bereich der JSON ziehen
+    const annexContent = languageData.annex ? languageData.annex[annexId] : null;
+
+    modalTitle.innerText = "Annex " + annexId;
+    modalBody.innerHTML = annexContent || "Zusatzdokumentation folgt...";
+    
+    modal.classList.remove('modal-hidden');
+}
+
+// 6. SCHLIESS-FUNKTIONEN
+function closeModal() {
+    document.getElementById('content-modal').classList.add('modal-hidden');
+}
+
+// Schließen durch Klick außerhalb des weißen Fensters
+window.onclick = function(event) {
+    const modal = document.getElementById('content-modal');
+    if (event.target == modal) {
+        closeModal();
     }
 };
 
-// Initialer Check beim Laden
-window.onload = () => {
-    console.log("Framework-Haus bereit.");
-};
+// 7. HILFSFUNKTION: FOOTER LADEN
+async function loadFooter() {
+    try {
+        const response = await fetch('assets/footer.html');
+        const footerHtml = await response.text();
+        document.getElementById('footer-placeholder').innerHTML = footerHtml;
+    } catch (e) {
+        console.log("Footer konnte nicht geladen werden.");
+    }
+}
