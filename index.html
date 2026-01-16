@@ -6,6 +6,7 @@
     <title>Framework Operating System</title>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/ui_elements.css">
+    <link rel="stylesheet" href="assets/imagine.css">
 </head>
 <body>
 
@@ -22,7 +23,7 @@
         </div>
     </header>
 
-    <main>
+    <main id="main-content">
         <section id="hero-section">
             <h1 id="main-title">Operating System</h1>
             <div id="preamble-display" class="glass-box">
@@ -69,8 +70,17 @@
         </div>
     </div>
 
-    <footer id="footer-placeholder"></footer>
+    <div id="admin-layer"></div>
+
+    <footer id="footer-placeholder">
+        <div id="admin-trigger-zone" style="text-align: center; padding: 10px;">
+            <input type="password" id="admin-gate-1" class="hidden-admin-input" placeholder="...">
+            <div id="forgot-pw-admin" onclick="triggerResetFlow()" style="font-size: 8px; color: rgba(255,255,255,0.1); cursor: pointer;">Passwort vergessen?</div>
+        </div>
+    </footer>
 
     <script src="scripts/main.js"></script>
+    <script src="scripts/sounds.js"></script>
+    <script src="scripts/logic.js"></script>
 </body>
 </html>
