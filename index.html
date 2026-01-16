@@ -3,31 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC CORE</title>
+    <title>EPTEC CORE - Management System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="auth-overlay" class="glass-mask">
         <div class="auth-card">
-            <h1>EPTEC CORE</h1>
+            <h1 class="brand-title">EPTEC CORE</h1>
+            <p class="brand-subtitle">Secure Access Management</p>
+            <hr>
             
             <div id="registration-fields">
-                <input type="text" id="reg-name" placeholder="Name / Firma">
-                <input type="email" id="reg-email" placeholder="E-Mail Adresse">
-                <input type="text" id="reg-iban" placeholder="IBAN">
-                <select id="reg-plan">
-                    <option value="basis">Basis (Tür I)</option>
-                    <option value="pro">Pro (Tür II)</option>
-                    <option value="premium">Premium (Alles)</option>
-                </select>
-                <button class="btn-main" onclick="AuthSystem.goToVerify()">Weiter</button>
+                <div class="input-group">
+                    <label>Benutzername / Firma</label>
+                    <input type="text" id="reg-name" placeholder="z.B. Max Mustermann">
+                </div>
+                <div class="input-group">
+                    <label>E-Mail Adresse</label>
+                    <input type="email" id="reg-email" placeholder="mail@beispiel.de">
+                </div>
+                <div class="input-group">
+                    <label>Zahlungsweg (IBAN)</label>
+                    <input type="text" id="reg-iban" placeholder="DE00 0000 ...">
+                </div>
+                <div class="input-group">
+                    <label>Wählen Sie Ihren Zugang</label>
+                    <select id="reg-plan">
+                        <option value="basis">Basis-Tarif (Nur Werkstatt)</option>
+                        <option value="pro">Pro-Tarif (Nur Kontrolle)</option>
+                        <option value="premium">Premium-Tarif (Vollzugriff)</option>
+                    </select>
+                </div>
+                <button class="btn-main" onclick="AuthSystem.goToVerify()">Registrieren & Validieren</button>
             </div>
 
             <div id="verify-area" style="display:none;">
-                <p>Passwort eingeben:</p>
-                <input type="password" id="main-pass-input" placeholder="Code...">
-                <button class="btn-main" onclick="AuthSystem.finalUnlock()">System entsperren</button>
+                <p>Bitte geben Sie Ihren Verifizierungs-Code oder Ihr Master-Passwort ein:</p>
+                <input type="password" id="main-pass-input" class="large-input" placeholder="Passwort...">
+                <button class="btn-main success" onclick="AuthSystem.finalUnlock()">System jetzt entsperren</button>
+                <button class="btn-link" onclick="location.reload()">Zurück</button>
             </div>
         </div>
     </div>
@@ -35,28 +50,43 @@
     <main id="main-content" style="display:none;">
         <div class="grassy-meadow">
             <div class="sun"></div>
-            <div class="glowing-orb" onclick="toggleProfileMenu()"></div>
+            
+            <div class="glowing-orb" title="Admin-Menü" onclick="toggleProfileMenu()"></div>
 
             <div class="portal-container">
                 <div class="door-unit">
-                    <div class="portal-door">⚒</div>
-                    <input type="password" id="door-1-code" placeholder="Tür-Code I">
-                    <button class="btn-door" onclick="enterDoor(1)">Werkstatt</button>
+                    <div class="portal-door">
+                        <span class="icon">⚒</span>
+                        <span class="label">WERKSTATT</span>
+                    </div>
+                    <div class="door-controls">
+                        <input type="password" id="door-1-code" placeholder="Tür-Code I">
+                        <button class="btn-door" onclick="enterDoor(1)">Eintreten</button>
+                    </div>
                 </div>
                 
                 <div class="door-unit">
-                    <div class="portal-door">🛡</div>
-                    <input type="password" id="door-2-code" placeholder="Tür-Code II">
-                    <button class="btn-door" onclick="enterDoor(2)">Kontrolle</button>
+                    <div class="portal-door">
+                        <span class="icon">🛡</span>
+                        <span class="label">KONTROLLE</span>
+                    </div>
+                    <div class="door-controls">
+                        <input type="password" id="door-2-code" placeholder="Tür-Code II">
+                        <button class="btn-door" onclick="enterDoor(2)">Eintreten</button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="profile-panel">
-            <h3>Konto: <span id="user-info"></span></h3>
-            <button onclick="AuthSystem.logout()">Abmelden</button>
+            <div class="panel-header">
+                <h4>Status: <span id="user-info-status" style="color: green;">Aktiv</span></h4>
+            </div>
+            <p>Eingeloggt als: <b id="user-info-name"></b></p>
+            <p>Tarif: <span id="user-info-plan"></span></p>
             <hr>
-            <button class="btn-danger" onclick="AuthSystem.terminate()">Rechte löschen</button>
+            <button class="btn-logout" onclick="AuthSystem.logout()">Abmelden</button>
+            <button class="btn-terminate" onclick="AuthSystem.terminate()">Rechte & Abo kündigen</button>
         </div>
     </main>
 
