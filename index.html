@@ -3,199 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC CORE - Methode Henke (Infrastruktur 2026)</title>
+    <title>EPTEC CORE - Methode Henke 2026</title>
     <style>
         :root {
             --gold: #d4af37;
             --dark-oak: #2c1e14;
+            --grass-green: #1a472a;
             --glass: rgba(255, 255, 255, 0.1);
-            --neon-green: #39ff14;
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: #000; color: white; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Georgia', serif; background: #000; color: white; overflow: hidden; }
 
-        /* Auth & Unterwerfung */
-        .glass-mask {
-            position: fixed; inset: 0; background: radial-gradient(circle, #1a1a1a, #000);
-            display: flex; align-items: center; justify-content: center; z-index: 1000;
+        /* --- LOADING SCREEN (Das goldene Schloss) --- */
+        #loader {
+            position: fixed; inset: 0; background: black; z-index: 5000;
+            display: flex; align-items: center; justify-content: center;
         }
-        .auth-card {
-            background: var(--glass); padding: 40px; border-radius: 20px; border: 1px solid var(--gold);
-            text-align: center; backdrop-filter: blur(10px); width: 400px;
-        }
-        .auth-card input { width: 90%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid var(--gold); color: white; }
-        .legal-check { font-size: 11px; color: #aaa; margin: 20px 0; text-align: left; }
+        .spinning-lock { font-size: 50px; animation: rotate 3s infinite linear; color: var(--gold); }
+        @keyframes rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 
-        /* Die Wiese (Navigation) */
-        .grassy-meadow {
-            height: 100vh; background: linear-gradient(to bottom, #1a472a, #0d2b1a);
+        /* --- ATMOSPHÄRE: LICHTSTRAHLEN --- */
+        .sun-beams {
+            position: absolute; top: -100px; left: -100px; width: 400px; height: 800px;
+            background: rgba(255, 255, 255, 0.05); transform: rotate(45deg);
+            filter: blur(50px); pointer-events: none; z-index: 5;
+        }
+
+        /* --- DIE WIESE (MEADOW) --- */
+        .meadow {
+            height: 100vh; background: radial-gradient(circle at center, #2e5d32, #0d2b1a);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: filter 2s ease;
         }
-        .portal-container { display: flex; gap: 50px; }
-        .door-unit {
-            width: 200px; height: 300px; border: 3px solid var(--gold); border-radius: 10px 10px 0 0;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            transition: transform 0.3s; background: rgba(212, 175, 55, 0.1);
+
+        /* --- DER TUNNEL (WURMLOCH-EFFEKT) --- */
+        .tunnel-active { filter: blur(50px) brightness(1.5) scale(2); }
+
+        /* --- PORTAL-DESIGN (Die Türen) --- */
+        .door-frame {
+            border: 2px solid var(--gold); padding: 20px; border-radius: 15px;
+            background: var(--glass); backdrop-filter: blur(5px);
+            transition: all 0.5s; cursor: pointer; text-align: center;
         }
-        .door-unit:hover { transform: scale(1.05); background: rgba(212, 175, 55, 0.2); }
+        .door-frame:hover { box-shadow: 0 0 30px var(--gold); transform: translateY(-10px); }
 
-        /* Raum 2 - Der Sitzungssaal */
-        .room-view { display: none; height: 100vh; position: relative; background: var(--dark-oak); padding: 20px; }
-        .control-ambient { height: 100%; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; align-items: center; }
-        
-        /* Die Ampel */
-        .ampel-standalone {
-            background: #111; width: 80px; padding: 20px; border-radius: 40px;
-            display: flex; flex-direction: column; gap: 15px; align-items: center; border: 2px solid #333;
+        /* --- DER SITZUNGSSAAL (RAUM 2) --- */
+        .room-2-bg {
+            display: none; height: 100vh; background: var(--dark-oak);
+            background-image: url('data:image/png;base64,iVBOR...'); /* Platzhalter für Holztextur */
+            position: relative;
         }
-        .ampel-bulb { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; opacity: 0.3; transition: 0.3s; }
-        .ampel-bulb.active { opacity: 1; box-shadow: 0 0 20px currentColor; }
-        #bulb-1, #bulb-2, #bulb-3 { background-color: yellow; }
-        #bulb-4 { background-color: orange; }
-        #bulb-5 { background-color: red; }
+        .dielen-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(90deg, transparent, transparent 120px, rgba(0,0,0,0.4) 121px);
+        }
 
-        .service-cart { background: #3d2b1f; padding: 20px; border-radius: 10px; border-bottom: 5px solid #222; }
-        .corner-plant { position: absolute; bottom: 20px; right: 20px; cursor: pointer; font-size: 40px; }
-        .hidden-archive { font-size: 12px; color: var(--gold); display: none; }
-        .corner-plant:hover .hidden-archive { display: block; }
+        /* --- ADMIN KUGEL --- */
+        .admin-orb {
+            position: fixed; top: 20px; right: 20px; width: 25px; height: 25px;
+            background: radial-gradient(circle, var(--gold), transparent);
+            border-radius: 50%; display: none; filter: blur(2px); animation: waver 4s infinite alternate;
+        }
+        @keyframes waver { from { transform: translate(0,0); } to { transform: translate(5px, 10px); } }
 
-        .btn-main { background: var(--gold); color: black; border: none; padding: 12px 24px; cursor: pointer; font-weight: bold; }
-        .btn-exit { position: absolute; top: 20px; left: 20px; background: none; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; }
+        /* --- PROFIL (Der Kalender oben links) --- */
+        .profile-calendar {
+            position: absolute; top: 20px; left: 20px; width: 50px; height: 50px;
+            background: #fff; color: #000; border-radius: 8px; border-top: 15px solid #d32f2f;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
+        }
+
+        /* --- AMPEL & SPIEGEL --- */
+        .ampel-box { background: #111; border: 3px solid #333; padding: 20px; border-radius: 50px; }
+        .bulb { width: 40px; height: 40px; border-radius: 50%; margin: 10px; opacity: 0.2; }
+        .bulb.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
     </style>
 </head>
-<body>
+<body onload="initApp()">
 
-    <div id="auth-overlay" class="glass-mask">
-        <div class="auth-card">
-            <h1>EPTEC CORE</h1>
-            <div id="registration-fields">
-                <input type="text" id="reg-name" placeholder="Name / Firma">
-                <input type="text" id="reg-partner" placeholder="Partner-ID (für Verknüpfung)">
-                <div class="legal-check">
-                    <input type="checkbox" id="agb-check"> 
-                    Ich unterwerfe mich und mein Handeln der <b>Methode Henke</b>. 
-                    Ich erkenne an, dass alle Protokolle (Annex K) in allen 12 Ziel-Ländern als unanfechtbare Beweismittel gelten. 
-                    Der Systemgeber (EPTEC) ist zu 100% haftungsfrei.
-                </div>
-                <button class="btn-main" onclick="Core.register()">Unterwerfen & Betreten</button>
-            </div>
-        </div>
+    <div id="loader">
+        <div class="spinning-lock">🔒</div>
     </div>
 
-    <main id="main-content" style="display:none;">
-        <div class="grassy-meadow">
-            <h2 id="welcome-msg">Infrastruktur Aktiv</h2>
-            <div class="portal-container">
-                <div class="door-unit" onclick="Core.toRoom(1)"><div>⚒ WERKSTATT<br><small>Struktur-Check</small></div></div>
-                <div class="door-unit" onclick="Core.toRoom(2)"><div>🛡 SITZUNGSSAAL<br><small>Methode Henke</small></div></div>
-            </div>
+    <section id="meadow-view" class="meadow" style="display:none;">
+        <div class="sun-beams"></div>
+        <div class="profile-calendar" onclick="toggleProfile()">17</div>
+        <h1>Portal-Wiese</h1>
+        <div style="display: flex; gap: 40px;">
+            <div class="door-frame" onclick="enterRoom('R1')">⚒ Werkstatt</div>
+            <div class="door-frame" onclick="enterRoom('R2')">🛡 Sitzungssaal</div>
         </div>
-    </main>
+    </section>
 
-    <div id="room-2" class="room-view">
-        <button class="btn-exit" onclick="Core.toMeadow()">↩ Zurück</button>
-        <div class="control-ambient">
-            
-            <div class="service-cart">
-                <h3>PARTNER A</h3>
-                <input type="file" id="file-A" style="display:none" onchange="Compliance.logAction('Upload Partner A')">
-                <button onclick="document.getElementById('file-A').click()">⬆ Beweis hochladen</button>
-                <p><small>Beweislast-Status: Aktiv</small></p>
-            </div>
+    <section id="room-2-view" class="room-2-bg">
+        <div class="dielen-overlay"></div>
+        <div class="admin-orb" id="admin-kugel" onclick="adminTeleport()"></div>
+        
+        <div style="display:flex; justify-content: space-around; align-items: center; height: 100%;">
+            <div class="door-frame">PARTNER A</div>
 
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <div class="ampel-standalone">
-                    <div class="ampel-bulb" id="bulb-1" onclick="Compliance.setAmpel(1)" title="Gelb 1: Rüge"></div>
-                    <div class="ampel-bulb" id="bulb-2" onclick="Compliance.setAmpel(2)" title="Gelb 2: Mahnung"></div>
-                    <div class="ampel-bulb" id="bulb-3" onclick="Compliance.setAmpel(3)" title="Gelb 3: Letzte Frist"></div>
-                    <div class="ampel-bulb" id="bulb-4" onclick="Compliance.setAmpel(4)" title="Orange: Schlichtung"></div>
-                    <div class="ampel-bulb" id="bulb-5" onclick="Compliance.setAmpel(5)" title="Rot: Rechtsweg"></div>
+            <div class="center-stage">
+                <div class="ampel-box">
+                    <div id="bulb-1" class="bulb" style="background: yellow;"></div>
+                    <div id="bulb-5" class="bulb" style="background: red;"></div>
                 </div>
-                <div id="spiegel-nachricht" style="margin-top: 20px; padding: 15px; border: 1px solid var(--gold); text-align: center; width: 300px;">
-                    Spiegel der Wahrheit: <br> <i>Warten auf Aktion...</i>
+                <div id="spiegel-nachricht" style="margin-top:20px; border:1px solid var(--gold); padding:20px;">
+                    <i>Der Spiegel der Wahrheit ist bereit...</i>
                 </div>
             </div>
 
-            <div class="service-cart">
-                <h3>PARTNER B</h3>
-                <input type="file" id="file-B" style="display:none" onchange="Compliance.logAction('Upload Partner B')">
-                <button onclick="document.getElementById('file-B').click()">⬆ Beweis hochladen</button>
-                <p><small>Konformität prüfen...</small></p>
-            </div>
-
+            <div class="door-frame">PARTNER B</div>
         </div>
-
-        <div class="corner-plant" onclick="Compliance.exportAnnexK()">
-            🌿
-            <div class="hidden-archive">KLICK FÜR ANNEX K (GERICHTSFEST)</div>
+        
+        <div style="position:absolute; bottom:20px; right:20px; cursor:pointer;" onclick="EPTEC_BRAIN.Compliance.exportAnnexK()">
+            🌿 <small>Annex K</small>
         </div>
-    </div>
+    </section>
 
+    <audio id="snd-wind" loop src="audio/wind.mp3"></audio>
+    <audio id="snd-wurmloch" src="audio/tunnel.mp3"></audio>
+
+    <script src="logic.js"></script>
     <script>
-        const Core = {
-            userData: {},
-            register() {
-                const name = document.getElementById('reg-name').value;
-                const agb = document.getElementById('agb-check').checked;
-                if(!name || !agb) return alert("Bitte Name angeben und der Methode Henke unterwerfen!");
-                
-                this.userData = { name, partner: document.getElementById('reg-partner').value, timestamp: new Date().toISOString() };
-                document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('welcome-msg').innerText = `Willkommen, ${name}. Methode Henke ist aktiv.`;
-                Compliance.logAction("Systembeitritt & Unterwerfung bestätigt.");
-            },
-            toRoom(num) {
-                if(num === 2) {
-                    document.getElementById('main-content').style.display = 'none';
-                    document.getElementById('room-2').style.display = 'block';
-                }
-            },
-            toMeadow() {
-                document.querySelectorAll('.room-view').forEach(r => r.style.display = 'none');
-                document.getElementById('main-content').style.display = 'block';
-            }
-        };
+        function initApp() {
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('meadow-view').style.display = 'flex';
+                // Sound starten
+                document.getElementById('snd-wind').play();
+            }, 3000);
+        }
 
-        const Compliance = {
-            currentLevel: 0,
-            logs: [],
+        function enterRoom(room) {
+            const meadow = document.getElementById('meadow-view');
+            meadow.classList.add('tunnel-active');
+            document.getElementById('snd-wurmloch').play();
             
-            setAmpel(level) {
-                this.currentLevel = level;
-                document.querySelectorAll('.ampel-bulb').forEach((b, i) => {
-                    b.classList.toggle('active', i === level - 1);
-                });
-                
-                const msgs = [
-                    "",
-                    "GELB 1: Unregelmäßigkeit gerügt. Stellungnahme binnen 7 Tagen gefordert.",
-                    "GELB 2: Mahnung erfolgt. Beweislastumkehr aktiviert. Bitte Beleg hochladen.",
-                    "GELB 3: Letzte außergerichtliche Frist. Protokoll wird für Anwalt vorbereitet.",
-                    "ORANGE: Schlichtungsverfahren gemäß Framework eingeleitet.",
-                    "ROT: Vertragsbruch dokumentiert. Rechtsweg in 12 Ländern freigegeben."
-                ];
-                document.getElementById('spiegel-nachricht').innerHTML = `<b>${msgs[level]}</b>`;
-                this.logAction(`Eskalationsstufe ${level} ausgerufen.`);
-            },
-
-            logAction(action) {
-                const entry = `[${new Date().toLocaleTimeString()}] ${action}`;
-                this.logs.push(entry);
-                console.log("Annex K Update:", entry);
-            },
-
-            exportAnnexK() {
-                const header = `BEWEISSICHERUNGSPROTOKOLL (ANNEX K)\nMethode Henke - Infrastruktur 2026\nNutzer: ${Core.userData.name}\nUnterwerfung erfolgt am: ${Core.userData.timestamp}\n----------------------------------\n\n`;
-                const content = this.logs.join("\n");
-                const blob = new Blob([header + content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `ANNEX_K_Beweisdossier.txt`;
-                a.click();
-            }
-        };
+            setTimeout(() => {
+                meadow.style.display = 'none';
+                if(room === 'R2') document.getElementById('room-2-view').style.display = 'block';
+                meadow.classList.remove('tunnel-active');
+            }, 2000);
+        }
     </script>
 </body>
 </html>
