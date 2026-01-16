@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC Business-Guard - Methode Henke</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <title>EPTEC Business-Guard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="grassy-meadow">
 
     <div id="start-admin-gate">
-        <div class="login-container">
-            <img src="assets/img/logo.png" alt="Logo" style="width: 150px; opacity: 0.6; margin-bottom: 20px;">
-            <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus placeholder="Passwort...">
-            <p onclick="triggerResetFlow()" style="cursor:pointer; font-size: 0.8rem; color: #666;">Passwort vergessen?</p>
+        <div class="login-container glass-box">
+            <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus placeholder="Master-Code">
         </div>
     </div>
 
@@ -20,74 +18,47 @@
 
     <main id="main-content" style="display:none;">
         <header class="os-header">
-            <div id="flag-swipe-zone" class="language-nav">
-                </div>
+            <div id="flag-swipe-zone" class="language-nav"></div>
+            <div id="system-status-display" style="font-weight: bold; color: #2ecc40;"></div>
             <div class="admin-orb" onclick="toggleApp()"></div>
         </header>
 
         <div id="room-content-area">
             <div id="app-1-setup" class="room-setup">
-                <div class="workspace glass-box">
-                    <div id="drop-zone-rillen" class="grid-rillen"></div>
-                    <div id="weltkarte-upload" class="worldmap-zone"></div>
-                </div>
-
                 <div class="toy-box-container">
                     <h3>MEIN VERTRAG MEINE RECHTE !</h3>
-                    <div class="parts-grid" id="parts-container">
-                        </div>
-                    <div class="annex-grid" id="annex-container">
-                        </div>
+                    <div class="parts-grid" id="parts-container"></div>
                 </div>
             </div>
 
             <div id="app-2-setup" class="room-setup" style="display:none;">
+                <div class="price-display glass-box" style="margin-bottom: 20px; text-align: center;">
+                    <p id="price-f1">Basis: --</p>
+                    <p id="price-f2">Premium: --</p>
+                </div>
                 <div class="negotiation-area glass-box">
                     <div id="table-water-glasses"></div>
-                    <div class="servierwagen" onclick="triggerUpload('Bericht')">
+                    <div class="servierwagen" onclick="triggerUpload()">
                         <div class="tischdecke-kariert"></div>
                     </div>
                 </div>
-                <div class="traffic-light">
-                    <div id="light-r" class="light red"></div>
-                    <div id="light-y" class="light yellow"></div>
-                    <div id="light-g" class="light green active"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="content-modal" class="modal-hidden">
-            <div class="modal-content glass-box">
-                <span class="close-btn" onclick="closeModal()">&times;</span>
-                <h2 id="modal-title">Info</h2>
-                <div id="modal-body"></div>
             </div>
         </div>
     </main>
 
-    <footer id="main-footer" style="display:none;">
+    <footer id="main-footer" style="display:none; margin-top: 50px; padding: 20px; border-top: 1px solid #ccc; text-align: center; background: #fff;">
         <p>&copy; 2024 EPTEC Business-Guard</p>
-        <a href="javascript:void(0)" onclick="showAgb()" id="footer-agb-link">AGB</a>
+        <a href="javascript:void(0)" onclick="showAgb()" id="footer-agb-link" style="color: #004a99; text-decoration: none;">AGB</a>
     </footer>
 
     <script type="application/json" id="multi-lang-assets">
     {
         "languages": {
-            "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status": "Aktiv" },
-            "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status": "Active" },
-            "it": { "lang": "Italiano", "agb_btn": "Termini e Condizioni", "status": "Attivo" },
-            "es": { "lang": "Español", "agb_btn": "Términos y Condiciones", "status": "Activo" },
-            "fr": { "lang": "Français", "agb_btn": "Conditions Générales", "status": "Actif" },
-            "ar": { "lang": "العربية", "agb_btn": "الشروط والأحكام", "status": "نشط" },
-            "cn": { "lang": "中文", "agb_btn": "条款和条件", "status": "激活" },
-            "jp": { "lang": "日本語", "agb_btn": "利用規約", "status": "有効" },
-            "nl": { "lang": "Nederlands", "agb_btn": "Voorwaarden", "status": "Actief" },
-            "pt": { "lang": "Português", "agb_btn": "Termos", "status": "Ativo" },
-            "ru": { "lang": "Русский", "agb_btn": "Условия", "status": "Активно" },
-            "uk": { "lang": "Українська", "agb_btn": "Правила", "status": "Активно" }
+            "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status_msg": "System-Status: Aktiv", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+            "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status_msg": "System Status: Active", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } }
         }
     }
     </script>
-    <script src="scripts/logic.js"></script>
+    <script src="logic.js"></script>
 </body>
 </html>
