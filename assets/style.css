@@ -1,59 +1,43 @@
 :root {
-    --primary: #007bff;
-    --white: #ffffff;
-    --glass: rgba(255, 255, 255, 0.8);
-    --shadow: 0 8px 32px rgba(0,0,0,0.1);
+    --primary: #004a99;
+    --glass: rgba(255, 255, 255, 0.85);
+    --shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
-body {
-    margin: 0; font-family: sans-serif; background: #e8f0f2; color: #333;
-}
+body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; overflow: hidden; }
 
 .grassy-meadow {
-    background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
-    height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #74be15 0%, #3a7d0d 100%);
+    display: flex; align-items: center; justify-content: center;
 }
-
-.login-container {
-    background: var(--glass); padding: 40px; border-radius: 20px;
-    backdrop-filter: blur(10px); text-align: center; box-shadow: var(--shadow);
-}
-
-.hidden-admin-input {
-    border: none; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; text-align: center;
-}
-
-.os-header {
-    background: var(--white); padding: 10px 30px; display: flex; justify-content: space-between; align-items: center;
-}
-
-.admin-orb {
-    width: 30px; height: 30px; background: radial-gradient(circle, var(--primary), #003366);
-    border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px var(--primary);
-}
-
-.room-setup { padding: 40px; max-width: 1000px; margin: auto; }
 
 .glass-box {
-    background: var(--glass); backdrop-filter: blur(10px); border-radius: 15px; padding: 20px; box-shadow: var(--shadow);
+    background: var(--glass); backdrop-filter: blur(12px);
+    border-radius: 20px; border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: var(--shadow); padding: 30px;
 }
 
-.parts-grid, .annex-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px; margin: 20px 0;
-}
+.login-container { text-align: center; width: 300px; }
+.hidden-admin-input { border: none; background: #eee; padding: 12px; border-radius: 8px; width: 80%; margin: 20px 0; }
 
-.part-box, .annex-box {
-    background: white; padding: 15px; border-radius: 8px; text-align: center;
-    font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-bottom: 3px solid var(--primary);
+.os-header { background: #fff; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
+.admin-orb { width: 35px; height: 35px; background: radial-gradient(circle, #007bff, #002a5c); border-radius: 50%; cursor: pointer; }
+
+.room-setup { padding: 40px; height: calc(100vh - 120px); overflow-y: auto; }
+.parts-grid, .annex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 15px; margin: 20px 0; }
+
+.part-box, .annex-box { 
+    background: #fff; padding: 20px; border-radius: 12px; text-align: center; font-weight: bold;
+    cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-bottom: 4px solid var(--primary); transition: 0.2s;
 }
+.part-box:hover { transform: translateY(-3px); background: var(--primary); color: #fff; }
+
+.traffic-light { display: flex; gap: 15px; margin-top: 30px; }
+.light { width: 40px; height: 40px; border-radius: 50%; opacity: 0.2; }
+.light.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
+.red { background: #ff4136; } .yellow { background: #ffdc00; } .green { background: #2ecc40; }
 
 .modal-hidden { display: none !important; }
-#content-modal {
-    position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5);
-    display:flex; align-items:center; justify-content:center; z-index:1000;
-}
+#content-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:2000; }
 
-.traffic-light { display: flex; gap: 10px; margin-top: 20px; }
-.light { width: 30px; height: 30px; border-radius: 50%; opacity: 0.3; }
-.light.active { opacity: 1; box-shadow: 0 0 10px currentColor; }
-.red { background: #ff4136; } .yellow { background: #ffdc00; } .green { background: #2ecc40; }
+footer { position: fixed; bottom: 0; width: 100%; text-align: center; padding: 15px; background: #fff; border-top: 1px solid #eee; font-size: 0.85rem; }
