@@ -2,94 +2,200 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>EPTEC CORE - System (Final Edition 2026)</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPTEC CORE - Methode Henke (Infrastruktur 2026)</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-oak: #2c1e14;
+            --glass: rgba(255, 255, 255, 0.1);
+            --neon-green: #39ff14;
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: #000; color: white; overflow: hidden; }
+
+        /* Auth & Unterwerfung */
+        .glass-mask {
+            position: fixed; inset: 0; background: radial-gradient(circle, #1a1a1a, #000);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .auth-card {
+            background: var(--glass); padding: 40px; border-radius: 20px; border: 1px solid var(--gold);
+            text-align: center; backdrop-filter: blur(10px); width: 400px;
+        }
+        .auth-card input { width: 90%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid var(--gold); color: white; }
+        .legal-check { font-size: 11px; color: #aaa; margin: 20px 0; text-align: left; }
+
+        /* Die Wiese (Navigation) */
+        .grassy-meadow {
+            height: 100vh; background: linear-gradient(to bottom, #1a472a, #0d2b1a);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .portal-container { display: flex; gap: 50px; }
+        .door-unit {
+            width: 200px; height: 300px; border: 3px solid var(--gold); border-radius: 10px 10px 0 0;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: transform 0.3s; background: rgba(212, 175, 55, 0.1);
+        }
+        .door-unit:hover { transform: scale(1.05); background: rgba(212, 175, 55, 0.2); }
+
+        /* Raum 2 - Der Sitzungssaal */
+        .room-view { display: none; height: 100vh; position: relative; background: var(--dark-oak); padding: 20px; }
+        .control-ambient { height: 100%; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; align-items: center; }
+        
+        /* Die Ampel */
+        .ampel-standalone {
+            background: #111; width: 80px; padding: 20px; border-radius: 40px;
+            display: flex; flex-direction: column; gap: 15px; align-items: center; border: 2px solid #333;
+        }
+        .ampel-bulb { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; opacity: 0.3; transition: 0.3s; }
+        .ampel-bulb.active { opacity: 1; box-shadow: 0 0 20px currentColor; }
+        #bulb-1, #bulb-2, #bulb-3 { background-color: yellow; }
+        #bulb-4 { background-color: orange; }
+        #bulb-5 { background-color: red; }
+
+        .service-cart { background: #3d2b1f; padding: 20px; border-radius: 10px; border-bottom: 5px solid #222; }
+        .corner-plant { position: absolute; bottom: 20px; right: 20px; cursor: pointer; font-size: 40px; }
+        .hidden-archive { font-size: 12px; color: var(--gold); display: none; }
+        .corner-plant:hover .hidden-archive { display: block; }
+
+        .btn-main { background: var(--gold); color: black; border: none; padding: 12px 24px; cursor: pointer; font-weight: bold; }
+        .btn-exit { position: absolute; top: 20px; left: 20px; background: none; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; }
+    </style>
 </head>
 <body>
-    <audio id="snd-meadow" loop src="meadow_ambience.mp3"></audio>
-    <audio id="snd-creak" src="wood_creak.mp3"></audio>
-    <audio id="snd-clack" src="mechanical_clack.mp3"></audio>
-    <audio id="snd-steps" src="footsteps.mp3"></audio>
 
     <div id="auth-overlay" class="glass-mask">
         <div class="auth-card">
             <h1>EPTEC CORE</h1>
             <div id="registration-fields">
                 <input type="text" id="reg-name" placeholder="Name / Firma">
-                <input type="text" id="reg-iban" placeholder="Zahlungsdaten">
-                <p><small>Mit Klick akzeptieren Sie das Transparency & Rights Framework 2025.</small></p>
-                <button class="btn-main" onclick="Core.register()">Registrieren & Akzeptieren</button>
-            </div>
-            <div id="login-area" style="display:none;">
-                <input type="password" id="login-pass" placeholder="Passwort">
-                <button class="btn-main" onclick="Core.login()">System betreten</button>
+                <input type="text" id="reg-partner" placeholder="Partner-ID (für Verknüpfung)">
+                <div class="legal-check">
+                    <input type="checkbox" id="agb-check"> 
+                    Ich unterwerfe mich und mein Handeln der <b>Methode Henke</b>. 
+                    Ich erkenne an, dass alle Protokolle (Annex K) in allen 12 Ziel-Ländern als unanfechtbare Beweismittel gelten. 
+                    Der Systemgeber (EPTEC) ist zu 100% haftungsfrei.
+                </div>
+                <button class="btn-main" onclick="Core.register()">Unterwerfen & Betreten</button>
             </div>
         </div>
     </div>
 
     <main id="main-content" style="display:none;">
         <div class="grassy-meadow">
-            <div class="sun"></div>
-            <div class="glowing-orb" onclick="UI.toggleAdminPanel()"></div>
+            <h2 id="welcome-msg">Infrastruktur Aktiv</h2>
             <div class="portal-container">
-                <div class="door-unit" onclick="Core.handleDoor(1)"><div class="portal-door">⚒ WERKSTATT</div></div>
-                <div class="door-unit" onclick="Core.handleDoor(2)"><div class="portal-door">🛡 KONTROLLE</div></div>
-            </div>
-            <div class="master-bottom">
-                <input type="password" id="master-code" placeholder="...">
-                <button onclick="Core.masterUnlock()">Unlock</button>
+                <div class="door-unit" onclick="Core.toRoom(1)"><div>⚒ WERKSTATT<br><small>Struktur-Check</small></div></div>
+                <div class="door-unit" onclick="Core.toRoom(2)"><div>🛡 SITZUNGSSAAL<br><small>Methode Henke</small></div></div>
             </div>
         </div>
     </main>
 
-    <div id="room-1" class="room-view" style="display:none;">
-        <div class="workshop-ambient">
-            <div class="bookshelf"><div class="folder-black" id="archive-folder">CORE ARCHIV (ANNEX F-M)</div></div>
-            <div class="wooden-desk">
-                <div id="matrix-table" class="engraved-matrix"></div>
-                <div id="premium-upload" class="world-map-btn" style="display:none;" onclick="Workshop.worldSync()">🌍</div>
-            </div>
-            <div class="wooden-chest" onclick="Workshop.openChest()"><div class="chest-label">XIX</div></div>
-            <div id="magic-light" class="magic-light"></div>
-            <button class="btn-exit" onclick="Navigation.toMeadow()">↩ Wiese</button>
-        </div>
-    </div>
-
-    <div id="room-2" class="room-view" style="display:none;">
+    <div id="room-2" class="room-view">
+        <button class="btn-exit" onclick="Core.toMeadow()">↩ Zurück</button>
         <div class="control-ambient">
-            <div class="partner-header">
-                <div class="p-tab">PARTNER A</div>
-                <div class="p-tab">PARTNER B</div>
-            </div>
             
-            <div class="service-cart left" id="cart-A">
-                <button onclick="Compliance.upload('A', 'Zahlung')">⬆ Upload PDF (Zahlung)</button>
-                <button onclick="Compliance.download('A')">⬇ Download Berichte</button>
+            <div class="service-cart">
+                <h3>PARTNER A</h3>
+                <input type="file" id="file-A" style="display:none" onchange="Compliance.logAction('Upload Partner A')">
+                <button onclick="document.getElementById('file-A').click()">⬆ Beweis hochladen</button>
+                <p><small>Beweislast-Status: Aktiv</small></p>
             </div>
 
-            <div class="grand-table">
-                <div class="ampel-standalone" id="ampel-objekt">
-                    <div class="ampel-bulb" id="bulb-1" onclick="Compliance.setAmpel(1)"></div>
-                    <div class="ampel-bulb" id="bulb-2" onclick="Compliance.setAmpel(2)"></div>
-                    <div class="ampel-bulb" id="bulb-3" onclick="Compliance.setAmpel(3)"></div>
-                    <div class="ampel-bulb" id="bulb-4" onclick="Compliance.setAmpel(4)"></div>
-                    <div class="ampel-bulb" id="bulb-5" onclick="Compliance.setAmpel(5)"></div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="ampel-standalone">
+                    <div class="ampel-bulb" id="bulb-1" onclick="Compliance.setAmpel(1)" title="Gelb 1: Rüge"></div>
+                    <div class="ampel-bulb" id="bulb-2" onclick="Compliance.setAmpel(2)" title="Gelb 2: Mahnung"></div>
+                    <div class="ampel-bulb" id="bulb-3" onclick="Compliance.setAmpel(3)" title="Gelb 3: Letzte Frist"></div>
+                    <div class="ampel-bulb" id="bulb-4" onclick="Compliance.setAmpel(4)" title="Orange: Schlichtung"></div>
+                    <div class="ampel-bulb" id="bulb-5" onclick="Compliance.setAmpel(5)" title="Rot: Rechtsweg"></div>
                 </div>
-                <div class="table-content">GERICHTSFESTE ÜBERWACHUNG (ANNEX K)</div>
+                <div id="spiegel-nachricht" style="margin-top: 20px; padding: 15px; border: 1px solid var(--gold); text-align: center; width: 300px;">
+                    Spiegel der Wahrheit: <br> <i>Warten auf Aktion...</i>
+                </div>
             </div>
 
-            <div class="service-cart right" id="cart-B">
-                <button onclick="Compliance.upload('B', 'Bericht')">⬆ Upload PDF (Bericht)</button>
-                <button onclick="Compliance.download('B')">⬇ Download Belege</button>
+            <div class="service-cart">
+                <h3>PARTNER B</h3>
+                <input type="file" id="file-B" style="display:none" onchange="Compliance.logAction('Upload Partner B')">
+                <button onclick="document.getElementById('file-B').click()">⬆ Beweis hochladen</button>
+                <p><small>Konformität prüfen...</small></p>
             </div>
 
-            <div class="corner-plant">
-                <div class="hidden-archive" onclick="Compliance.exportGerichtsfest()">📜 PROTOKOLL (ANNEX K) DOWNLOAD</div>
-            </div>
-            <button class="btn-exit" onclick="Navigation.toMeadow()">↩ Wiese</button>
+        </div>
+
+        <div class="corner-plant" onclick="Compliance.exportAnnexK()">
+            🌿
+            <div class="hidden-archive">KLICK FÜR ANNEX K (GERICHTSFEST)</div>
         </div>
     </div>
 
-    <script src="logic.js"></script>
+    <script>
+        const Core = {
+            userData: {},
+            register() {
+                const name = document.getElementById('reg-name').value;
+                const agb = document.getElementById('agb-check').checked;
+                if(!name || !agb) return alert("Bitte Name angeben und der Methode Henke unterwerfen!");
+                
+                this.userData = { name, partner: document.getElementById('reg-partner').value, timestamp: new Date().toISOString() };
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('welcome-msg').innerText = `Willkommen, ${name}. Methode Henke ist aktiv.`;
+                Compliance.logAction("Systembeitritt & Unterwerfung bestätigt.");
+            },
+            toRoom(num) {
+                if(num === 2) {
+                    document.getElementById('main-content').style.display = 'none';
+                    document.getElementById('room-2').style.display = 'block';
+                }
+            },
+            toMeadow() {
+                document.querySelectorAll('.room-view').forEach(r => r.style.display = 'none');
+                document.getElementById('main-content').style.display = 'block';
+            }
+        };
+
+        const Compliance = {
+            currentLevel: 0,
+            logs: [],
+            
+            setAmpel(level) {
+                this.currentLevel = level;
+                document.querySelectorAll('.ampel-bulb').forEach((b, i) => {
+                    b.classList.toggle('active', i === level - 1);
+                });
+                
+                const msgs = [
+                    "",
+                    "GELB 1: Unregelmäßigkeit gerügt. Stellungnahme binnen 7 Tagen gefordert.",
+                    "GELB 2: Mahnung erfolgt. Beweislastumkehr aktiviert. Bitte Beleg hochladen.",
+                    "GELB 3: Letzte außergerichtliche Frist. Protokoll wird für Anwalt vorbereitet.",
+                    "ORANGE: Schlichtungsverfahren gemäß Framework eingeleitet.",
+                    "ROT: Vertragsbruch dokumentiert. Rechtsweg in 12 Ländern freigegeben."
+                ];
+                document.getElementById('spiegel-nachricht').innerHTML = `<b>${msgs[level]}</b>`;
+                this.logAction(`Eskalationsstufe ${level} ausgerufen.`);
+            },
+
+            logAction(action) {
+                const entry = `[${new Date().toLocaleTimeString()}] ${action}`;
+                this.logs.push(entry);
+                console.log("Annex K Update:", entry);
+            },
+
+            exportAnnexK() {
+                const header = `BEWEISSICHERUNGSPROTOKOLL (ANNEX K)\nMethode Henke - Infrastruktur 2026\nNutzer: ${Core.userData.name}\nUnterwerfung erfolgt am: ${Core.userData.timestamp}\n----------------------------------\n\n`;
+                const content = this.logs.join("\n");
+                const blob = new Blob([header + content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ANNEX_K_Beweisdossier.txt`;
+                a.click();
+            }
+        };
+    </script>
 </body>
 </html>
