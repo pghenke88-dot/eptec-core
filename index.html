@@ -3,58 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC Business-Guard - Master Edition</title>
-    <link rel="stylesheet" href="assets/style.css" id="main-style">
+    <title>EPTEC CORE</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="grassy-meadow">
+<body>
 
-    <div id="start-admin-gate">
-        <div class="login-container glass-box">
-            <h2>EPTEC</h2>
-            <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus placeholder="Master-Code">
+    <div id="auth-overlay" class="glass-mask">
+        <div class="auth-card">
+            <h1>EPTEC CORE</h1>
+            
+            <div id="registration-fields">
+                <input type="text" id="reg-name" placeholder="Name / Firma">
+                <input type="email" id="reg-email" placeholder="E-Mail Adresse">
+                <input type="text" id="reg-iban" placeholder="IBAN">
+                <select id="reg-plan">
+                    <option value="basis">Basis (Tür I)</option>
+                    <option value="pro">Pro (Tür II)</option>
+                    <option value="premium">Premium (Alles)</option>
+                </select>
+                <button class="btn-main" onclick="AuthSystem.goToVerify()">Weiter</button>
+            </div>
+
+            <div id="verify-area" style="display:none;">
+                <p>Passwort eingeben:</p>
+                <input type="password" id="main-pass-input" placeholder="Code...">
+                <button class="btn-main" onclick="AuthSystem.finalUnlock()">System entsperren</button>
+            </div>
         </div>
     </div>
 
-    <div id="admin-layer"></div>
-
     <main id="main-content" style="display:none;">
-        <header class="os-header">
-            <div id="flag-swipe-zone" class="language-nav"></div>
-            <div id="system-status-display"></div>
-            <div class="admin-orb" onclick="toggleApp()"></div>
-        </header>
+        <div class="grassy-meadow">
+            <div class="sun"></div>
+            <div class="glowing-orb" onclick="toggleProfileMenu()"></div>
 
-        <div id="room-content-area">
-            <div id="app-1-setup" class="room-setup">
-                <div class="workspace glass-box">
-                    <div id="parts-container" class="parts-grid"></div>
+            <div class="portal-container">
+                <div class="door-unit">
+                    <div class="portal-door">⚒</div>
+                    <input type="password" id="door-1-code" placeholder="Tür-Code I">
+                    <button class="btn-door" onclick="enterDoor(1)">Werkstatt</button>
                 </div>
-            </div>
-
-            <div id="app-2-setup" class="room-setup" style="display:none;">
-                <div id="table-water-glasses"></div>
-                <div class="servierwagen" onclick="triggerUpload()">
-                    <div class="tischdecke-kariert"></div>
+                
+                <div class="door-unit">
+                    <div class="portal-door">🛡</div>
+                    <input type="password" id="door-2-code" placeholder="Tür-Code II">
+                    <button class="btn-door" onclick="enterDoor(2)">Kontrolle</button>
                 </div>
             </div>
         </div>
 
-        <div id="content-modal" class="modal-hidden">
-            <div class="modal-content glass-box">
-                <span onclick="closeModal()" style="cursor:pointer; float:right; font-size: 24px;">&times;</span>
-                <h2 id="modal-title"></h2>
-                <hr>
-                <div id="modal-body"></div>
-            </div>
+        <div id="profile-panel">
+            <h3>Konto: <span id="user-info"></span></h3>
+            <button onclick="AuthSystem.logout()">Abmelden</button>
+            <hr>
+            <button class="btn-danger" onclick="AuthSystem.terminate()">Rechte löschen</button>
         </div>
     </main>
 
-    <footer id="main-footer" style="display:none;">
-        <a href="javascript:void(0)" id="footer-agb-link">AGB</a>
-    </footer>
-
-    <script src="scripts/audit_trail.js" defer></script>
-    <script src="scripts/bank_bridge.js" defer></script>
-    <script src="scripts/logic.js" defer></script>
+    <script src="logic.js"></script>
 </body>
 </html>
