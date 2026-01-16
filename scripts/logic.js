@@ -1,6 +1,6 @@
 /**
- * EPTEC CORE - MASTER EDITION (VOLT-FIX)
- * 12 Sprachen | 12 Module | Dynamisches Laden
+ * EPTEC BUSINESS-GUARD - FINAL CORE LOGIC
+ * Framework: 53 Modules | Languages: de, en, es
  */
 
 const CONFIG = {
@@ -8,122 +8,78 @@ const CONFIG = {
     MASTER_HASH: "6276853767f406834547926b0521c3275323a1945695027c95e1a2f6057885b5"
 };
 
-// Deine exakten Kürzel (jp für Japanisch, cn für Chinesisch)
-const SPRACHEN = ["ar", "cn", "de", "en", "es", "fr", "it", "jp", "nl", "pt", "ru", "uk"];
+const ACTIVE_LANGS = ["de", "en", "es"];
+let currentData = {}; 
 
-// 1. KRYPTO-CHECK
-async function sha256(msg) {
-    try {
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) { return ""; }
-}
+const MODULES = [
+    "Preamble — Intent", "Preamble — Balance", "Part 0", "Part 0A", "Part 0B",
+    "Part I", "Part I-A", "Part I-B", "Part I-C", "Part I-D", "Part I-E", "Part I-F", "Part I-G", "Part I-H",
+    "Part II", "Part II-A", "Part II-B", "Part III", "Part IV", "Part IV-A", "Part V",
+    "Part VI", "Part VI-A", "Part VI-B", "Part VII", "Part VIII", "Part VIII-A",
+    "Part IX", "Part IX-A", "Part X", "Part X-A", "Part X-B", "Part X-C", "Part X-D", "Part XI",
+    "Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G",
+    "Annex H", "Annex I", "Annex J", "Annex K", "Annex L", "Annex M", "Annex N", "Annex O", "Annex P"
+];
 
-// 2. AUDIO-ENGINE
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playSound(type) {
-    try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(type === 'unlock' ? 880 : 440, audioCtx.currentTime);
-        gain.gain.setTargetAtTime(0.02, audioCtx.currentTime, 0.01);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } catch (e) {}
-}
+function initApp() {
+    const container = document.getElementById('parts-container');
+    const nav = document.getElementById('flag-swipe-zone');
 
-// 3. LOGIN & UNLOCK
-const inputGate = document.getElementById('admin-gate-1');
-inputGate?.addEventListener('input', async (e) => {
-    const hash = await sha256(e.target.value);
-    if (hash === CONFIG.MASTER_HASH) {
-        unlockSystem();
+    if (container) {
+        container.innerHTML = MODULES.map(m => `
+            <div class="part-box" onclick="openModule('${m}')">
+                <div class="module-id">${m.split(' ')[0]}</div>
+                <div class="module-name">${m}</div>
+            </div>
+        `).join('');
     }
-});
 
-function unlockSystem() {
-    const main = document.getElementById('main-content');
-    const gate = document.getElementById('start-admin-gate');
-    if (main && gate) {
-        playSound('unlock');
-        gate.style.display = 'none';
-        main.style.display = 'block';
+    if (nav) {
+        nav.innerHTML = ACTIVE_LANGS.map(l => 
+            `<span class="flag-btn" onclick="setLang('${l}')">${l.toUpperCase()}</span>`
+        ).join(' ');
+    }
+    setLang('en');
+}
+
+async function setLang(lang) {
+    try {
+        const res = await fetch(`${CONFIG.LOCALE_PATH}${lang}.json`);
+        currentData = await res.json();
+        
+        document.getElementById('system-status-display').innerText = currentData.status_msg || "ACTIVE";
+        document.getElementById('footer-agb-link').innerText = currentData.agb_btn || "AGB / T&C";
+        document.documentElement.lang = lang;
+    } catch (e) {
+        console.error("Sprachdatei-Fehler.");
+    }
+}
+
+function openModule(name) {
+    const modal = document.getElementById('content-modal');
+    document.getElementById('modal-title').innerText = name;
+    
+    const detailText = currentData[name] || "Verification in progress...";
+    
+    document.getElementById('modal-body').innerHTML = `
+        <div class="audit-content">
+            <p>${detailText}</p>
+        </div>
+    `;
+    modal.classList.remove('modal-hidden');
+}
+
+document.getElementById('admin-gate-1')?.addEventListener('input', async (e) => {
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(e.target.value))
+        .then(b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''));
+    
+    if (hash === CONFIG.MASTER_HASH) {
+        document.getElementById('start-admin-gate').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
         document.getElementById('main-footer').style.display = 'block';
         initApp();
     }
-}
-
-// 4. APP-INITIALISIERUNG (12 Module & 12 Flaggen)
-function initApp() {
-    // JETZT KORREKT: I bis XII (12 Stück)
-    const parts = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"];
-    const container = document.getElementById('parts-container');
-    if (container) {
-        container.innerHTML = parts.map(p => 
-            `<div class="part-box" onclick="openBox('${p}')">${p}</div>`
-        ).join('');
-    }
-
-    // Erzeugt die 12 Flaggen-Buttons im Header
-    const nav = document.getElementById('flag-swipe-zone');
-    if (nav) {
-        nav.innerHTML = SPRACHEN.map(s => 
-            `<span class="flag-btn" onclick="updateLanguage('${s}')">${s.toUpperCase()}</span>`
-        ).join(' ');
-    }
-    updateLanguage('de');
-}
-
-// 5. DYNAMISCHE SPRACH-STEUERUNG (Lädt echte .json Dateien)
-async function updateLanguage(lang) {
-    try {
-        // Zieht die Daten direkt aus deinem Ordner locales/
-        const response = await fetch(`${CONFIG.LOCALE_PATH}${lang}.json`);
-        const data = await response.json();
-        
-        const statusDisplay = document.getElementById('system-status-display');
-        const agbLink = document.getElementById('footer-agb-link');
-        
-        if (statusDisplay) statusDisplay.innerText = data.status_msg || "System Aktiv";
-        if (agbLink) agbLink.innerText = data.agb_btn || "AGB";
-        
-        document.documentElement.lang = lang;
-        playSound('click');
-    } catch (e) {
-        console.warn("Silent Mode: locales/" + lang + ".json nicht gefunden.");
-    }
-}
-
-// 6. NAVIGATION & UI
-function openBox(id) {
-    const title = document.getElementById('modal-title');
-    const modal = document.getElementById('content-modal');
-    if (title && modal) {
-        playSound('click');
-        title.innerText = "Modul " + id;
-        modal.classList.remove('modal-hidden');
-    }
-}
-
-function toggleApp() {
-    const app1 = document.getElementById('app-1-setup');
-    const app2 = document.getElementById('app-2-setup');
-    if (app1 && app2) {
-        const isHidden = app1.style.display === 'none';
-        app1.style.display = isHidden ? 'block' : 'none';
-        app2.style.display = isHidden ? 'none' : 'block';
-        playSound('click');
-    }
-}
-
-function triggerUpload() {
-    const water = document.getElementById('table-water-glasses');
-    if (water) {
-        water.innerHTML += "💧 ";
-        playSound('click');
-    }
-}
+});
 
 function closeModal() {
     document.getElementById('content-modal')?.classList.add('modal-hidden');
