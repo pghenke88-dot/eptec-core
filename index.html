@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPTEC Business-Guard - Methode Henke</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/ui_elements.css">
+    <link rel="stylesheet" href="assets/imagine.css">
 </head>
 <body class="grassy-meadow">
 
@@ -68,7 +71,7 @@
     </main>
 
     <footer id="main-footer" style="display:none; margin-top: 50px; padding: 20px; border-top: 1px solid #ccc; text-align: center; background: #fff;">
-        <p>&copy; 2024 EPTEC Business-Guard</p>
+        <p>&copy; 2026 EPTEC Business-Guard | Methode Henke</p>
         <a href="javascript:void(0)" onclick="showAgb()" id="footer-agb-link" style="color: #004a99; text-decoration: none;">AGB</a>
     </footer>
 
@@ -77,21 +80,19 @@
       "brand": "EPTEC",
       "system": "Business-Guard",
       "languages": {
-        "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status_msg": "System-Status: Aktiv", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status_msg": "System Status: Active", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "it": { "lang": "Italiano", "agb_btn": "Termini e Condizioni", "status_msg": "Verifica stato", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "es": { "lang": "Español", "agb_btn": "Términos y Condiciones", "status_msg": "Estado del sistema", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "fr": { "lang": "Français", "agb_btn": "Conditions Générales", "status_msg": "État du système", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "ar": { "lang": "العربية", "agb_btn": "الشروط والأحكام", "status_msg": "حالة النظام", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "cn": { "lang": "中文", "agb_btn": "条款和条件", "status_msg": "系统状态", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "jp": { "lang": "日本語", "agb_btn": "利用規約と法的情報", "status_msg": "システムステータスを確認", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "nl": { "lang": "Nederlands", "agb_btn": "Algemene Voorwaarden", "status_msg": "Systeemstatus controleren", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "pt": { "lang": "Português", "agb_btn": "Termos e Condizioni", "status_msg": "Verificar status", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "ru": { "lang": "Русский", "agb_btn": "Условия и положения", "status_msg": "Проверить статус", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-        "uk": { "lang": "Українська", "agb_btn": "Правила та юридична інформація", "status_msg": "Перевірити статус системи", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } }
+        "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen", "status_msg": "System-Status: Aktiv" },
+        "en": { "lang": "English", "agb_btn": "Terms and Conditions", "status_msg": "System Status: Active" }
       }
     }
     </script>
-    <script src="logic.js"></script>
+
+    <script src="scripts/audit_trail.js"></script>
+    <script src="scripts/fact_validator.js"></script>
+    <script src="scripts/bank_bridge.js"></script>
+    <script src="scripts/deadline_tracker.js"></script>
+    <script src="scripts/legitimation_router.js"></script>
+    
+    <script src="scripts/logic.js"></script>
+
 </body>
 </html>
