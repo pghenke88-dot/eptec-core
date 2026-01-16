@@ -3,103 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Framework OS - Methode Henke</title>
+    <title>EPTEC Business-Guard - Methode Henke</title>
     <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/ui_elements.css">
-    <link rel="stylesheet" href="assets/imagine.css">
 </head>
 <body class="grassy-meadow">
 
     <div id="start-admin-gate">
-        <div id="logo-container">
-             <img src="assets/img/logo.png" alt="Logo" id="app-logo" style="width: 150px; opacity: 0.5;">
-        </div>
         <div class="login-container">
-            <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus>
-            <p id="forgot-pw-admin" onclick="triggerResetFlow()">Passwort vergessen?</p>
+            <img src="assets/img/logo.png" alt="Logo" style="width: 150px; opacity: 0.6; margin-bottom: 20px;">
+            <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus placeholder="Passwort...">
+            <p onclick="triggerResetFlow()" style="cursor:pointer; font-size: 0.8rem; color: #666;">Passwort vergessen?</p>
         </div>
     </div>
 
     <div id="admin-layer"></div>
 
     <main id="main-content" style="display:none;">
-        
         <header class="os-header">
-            <div id="flag-swipe-zone" class="language-nav"></div>
-            <div class="admin-status">
-                <div class="admin-orb" onclick="toggleApp()"></div> 
-            </div>
+            <div id="flag-swipe-zone" class="language-nav">
+                </div>
+            <div class="admin-orb" onclick="toggleApp()"></div>
         </header>
 
         <div id="room-content-area">
-
             <div id="app-1-setup" class="room-setup">
-                <div class="workspace">
-                    <div class="desk-surface">
-                        <div id="drop-zone-rillen" class="grid-rillen"></div>
-                        <div id="weltkarte-upload" class="worldmap-zone" ondrop="dropHandler(event)" ondragover="dragOverHandler(event)"></div>
-                    </div>
-
-                    <div class="accessory-bowl">
-                        <div class="radiergummi-btn" onclick="startComparison()"></div>
-                        <div class="bleistift-icon"></div>
-                    </div>
-
-                    <div class="shelf-system">
-                        <div class="folder" id="folder-framework" onclick="loadFramework()"></div>
-                        <div class="save-icon" onclick="saveToShelf()"></div>
-                    </div>
+                <div class="workspace glass-box">
+                    <div id="drop-zone-rillen" class="grid-rillen"></div>
+                    <div id="weltkarte-upload" class="worldmap-zone"></div>
                 </div>
 
                 <div class="toy-box-container">
                     <h3>MEIN VERTRAG MEINE RECHTE !</h3>
-                    <div class="parts-grid">
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p1">I</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p2">II</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p3">III</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p4">IV</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p5">V</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p6">VI</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p7">VII</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p8">VIII</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p9">IX</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p10">X</div>
-                        <div class="part-box" draggable="true" ondragstart="drag(event)" id="p11">XI</div>
-                    </div>
-                    <div class="annex-grid">
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aA">A</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aB">B</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aC">C</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aD">D</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aE">E</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aF">F</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aG">G</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aH">H</div>
-                        <div class="annex-box" draggable="true" ondragstart="drag(event)" id="aI">I</div>
-                    </div>
+                    <div class="parts-grid" id="parts-container">
+                        </div>
+                    <div class="annex-grid" id="annex-container">
+                        </div>
                 </div>
             </div>
 
             <div id="app-2-setup" class="room-setup" style="display:none;">
-                <div class="negotiation-area">
+                <div class="negotiation-area glass-box">
                     <div id="table-water-glasses"></div>
                     <div class="servierwagen" onclick="triggerUpload('Bericht')">
                         <div class="tischdecke-kariert"></div>
                     </div>
-                    <div class="office-plant" onclick="alert('Log: ' + actionLog.join('\n'))"></div>
                 </div>
-                <div class="os-sidebar">
-                    <div class="traffic-light">
-                        <div id="light-r" class="light red"></div>
-                        <div id="light-y" class="light yellow"></div>
-                        <div id="light-g" class="light green active"></div>
-                    </div>
+                <div class="traffic-light">
+                    <div id="light-r" class="light red"></div>
+                    <div id="light-y" class="light yellow"></div>
+                    <div id="light-g" class="light green active"></div>
                 </div>
+            </div>
+        </div>
+
+        <div id="content-modal" class="modal-hidden">
+            <div class="modal-content glass-box">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <h2 id="modal-title">Info</h2>
+                <div id="modal-body"></div>
             </div>
         </div>
     </main>
 
-    <script src="scripts/sounds.js"></script>
+    <footer id="main-footer" style="display:none;">
+        <p>&copy; 2024 EPTEC Business-Guard</p>
+        <a href="javascript:void(0)" onclick="showAgb()" id="footer-agb-link">AGB</a>
+    </footer>
+
+    <script type="application/json" id="multi-lang-assets">
+    {
+        "languages": {
+            "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status": "Aktiv" },
+            "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status": "Active" },
+            "it": { "lang": "Italiano", "agb_btn": "Termini e Condizioni", "status": "Attivo" },
+            "es": { "lang": "Español", "agb_btn": "Términos y Condiciones", "status": "Activo" },
+            "fr": { "lang": "Français", "agb_btn": "Conditions Générales", "status": "Actif" },
+            "ar": { "lang": "العربية", "agb_btn": "الشروط والأحكام", "status": "نشط" },
+            "cn": { "lang": "中文", "agb_btn": "条款和条件", "status": "激活" },
+            "jp": { "lang": "日本語", "agb_btn": "利用規約", "status": "有効" },
+            "nl": { "lang": "Nederlands", "agb_btn": "Voorwaarden", "status": "Actief" },
+            "pt": { "lang": "Português", "agb_btn": "Termos", "status": "Ativo" },
+            "ru": { "lang": "Русский", "agb_btn": "Условия", "status": "Активно" },
+            "uk": { "lang": "Українська", "agb_btn": "Правила", "status": "Активно" }
+        }
+    }
+    </script>
     <script src="scripts/logic.js"></script>
 </body>
 </html>
