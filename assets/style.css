@@ -1,177 +1,59 @@
-/* --- BASIS & VARIABLEN --- */
 :root {
     --primary: #007bff;
-    --primary-dark: #0056b3;
-    --bg: #f4f7f6;
     --white: #ffffff;
-    --text: #333;
-    --shadow: 0 4px 15px rgba(0,0,0,0.1);
-    --glass: rgba(255, 255, 255, 0.75);
-}
-
-* {
-    box-sizing: border-box;
+    --glass: rgba(255, 255, 255, 0.8);
+    --shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
 
 body {
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-    padding: 0;
-    line-height: 1.6;
-    overflow-x: hidden;
+    margin: 0; font-family: sans-serif; background: #e8f0f2; color: #333;
 }
 
-/* --- HEADER & NAVIGATION --- */
+.grassy-meadow {
+    background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+    height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+
+.login-container {
+    background: var(--glass); padding: 40px; border-radius: 20px;
+    backdrop-filter: blur(10px); text-align: center; box-shadow: var(--shadow);
+}
+
+.hidden-admin-input {
+    border: none; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; text-align: center;
+}
+
 .os-header {
-    background: var(--white);
-    padding: 0.8rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--shadow);
-    position: sticky;
-    top: 0;
-    z-index: 900;
+    background: var(--white); padding: 10px 30px; display: flex; justify-content: space-between; align-items: center;
 }
 
-.language-nav {
-    display: flex;
-    gap: 12px;
-}
-
-.language-nav button {
-    background: #eee;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.3s;
-}
-
-.language-nav button:hover {
-    background: var(--primary);
-    color: white;
-}
-
-/* --- ADMIN ORB (MAGISCHER SCHALTER) --- */
 .admin-orb {
-    width: 35px;
-    height: 35px;
-    background: radial-gradient(circle at 30% 30%, var(--primary), #002b5c);
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
-    transition: transform 0.3s ease;
+    width: 30px; height: 30px; background: radial-gradient(circle, var(--primary), #003366);
+    border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px var(--primary);
 }
 
-.admin-orb:hover {
-    transform: scale(1.1);
-}
+.room-setup { padding: 40px; max-width: 1000px; margin: auto; }
 
-/* --- RAUM-LAYOUTS --- */
-.room-setup {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-/* --- DIE SPIELZEUGKISTE (I-XI) --- */
-.toy-box-container {
-    text-align: center;
+.glass-box {
+    background: var(--glass); backdrop-filter: blur(10px); border-radius: 15px; padding: 20px; box-shadow: var(--shadow);
 }
 
 .parts-grid, .annex-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px; margin: 20px 0;
 }
 
 .part-box, .annex-box {
-    background: var(--white);
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    cursor: grab;
-    font-weight: bold;
-    box-shadow: var(--shadow);
-    transition: 0.3s;
-    border-bottom: 3px solid var(--primary);
+    background: white; padding: 15px; border-radius: 8px; text-align: center;
+    font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-bottom: 3px solid var(--primary);
 }
 
-.part-box:hover, .annex-box:hover {
-    background: var(--primary);
-    color: white;
-    transform: translateY(-3px);
-}
-
-/* --- GLAS-EFFEKT (MODALS & BOXEN) --- */
-.glass-box {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: var(--shadow);
-}
-
-/* --- MODAL (POP-UP) --- */
+.modal-hidden { display: none !important; }
 #content-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+    position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5);
+    display:flex; align-items:center; justify-content:center; z-index:1000;
 }
 
-.modal-hidden {
-    display: none !important;
-}
-
-.modal-content {
-    background: white;
-    width: 90%;
-    max-width: 650px;
-    max-height: 80vh;
-    overflow-y: auto;
-    padding: 40px;
-    border-radius: 20px;
-    position: relative;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 28px;
-    cursor: pointer;
-    color: #999;
-}
-
-/* --- FOOTER --- */
-footer {
-    text-align: center;
-    padding: 40px 20px;
-    color: #888;
-    font-size: 0.85rem;
-}
+.traffic-light { display: flex; gap: 10px; margin-top: 20px; }
+.light { width: 30px; height: 30px; border-radius: 50%; opacity: 0.3; }
+.light.active { opacity: 1; box-shadow: 0 0 10px currentColor; }
+.red { background: #ff4136; } .yellow { background: #ffdc00; } .green { background: #2ecc40; }
