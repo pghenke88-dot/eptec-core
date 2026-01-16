@@ -1,19 +1,20 @@
 /**
- * EPTEC BUSINESS-GUARD - FINAL MASTER LOGIC
- * Framework: 53 Modules | Locales: de, en, es (expandable to 12)
- * Security: SHA-256 Master-Gate
+ * EPTEC BUSINESS-GUARD - MASTER LOGIC
+ * Version: 2.0.1 (Final Release)
+ * Files: .jsn (Locales)
+ * Modules: 53 (Legal Framework)
  */
 
 const CONFIG = {
     LOCALE_PATH: 'locales/',
-    // Der Hash für deinen Master-Code
+    // Der kryptografische Schlüssel für deinen Master-Code
     MASTER_HASH: "6276853767f406834547926b0521c3275323a1945695027c95e1a2f6057885b5"
 };
 
-// Deine aktuell aktiven Sprachdateien
+// Aktuell aktive Sprachen - erweiterbar auf 12
 const ACTIVE_LANGS = ["de", "en", "es"]; 
 
-// Die 53 unbestechlichen Module deines Frameworks
+// Die unbestechliche Liste deiner 53 Module
 const MODULES = [
     "Preamble — Intent", "Preamble — Balance", 
     "Part 0", "Part 0A", "Part 0B", 
@@ -32,75 +33,95 @@ const MODULES = [
     "Annex H", "Annex I", "Annex J", "Annex K", "Annex L", "Annex M", "Annex N", "Annex O", "Annex P"
 ];
 
-let currentData = {}; // Globaler Speicher für geladene Texte
+let currentData = {}; // Globaler Speicher für die Texte aus den .jsn Dateien
 
-// 1. INITIALISIERUNG (Wird nach Login aufgerufen)
+/**
+ * 1. INITIALISIERUNG
+ * Baut das Dashboard und die Flaggen-Navigation auf.
+ */
 function initApp() {
     const container = document.getElementById('parts-container');
     const nav = document.getElementById('flag-swipe-zone');
 
+    // Erzeugt die 53 Kacheln im Dashboard
     if (container) {
-        // Erzeugt 53 Kacheln mit ID-Vorsatz (z.B. Annex P)
         container.innerHTML = MODULES.map(m => `
             <div class="part-box" onclick="openModule('${m}')">
-                <div class="module-id">${m.split(' ')[0]} ${m.split(' ')[1] || ''}</div>
+                <div class="module-id">${m.split(' — ')[0] || m.split(' ')[0]}</div>
                 <div class="module-name">${m}</div>
             </div>
         `).join('');
     }
 
+    // Erzeugt die Sprach-Auswahl
     if (nav) {
-        // Erzeugt die Sprach-Buttons (de, en, es)
         nav.innerHTML = ACTIVE_LANGS.map(l => 
             `<span class="flag-btn" onclick="setLang('${l}')">${l.toUpperCase()}</span>`
-        ).join(' ');
+        ).join('');
     }
     
-    // Startsprache setzen (z.B. Deutsch)
+    // Startsprache laden
     setLang('de');
 }
 
-// 2. SPRACH-LOADER (Zieht die Texte aus /locales/lang.json)
+/**
+ * 2. SPRACH-LOADER
+ * Lädt die .jsn Dateien und füllt das Interface mit Wörtern.
+ */
 async function setLang(lang) {
     try {
-        const res = await fetch(`${CONFIG.LOCALE_PATH}${lang}.json`);
+        // Zieht die Daten aus deiner .jsn Datei
+        const res = await fetch(`${CONFIG.LOCALE_PATH}${lang}.jsn`);
         if (!res.ok) throw new Error("File not found");
         currentData = await res.json();
         
-        // UI-Texte aktualisieren
-        document.getElementById('system-status-display').innerText = currentData.status_msg || "System Aktiv";
-        document.getElementById('footer-agb-link').innerText = currentData.agb_btn || "AGB / T&C";
-        document.documentElement.lang = lang;
+        // Interface-Wörter dynamisch setzen
+        const statusDisplay = document.getElementById('system-status-display');
+        const agbLink = document.getElementById('footer-agb-link');
+
+        if (statusDisplay) statusDisplay.innerText = currentData.status_msg || "System Active";
+        if (agbLink) agbLink.innerText = currentData.agb_btn || "AGB";
         
-        console.log(`Sprache auf ${lang.toUpperCase()} gewechselt.`);
+        document.documentElement.lang = lang;
+        console.log(`Interface-Sprache gewechselt zu: ${lang}.jsn`);
     } catch (e) {
-        console.error("Fehler beim Laden der Sprache:", lang);
+        console.error("Konnte Sprachdatei nicht laden:", lang + ".jsn");
     }
 }
 
-// 3. MODAL-STEUERUNG (Inhalt aus currentData ziehen)
+/**
+ * 3. MODAL-STEUERUNG
+ * Öffnet das Fenster mit dem Text des jeweiligen Moduls.
+ */
 function openModule(name) {
     const modal = document.getElementById('content-modal');
-    document.getElementById('modal-title').innerText = name;
-    
-    // Holt den Text aus der JSON anhand des Modul-Namens
-    const detailText = currentData[name] || "Inhalt wird verifiziert... (Kein Eintrag im JSON gefunden)";
-    
-    document.getElementById('modal-body').innerHTML = `
-        <div class="audit-content">
-            <p>${detailText}</p>
-        </div>
-    `;
-    modal.classList.remove('modal-hidden');
+    const title = document.getElementById('modal-title');
+    const body = document.getElementById('modal-body');
+
+    if (modal && title && body) {
+        title.innerText = name;
+        // Holt den spezifischen Text aus der .jsn Datei
+        body.innerHTML = `<div class="audit-text">${currentData[name] || "Inhalt wird verifiziert..."}</div>`;
+        modal.classList.remove('modal-hidden');
+        modal.style.display = 'flex'; // Sicherstellen, dass es sichtbar ist
+    }
 }
 
 function closeModal() {
-    document.getElementById('content-modal').classList.add('modal-hidden');
+    const modal = document.getElementById('content-modal');
+    if (modal) {
+        modal.classList.add('modal-hidden');
+        modal.style.display = 'none';
+    }
 }
 
-// 4. LOGIN-LOGIK (SHA-256 Gate)
+/**
+ * 4. SECURITY GATE (LOGIN)
+ * Überprüft den Master-Code via SHA-256 Hash.
+ */
 document.getElementById('admin-gate-1')?.addEventListener('input', async (e) => {
     const val = e.target.value;
+    // Erzeugt den Hash zum Vergleich
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val))
         .then(b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''));
     
@@ -108,21 +129,27 @@ document.getElementById('admin-gate-1')?.addEventListener('input', async (e) => 
         document.getElementById('start-admin-gate').style.display = 'none';
         document.getElementById('main-content').style.display = 'block';
         document.getElementById('main-footer').style.display = 'block';
-        initApp(); // Startet die App-Generierung
+        initApp(); // App erst nach erfolgreichem Login bauen
     }
 });
 
-// 5. APP-SWITCHER (Dashboard <-> Servierwagen)
+/**
+ * 5. APP-SWITCHER
+ * Wechselt zwischen Dashboard (App 1) und Servierwagen (App 2).
+ */
 function toggleApp() {
     const a1 = document.getElementById('app-1-setup');
     const a2 = document.getElementById('app-2-setup');
-    const isA1Visible = a1.style.display !== 'none';
     
-    a1.style.display = isA1Visible ? 'none' : 'block';
-    a2.style.display = isA1Visible ? 'block' : 'none';
+    if (a1 && a2) {
+        const isDashboardVisible = a1.style.display !== 'none';
+        a1.style.display = isDashboardVisible ? 'none' : 'block';
+        a2.style.display = isDashboardVisible ? 'block' : 'none';
+    }
 }
 
-// Platzhalter für Servierwagen-Upload
+// Schnittstelle für bank_bridge.js / Servierwagen
 function triggerUpload() {
-    console.log("Upload-Funktion bereit.");
+    console.log("Servierwagen-Protokoll aktiviert.");
+    // Hier klinkt sich deine bank_bridge.js ein
 }
