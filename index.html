@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>EPTEC CORE - System</title>
+    <title>EPTEC CORE - System (Final Edition 2026)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,11 +17,12 @@
             <div id="registration-fields">
                 <input type="text" id="reg-name" placeholder="Name / Firma">
                 <input type="text" id="reg-iban" placeholder="Zahlungsdaten">
-                <button class="btn-main" onclick="Core.register()">Registrieren & AGB akzeptieren</button>
+                <p><small>Mit Klick akzeptieren Sie das Transparency & Rights Framework 2025.</small></p>
+                <button class="btn-main" onclick="Core.register()">Registrieren & Akzeptieren</button>
             </div>
             <div id="login-area" style="display:none;">
                 <input type="password" id="login-pass" placeholder="Passwort">
-                <button class="btn-main" onclick="Core.login()">Einloggen</button>
+                <button class="btn-main" onclick="Core.login()">System betreten</button>
             </div>
         </div>
     </div>
@@ -34,16 +35,19 @@
                 <div class="door-unit" onclick="Core.handleDoor(1)"><div class="portal-door">⚒ WERKSTATT</div></div>
                 <div class="door-unit" onclick="Core.handleDoor(2)"><div class="portal-door">🛡 KONTROLLE</div></div>
             </div>
-            <div class="master-bottom"><input type="password" id="master-code" placeholder="..."><button onclick="Core.masterUnlock()">Unlock</button></div>
+            <div class="master-bottom">
+                <input type="password" id="master-code" placeholder="...">
+                <button onclick="Core.masterUnlock()">Unlock</button>
+            </div>
         </div>
     </main>
 
     <div id="room-1" class="room-view" style="display:none;">
         <div class="workshop-ambient">
-            <div class="bookshelf"><div class="folder-black" id="archive-folder">CORE ARCHIV</div></div>
+            <div class="bookshelf"><div class="folder-black" id="archive-folder">CORE ARCHIV (ANNEX F-M)</div></div>
             <div class="wooden-desk">
                 <div id="matrix-table" class="engraved-matrix"></div>
-                <div id="premium-upload" class="world-map-btn" style="display:none;">🌍</div>
+                <div id="premium-upload" class="world-map-btn" style="display:none;" onclick="Workshop.worldSync()">🌍</div>
             </div>
             <div class="wooden-chest" onclick="Workshop.openChest()"><div class="chest-label">XIX</div></div>
             <div id="magic-light" class="magic-light"></div>
@@ -65,8 +69,13 @@
 
             <div class="grand-table">
                 <div class="ampel-standalone" id="ampel-objekt">
-                    <div class="ampel-bulb" id="bulb-1"></div> <div class="ampel-bulb" id="bulb-2"></div> <div class="ampel-bulb" id="bulb-3"></div> <div class="ampel-bulb" id="bulb-4"></div> <div class="ampel-bulb" id="bulb-5"></div> </div>
-                <div class="table-content">GERICHTSFESTE ÜBERWACHUNG</div>
+                    <div class="ampel-bulb" id="bulb-1" onclick="Compliance.setAmpel(1)"></div>
+                    <div class="ampel-bulb" id="bulb-2" onclick="Compliance.setAmpel(2)"></div>
+                    <div class="ampel-bulb" id="bulb-3" onclick="Compliance.setAmpel(3)"></div>
+                    <div class="ampel-bulb" id="bulb-4" onclick="Compliance.setAmpel(4)"></div>
+                    <div class="ampel-bulb" id="bulb-5" onclick="Compliance.setAmpel(5)"></div>
+                </div>
+                <div class="table-content">GERICHTSFESTE ÜBERWACHUNG (ANNEX K)</div>
             </div>
 
             <div class="service-cart right" id="cart-B">
@@ -75,17 +84,10 @@
             </div>
 
             <div class="corner-plant">
-                <div class="hidden-archive" onclick="Compliance.exportGerichtsfest()">📜 PROTOKOLL (ANNEX K)</div>
+                <div class="hidden-archive" onclick="Compliance.exportGerichtsfest()">📜 PROTOKOLL (ANNEX K) DOWNLOAD</div>
             </div>
             <button class="btn-exit" onclick="Navigation.toMeadow()">↩ Wiese</button>
         </div>
-    </div>
-
-    <div id="admin-panel" class="profile-panel">
-        <h3>Admin Teleporter</h3>
-        <button onclick="Navigation.toRoom(1)">Werkstatt</button>
-        <button onclick="Navigation.toRoom(2)">Kontrolle</button>
-        <button onclick="Core.logout()">Abmelden</button>
     </div>
 
     <script src="logic.js"></script>
