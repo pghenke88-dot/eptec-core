@@ -3,91 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC Business-Guard</title>
-    <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/ui_elements.css">
+    <title>Universal Framework - Betrieb & Agentur</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="lang-de mode-app1">
 
-<header>
-    <h1 id="brand-title">EPTEC Business-Guard</h1>
-    <p id="lang-status">Wähle deine Sprache / Choose your language</p>
-</header>
-
-<div class="language-picker">
-    <button onclick="changeLanguage('de')">DE</button>
-    <button onclick="changeLanguage('en')">EN</button>
-    <button onclick="changeLanguage('cn')">CN</button> 
-    <button onclick="changeLanguage('it')">IT</button>
-    <button onclick="changeLanguage('es')">ES</button>
-    <button onclick="changeLanguage('fr')">FR</button>
-    <button onclick="changeLanguage('nl')">NL</button>
-    <button onclick="changeLanguage('pt')">PT</button>
-    <button onclick="changeLanguage('ru')">RU</button>
-    <button onclick="changeLanguage('jp')">JP</button>
-    <button onclick="changeLanguage('uk')">UK</button>
-    <button onclick="changeLanguage('ar')">AR</button>
-</div>
-
-<div class="price-container">
-    <div class="card">
-        <h3>Plan F1</h3>
-        <p>Basis: <span id="f1-basis" class="price">--</span></p>
-        <p>Premium: <span id="f1-premium" class="price">--</span></p>
+    <div id="legal-overlay" class="overlay">
+        <div class="modal">
+            <h1>Rechtlicher Hinweis & Haftungsausschluss</h1>
+            <p>Die Nutzung dieses Frameworks erfolgt auf eigenes Risiko. Der Betreiber ist in keinem Fall haftbar für rechtliche oder wirtschaftliche Folgen. Es gilt ausschließlich das Recht der Bundesrepublik Deutschland. Mit dem Start bestätigen Sie die AGB vollumfänglich.</p>
+            <button onclick="app.acceptLegal()" class="btn-start">Ich akzeptiere & Starte</button>
+        </div>
     </div>
-    <div class="card">
-        <h3>Plan F2</h3>
-        <p>Basis: <span id="f2-basis" class="price">--</span></p>
-        <p>Premium: <span id="f2-premium" class="price">--</span></p>
-    </div>
-</div>
 
-<div id="app-root">
-    <section id="app-selection">
-        <button onclick="initApp('verlag')">EPTEC Verlags-Framework (App 1)</button>
-        <button onclick="initApp('eskalation')">EPTEC Eskalations-Modul (App 2)</button>
-    </section>
+    <header>
+        <div class="nav-main">
+            <button onclick="app.switchApp(1)" id="btn-app1">App 1: Wunderland</button>
+            <button onclick="app.switchApp(2)" id="btn-app2">App 2: Professional</button>
+        </div>
+        <div class="nav-lang">
+            <button onclick="app.setLanguage('de')">DE</button>
+            <button onclick="app.setLanguage('en')">EN</button>
+            <button onclick="app.setLanguage('es')">ES</button>
+        </div>
+    </header>
 
-    <main id="workflow-container" style="display:none;">
-        <div id="step-indicator">Initialisierung...</div>
+    <main id="app-container">
         
-        <div id="content-area">
-            <div class="traffic-light-container" id="ampel-display" style="display:none;">
-                <div class="traffic-light">
-                    <div id="light-red" class="light red"></div>
-                    <div id="light-yellow" class="light yellow"></div>
-                    <div id="light-green" class="light green"></div>
+        <section id="view-app1">
+            <div class="kisten-lager">
+                <div class="kiste" id="kiste-betrieb" onclick="app.openKiste('betrieb')">
+                    <span class="icon">📦</span>
+                    <label>Framework Betrieb</label>
+                </div>
+                <div class="kiste" id="kiste-agentur" onclick="app.openKiste('agentur')">
+                    <span class="icon">💼</span>
+                    <label>Agency Framework (EN)</label>
                 </div>
             </div>
+
+            <div id="breadcrumb">Navigation: Start</div>
+
+            <div id="module-selector" class="grid-selector">
+                </div>
+
+            <div id="construction-zone">
+                <div class="form-slot-container">
+                    <div id="slots"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-app2" class="hidden">
+            <div id="secret-register-bar">
+                <div class="register-status">
+                    <span id="seal-icon" onclick="app.exportSecretRegister()">🛡️</span>
+                    <div id="live-ticker">Secret Register: Active (Annex J-M Compliance)</div>
+                </div>
             </div>
 
-        <div id="action-bar">
-            <button id="prevBtn" onclick="prevStep()" disabled>Zurück</button>
-            <button id="nextBtn" onclick="nextStep()">Weiter</button>
-            <button id="downloadBtn" onclick="generatePDF()" style="display:none;">PDF laden</button>
-        </div>
+            <div class="pro-grid-212">
+                <div class="side-panel">
+                    <h3>User A</h3>
+                    <div class="upload-group">
+                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-a">
+                        <label>Bericht</label><input type="file" id="u-rep-a">
+                    </div>
+                </div>
+
+                <div class="center-panel">
+                    <div class="module-title-display">Aktives Modul (aus App 1)</div>
+                    <textarea id="main-contract-field" placeholder="Zentrales Vertragsfeld..."></textarea>
+                    
+                    <div class="compliance-ampel">
+                        <div class="ampel-btn green" onclick="app.logCompliance('Status Green: All Clear')"></div>
+                        <div class="ampel-btn yellow" onclick="app.logCompliance('Status Yellow: Escalation Triggered')"></div>
+                        <div class="ampel-btn red" onclick="app.logCompliance('Status Red: Emergency Stop')"></div>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <h3>Partner B</h3>
+                    <div class="upload-group">
+                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-b">
+                        <label>Bericht</label><input type="file" id="u-rep-b">
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
-</div>
 
-<div id="agb-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-button" onclick="closeAgb()">&times;</span>
-        <div id="agb-content">
-            </div>
+    <div id="paywall-overlay" class="hidden">
+        <div class="modal">
+            <h2>Premium Zugriff</h2>
+            <p>Dieses Modul erfordert ein aktives Abonnement.</p>
+            <button onclick="app.redirectToStripe()" class="btn-pay">Abo via Stripe/PayPal</button>
+        </div>
     </div>
-</div>
 
-<footer style="margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
-    <p id="footer-copyright">&copy; 2024 EPTEC Business-Guard</p>
-    <a href="javascript:void(0)" 
-       onclick="showAgb()" 
-       id="footer-agb-link"
-       style="color: #004a99; text-decoration: none; font-weight: bold;">
-       AGB
-    </a>
-</footer>
-
-<script src="scripts/main.js"></script>
-
+    <script src="main.js"></script>
 </body>
 </html>
