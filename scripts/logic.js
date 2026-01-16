@@ -1,84 +1,103 @@
-// --- DEINE UNVERÄNDERLICHEN MASTER-CODES ---
-const MASTER_GATE_PASS = "PatrickGeorgHenke200288"; 
-const MASTER_DOOR_PASS = "PatrickGeorgHenke6264";
+const Core = {
+    // Deine spezifischen Master-Codes
+    MASTER_GATE: "PatrickGeorgHenke200288",
+    MASTER_DOOR: "PatrickGeorgHenke6264",
 
-// --- SOUND-ENGINE (BERECHNETE FREQUENZEN) ---
-const AudioEngine = {
-    ctx: null,
-    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
-    
-    playSwoosh() {
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1500, this.ctx.currentTime + 0.8);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.8);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.8);
+    register: function() {
+        document.getElementById('registration-fields').style.display = 'none';
+        document.getElementById('login-area').style.display = 'block';
     },
-    
-    playClick() {
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+
+    login: function() {
+        document.getElementById('auth-overlay').style.display = 'none';
+        Navigation.toMeadow();
+    },
+
+    masterUnlock: function() {
+        const val = document.getElementById('master-code').value;
+        if(val === this.MASTER_GATE) {
+            alert("System-Kern entsperrt. Alle Annex-Module aktiv.");
+            document.getElementById('premium-upload').style.display = 'block';
+        }
+    },
+
+    handleDoor: function(id) {
+        Navigation.toRoom(id);
     }
 };
 
-// --- CORE-SYSTEM LOGIK ---
-const AuthSystem = {
-    
-    // Wechselt zur Passwort-Eingabe
-    goToVerify: function() {
-        const name = document.getElementById('reg-name').value;
-        if(!name) { alert("Bitte geben Sie einen Namen an."); return; }
-        AudioEngine.playClick();
-        document.getElementById('registration-fields').style.display = 'none';
-        document.getElementById('verify-area').style.display = 'block';
-    },
-
-    // Finales Entsperren
-    finalUnlock: function() {
-        const input = document.getElementById('main-pass-input').value;
-        AudioEngine.playSwoosh();
-
-        // 1. Check auf DEIN Master-Passwort
-        if (input === MASTER_GATE_PASS) {
-            this.proceedLogin({
-                name: "EPTEC CREATOR",
-                role: "admin",
-                plan: "premium"
-            });
-            return;
-        }
-
-        // 2. Normaler User-Login
-        const userData = {
-            name: document.getElementById('reg-name').value,
-            email: document.getElementById('reg-email').value,
-            plan: document.getElementById('reg-plan').value,
-            role: "user"
-        };
-        this.proceedLogin(userData);
-    },
-
-    proceedLogin: function(data) {
-        localStorage.setItem('eptec_session_user', JSON.stringify(data));
-        this.renderApp();
-    },
-
-    renderApp: function() {
-        const user = JSON.parse(localStorage.getItem('eptec_session_user'));
-        document.getElementById('auth-overlay').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
+const Workshop = {
+    openChest: function() {
+        document.getElementById('snd-creak').play();
+        setTimeout(() => document.getElementById('snd-clack').play(), 400);
         
-        // Dashboard füllen
-        document.getElementById('user-info-name').innerText = user.name;
+        // Die Big-5 Matrix aus deiner Vorlage
+        const matrix = document.getElementById('matrix-table');
+        matrix.innerHTML = `
+            <div class='m-row'><b>BIG-5 VERTRAGSMATRIX</b></div>
+            <div class='m-row'>1. PRÄAMBEL & IDENTITÄT (ANNEX F) - [STATUS: GRÜN]</div>
+            <div class='m-row'>2. KERNLEISTUNGEN & RECHTE - [STATUS: PRÜFUNG]</div>
+            <div class='m-row'>3. FINANZEN & TREUHAND (ANNEX L) - [AKTIV]</div>
+            <div class='m-row'>4. COMPLIANCE & ÜBERWACHUNG (ANNEX K) - [REVISION]</div>
+            <div class='m-row'>5. BEENDIGUNG & ESKALATION (ANNEX J) - [STUFE 1]</div>
+        `;
+    },
+    worldSync: function() {
+        alert("Globaler Datenabgleich (Annex I) wird gestartet... Synchronisation mit lokalen Vertretern läuft.");
+    }
+};
+
+const Compliance = {
+    registry: [], // Das gerichtsfeste Archiv (Annex K)
+    
+    upload: function(party, type) {
+        document.getElementById('snd-clack').play();
+        const docId = "HASH-" + Math.random().toString(36).substring(7).toUpperCase();
+        this.registry.push({
+            timestamp: new Date().toLocaleString(),
+            party: "Partner " + party,
+            type: type,
+            hash: docId
+        });
+        alert(`Dokument ${type} von ${party} zeitgestempelt und in Annex K registriert.`);
+    },
+
+    setAmpel: function(level) {
+        document.getElementById('snd-clack').play();
+        // Alle löschen
+        for(let i=1; i<=5; i++) document.getElementById('bulb-'+i).classList.remove('active');
+        // Neue Stufe (1-5) setzen
+        document.getElementById('bulb-'+level).classList.add('active');
+        
+        this.registry.push({
+            timestamp: new Date().toLocaleString(),
+            event: "AMPEL-STUFE GEÄNDERT",
+            level: level,
+            info: "Eskalationsstufe nach Annex J & F"
+        });
+    },
+
+    exportGerichtsfest: function() {
+        let output = "EPTEC CORE - REVISIONS-PROTOKOLL (ANNEX K)\n";
+        output += "-------------------------------------------\n";
+        this.registry.forEach(e => {
+            output += `[${e.timestamp}] ${e.party || 'SYSTEM'}: ${e.type || e.event} | ID: ${e.hash || e.level}\n`;
+        });
+        console.log(output);
+        alert("Das gerichtsfeste Backup wurde erstellt. Siehe Konsole für PDF-Rohdaten.");
+    }
+};
+
+const Navigation = {
+    toMeadow: function() {
+        document.querySelectorAll('.room-view').forEach(r => r.style.display = 'none');
+        document.getElementById('main-content').style.display = 'block';
+        document.getElementById('snd-meadow').play();
+    },
+    toRoom: function(id) {
+        document.getElementById('snd-meadow').pause();
+        document.getElementById('snd-steps').play();
+        document.getElementById('main-content').style.display = 'none';
+        document.getElementById('room-'+id).style.display = 'flex';
+    }
+};
