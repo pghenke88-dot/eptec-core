@@ -1,107 +1,146 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Framework - Betrieb & Agentur</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="lang-de mode-app1">
+/**
+ * FRAMEWORK CORE SCRIPT
+ * Steuert App 1 (Wunderland) & App 2 (Professional)
+ * Fokus: Haftungsausschluss, Modul-Hierarchie, Secret Register
+ */
 
-    <div id="legal-overlay" class="overlay">
-        <div class="modal">
-            <h1>Rechtlicher Hinweis & Haftungsausschluss</h1>
-            <p>Die Nutzung dieses Frameworks erfolgt auf eigenes Risiko. Der Betreiber ist in keinem Fall haftbar für rechtliche oder wirtschaftliche Folgen. Es gilt ausschließlich das Recht der Bundesrepublik Deutschland. Mit dem Start bestätigen Sie die AGB vollumfänglich.</p>
-            <button onclick="app.acceptLegal()" class="btn-start">Ich akzeptiere & Starte</button>
-        </div>
-    </div>
+const app = {
+    // 1. INITIALER STATUS
+    state: {
+        legalAccepted: false,
+        currentLang: 'de',
+        activeApp: 1,
+        activeKiste: null, // 'betrieb' oder 'agentur'
+        secretLog: [],
+        maxSnippets: 5,
+        selectedSnippets: []
+    },
 
-    <header>
-        <div class="nav-main">
-            <button onclick="app.switchApp(1)" id="btn-app1">App 1: Wunderland</button>
-            <button onclick="app.switchApp(2)" id="btn-app2">App 2: Professional</button>
-        </div>
-        <div class="nav-lang">
-            <button onclick="app.setLanguage('de')">DE</button>
-            <button onclick="app.setLanguage('en')">EN</button>
-            <button onclick="app.setLanguage('es')">ES</button>
-        </div>
-    </header>
+    // 2. START & HAFTUNG
+    acceptLegal: function() {
+        this.state.legalAccepted = true;
+        document.getElementById('legal-overlay').style.display = 'none';
+        this.logCompliance("Systemstart: Haftungsausschluss akzeptiert (Deutsches Recht).");
+        this.playSound('start');
+    },
 
-    <main id="app-container">
+    // 3. SPRACH- & SOUND-LOGIK
+    setLanguage: function(lang) {
+        this.state.currentLang = lang;
+        document.body.className = `lang-${lang} mode-app${this.state.activeApp}`;
+        this.logCompliance(`Sprache gewechselt zu: ${lang.toUpperCase()}`);
+        this.playSound('switch');
+    },
+
+    playSound: function(effect) {
+        // Pfad-Logik: assets/sounds/[sprache]/[effekt].mp3
+        const audio = new Audio(`assets/sounds/${this.state.currentLang}/${effect}.mp3`);
+        audio.play().catch(e => console.log("Sound-Platzhalter: " + effect));
+    },
+
+    // 4. NAVIGATION APP 1 & 2
+    switchApp: function(num) {
+        if (!this.state.legalAccepted) return;
+        this.state.activeApp = num;
+        document.getElementById('view-app1').classList.toggle('hidden', num !== 1);
+        document.getElementById('view-app2').classList.toggle('hidden', num !== 2);
+        this.logCompliance(`Wechsel zu App ${num}`);
+    },
+
+    // 5. KISTEN-LOGIK (PART X -> SUB-MODULE C)
+    openKiste: function(kisteName) {
+        this.state.activeKiste = kisteName;
+        const breadcrumb = document.getElementById('breadcrumb');
+        breadcrumb.innerText = `Navigation: ${kisteName.toUpperCase()}`;
         
-        <section id="view-app1">
-            <div class="kisten-lager">
-                <div class="kiste" id="kiste-betrieb" onclick="app.openKiste('betrieb')">
-                    <span class="icon">📦</span>
-                    <label>Framework Betrieb</label>
-                </div>
-                <div class="kiste" id="kiste-agentur" onclick="app.openKiste('agentur')">
-                    <span class="icon">💼</span>
-                    <label>Agency Framework (EN)</label>
-                </div>
-            </div>
+        this.logCompliance(`Kiste geöffnet: ${kisteName}`);
+        this.renderModuleList(kisteName);
+    },
 
-            <div id="breadcrumb">Navigation: Start</div>
+    renderModuleList: function(kiste) {
+        const selector = document.getElementById('module-selector');
+        selector.innerHTML = ''; // Reset
 
-            <div id="module-selector" class="grid-selector">
-                </div>
+        // Diese Liste wird später aus der de.json / en.json gespeist
+        // Hier beispielhaft für die Struktur:
+        const demoModules = ["Präambel", "Part 0", "Part I", "Part X", "Annex A", "Annex J (Compliance)"];
+        
+        demoModules.forEach(mod => {
+            let btn = document.createElement('button');
+            btn.className = 'module-btn';
+            btn.innerText = mod;
+            btn.onclick = () => this.selectModule(mod);
+            selector.appendChild(btn);
+        });
+    },
 
-            <div id="construction-zone">
-                <div class="form-slot-container">
-                    <div id="slots"></div>
-                </div>
-            </div>
-        </section>
+    selectModule: function(modId) {
+        // Logik für Untermodule (z.B. Part X -> C)
+        if (modId === "Part X") {
+            this.renderSubModules(["Sub-C", "Sub-D"]);
+        } else {
+            this.logCompliance(`Modul gewählt: ${modId}`);
+            this.triggerAliceEffect(modId);
+        }
+    },
 
-        <section id="view-app2" class="hidden">
-            <div id="secret-register-bar">
-                <div class="register-status">
-                    <span id="seal-icon" onclick="app.exportSecretRegister()">🛡️</span>
-                    <div id="live-ticker">Secret Register: Active (Annex J-M Compliance)</div>
-                </div>
-            </div>
+    renderSubModules: function(subs) {
+        const selector = document.getElementById('module-selector');
+        selector.innerHTML = '<p>Untermodule wählen:</p>';
+        subs.forEach(s => {
+            let btn = document.createElement('button');
+            btn.innerText = s;
+            btn.onclick = () => this.triggerAliceEffect(s);
+            selector.appendChild(btn);
+        });
+    },
 
-            <div class="pro-grid-212">
-                <div class="side-panel">
-                    <h3>User A</h3>
-                    <div class="upload-group">
-                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-a">
-                        <label>Bericht</label><input type="file" id="u-rep-a">
-                    </div>
-                </div>
+    // 6. ALICE-EFFEKT (SCHNIPSEL)
+    triggerAliceEffect: function(modId) {
+        this.playSound('magic');
+        const slotContainer = document.getElementById('slots');
+        
+        // Schnipsel "fliegen" ins Feld (max 5)
+        if (this.state.selectedSnippets.length < this.state.maxSnippets) {
+            let snip = document.createElement('div');
+            snip.className = 'snippet-item';
+            snip.innerText = `${modId} - Baustein`;
+            slotContainer.appendChild(snip);
+            this.state.selectedSnippets.push(modId);
+        } else {
+            alert("Maximal 5 Bausteine erlaubt!");
+        }
+    },
 
-                <div class="center-panel">
-                    <div class="module-title-display">Aktives Modul (aus App 1)</div>
-                    <textarea id="main-contract-field" placeholder="Zentrales Vertragsfeld..."></textarea>
-                    
-                    <div class="compliance-ampel">
-                        <div class="ampel-btn green" onclick="app.logCompliance('Status Green: All Clear')"></div>
-                        <div class="ampel-btn yellow" onclick="app.logCompliance('Status Yellow: Escalation Triggered')"></div>
-                        <div class="ampel-btn red" onclick="app.logCompliance('Status Red: Emergency Stop')"></div>
-                    </div>
-                </div>
+    // 7. APP 2: SECRET REGISTER & COMPLIANCE (ANNEX J-M)
+    logCompliance: function(action) {
+        const timestamp = new Date().toISOString();
+        const entry = `[${timestamp}] ${action}`;
+        this.state.secretLog.push(entry);
+        
+        const ticker = document.getElementById('live-ticker');
+        if (ticker) ticker.innerText = `Log: ${action}`;
+    },
 
-                <div class="side-panel">
-                    <h3>Partner B</h3>
-                    <div class="upload-group">
-                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-b">
-                        <label>Bericht</label><input type="file" id="u-rep-b">
-                    </div>
-                </div>
-            </div>
-        </section>
+    exportSecretRegister: function() {
+        const blob = new Blob([this.state.secretLog.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Secret_Register_Protokoll.txt`;
+        a.click();
+        this.logCompliance("Secret Register exportiert.");
+    },
 
-    </main>
+    // 8. STRIPE / ZAHLUNG
+    redirectToStripe: function() {
+        this.logCompliance("Umleitung zu Stripe Checkout...");
+        // Hier kommt dein Stripe-Link rein:
+        window.location.href = "https://checkout.stripe.com/pay/dein_link";
+    }
+};
 
-    <div id="paywall-overlay" class="hidden">
-        <div class="modal">
-            <h2>Premium Zugriff</h2>
-            <p>Dieses Modul erfordert ein aktives Abonnement.</p>
-            <button onclick="app.redirectToStripe()" class="btn-pay">Abo via Stripe/PayPal</button>
-        </div>
-    </div>
-
-    <script src="main.js"></script>
-</body>
-</html>
+// Initialer Check beim Laden
+window.onload = () => {
+    console.log("Framework-Haus bereit.");
+};
