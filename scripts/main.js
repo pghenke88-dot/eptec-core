@@ -1,84 +1,69 @@
 /**
- * FRAMEWORK OPERATING SYSTEM - CORE LOGIC
+ * FRAMEWORK CORE LOGIC
  */
 
 let currentLang = 'de';
 let languageData = {};
 
+// Startet die App
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Framework gestartet...");
     setLanguage('de'); 
     loadFooter();      
 });
 
+// Lädt die Sprachdatei aus dem locales Ordner
 async function setLanguage(lang) {
     currentLang = lang;
-    
     try {
-        // KORREKTUR: Der Pfad muss in den 'locales' Ordner zeigen (siehe dein Foto)
         const response = await fetch(`locales/${lang}.json`);
-        
-        if (!response.ok) throw new Error(`Datei locales/${lang}.json nicht gefunden`);
+        if (!response.ok) throw new Error("Sprachdatei nicht gefunden");
         
         languageData = await response.json();
-        updateInterfaceTexts();
-        console.log("Sprache erfolgreich geladen aus: locales/" + lang + ".json");
+        
+        // UI Texte aktualisieren
+        document.getElementById('preamble-display').innerText = languageData.preamble || "";
+        document.getElementById('main-title').innerText = languageData.framework_name || "OS";
+        
+        console.log(`Sprache auf ${lang} gesetzt.`);
     } catch (error) {
-        console.error("Fehler beim Laden der Sprachdatei:", error);
+        console.error("Fehler beim Laden der Sprache:", error);
     }
 }
 
-function updateInterfaceTexts() {
-    const preambleBox = document.getElementById('preamble-display');
-    const mainTitle = document.getElementById('main-title');
-    
-    if (languageData.preamble && preambleBox) {
-        preambleBox.innerText = languageData.preamble;
-    }
-    if (languageData.framework_name && mainTitle) {
-        mainTitle.innerText = languageData.framework_name;
-    }
-}
-
+// Öffnet Part I - XI
 function loadContent(partId) {
-    // Sound aus assets/sounds de/ (entspricht deinem Foto)
-    const soundPath = `assets/sounds ${currentLang}/click.mp3`;
-    const audio = new Audio(soundPath);
-    audio.play().catch(() => console.warn("Sound click.mp3 fehlt."));
-
+    playClickSound();
     const modal = document.getElementById('content-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-
-    // Text aus dem "parts" Objekt der JSON
-    const textContent = languageData.parts ? languageData.parts[partId] : null;
-
-    modalTitle.innerText = "Part " + partId;
-    modalBody.innerHTML = textContent || "Inhalt wird vorbereitet...";
+    document.getElementById('modal-title').innerText = "Part " + partId;
+    
+    const content = languageData.parts ? languageData.parts[partId] : "Inhalt folgt...";
+    document.getElementById('modal-body').innerHTML = content;
     
     modal.classList.remove('modal-hidden');
 }
 
+// Öffnet Annex A - I
 function loadAnnex(annexId) {
-    const soundPath = `assets/sounds ${currentLang}/click.mp3`;
-    new Audio(soundPath).play().catch(() => {});
-
+    playClickSound();
     const modal = document.getElementById('content-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-
-    const annexContent = languageData.annex ? languageData.annex[annexId] : null;
-
-    modalTitle.innerText = "Annex " + annexId;
-    modalBody.innerHTML = annexContent || "Zusatzdokumentation folgt...";
+    document.getElementById('modal-title').innerText = "Annex " + annexId;
+    
+    const content = languageData.annex ? languageData.annex[annexId] : "Info folgt...";
+    document.getElementById('modal-body').innerHTML = content;
     
     modal.classList.remove('modal-hidden');
+}
+
+function playClickSound() {
+    const audio = new Audio(`assets/sounds ${currentLang}/click.mp3`);
+    audio.play().catch(() => console.log("Sounddatei nicht gefunden."));
 }
 
 function closeModal() {
     document.getElementById('content-modal').classList.add('modal-hidden');
 }
 
+// Schließen bei Klick außerhalb des Modals
 window.onclick = function(event) {
     const modal = document.getElementById('content-modal');
     if (event.target == modal) closeModal();
@@ -86,12 +71,10 @@ window.onclick = function(event) {
 
 async function loadFooter() {
     try {
-        // Footer liegt laut Foto in assets/footer.html
         const response = await fetch('assets/footer.html');
-        const footerHtml = await response.text();
-        const placeholder = document.getElementById('footer-placeholder');
-        if (placeholder) placeholder.innerHTML = footerHtml;
+        const html = await response.text();
+        document.getElementById('footer-placeholder').innerHTML = html;
     } catch (e) {
-        console.log("Footer-Datei fehlt in assets/");
+        console.log("Kein Footer gefunden.");
     }
 }
