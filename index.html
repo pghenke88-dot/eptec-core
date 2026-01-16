@@ -2,47 +2,26 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC CORE - Management System</title>
+    <title>EPTEC CORE - System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <audio id="snd-meadow" loop src="meadow_ambience.mp3"></audio>
+    <audio id="snd-creak" src="wood_creak.mp3"></audio>
+    <audio id="snd-clack" src="mechanical_clack.mp3"></audio>
+    <audio id="snd-steps" src="footsteps.mp3"></audio>
 
     <div id="auth-overlay" class="glass-mask">
         <div class="auth-card">
-            <h1 class="brand-title">EPTEC CORE</h1>
-            <p class="brand-subtitle">Secure Access Management</p>
-            <hr>
-            
+            <h1>EPTEC CORE</h1>
             <div id="registration-fields">
-                <div class="input-group">
-                    <label>Benutzername / Firma</label>
-                    <input type="text" id="reg-name" placeholder="z.B. Max Mustermann">
-                </div>
-                <div class="input-group">
-                    <label>E-Mail Adresse</label>
-                    <input type="email" id="reg-email" placeholder="mail@beispiel.de">
-                </div>
-                <div class="input-group">
-                    <label>Zahlungsweg (IBAN)</label>
-                    <input type="text" id="reg-iban" placeholder="DE00 0000 ...">
-                </div>
-                <div class="input-group">
-                    <label>Wählen Sie Ihren Zugang</label>
-                    <select id="reg-plan">
-                        <option value="basis">Basis-Tarif (Nur Werkstatt)</option>
-                        <option value="pro">Pro-Tarif (Nur Kontrolle)</option>
-                        <option value="premium">Premium-Tarif (Vollzugriff)</option>
-                    </select>
-                </div>
-                <button class="btn-main" onclick="AuthSystem.goToVerify()">Registrieren & Validieren</button>
+                <input type="text" id="reg-name" placeholder="Name / Firma">
+                <input type="text" id="reg-iban" placeholder="Zahlungsdaten">
+                <button class="btn-main" onclick="Core.register()">Registrieren & AGB akzeptieren</button>
             </div>
-
-            <div id="verify-area" style="display:none;">
-                <p>Bitte geben Sie Ihren Verifizierungs-Code oder Ihr Master-Passwort ein:</p>
-                <input type="password" id="main-pass-input" class="large-input" placeholder="Passwort...">
-                <button class="btn-main success" onclick="AuthSystem.finalUnlock()">System jetzt entsperren</button>
-                <button class="btn-link" onclick="location.reload()">Zurück</button>
+            <div id="login-area" style="display:none;">
+                <input type="password" id="login-pass" placeholder="Passwort">
+                <button class="btn-main" onclick="Core.login()">Einloggen</button>
             </div>
         </div>
     </div>
@@ -50,45 +29,64 @@
     <main id="main-content" style="display:none;">
         <div class="grassy-meadow">
             <div class="sun"></div>
-            
-            <div class="glowing-orb" title="Admin-Menü" onclick="toggleProfileMenu()"></div>
-
+            <div class="glowing-orb" onclick="UI.toggleAdminPanel()"></div>
             <div class="portal-container">
-                <div class="door-unit">
-                    <div class="portal-door">
-                        <span class="icon">⚒</span>
-                        <span class="label">WERKSTATT</span>
-                    </div>
-                    <div class="door-controls">
-                        <input type="password" id="door-1-code" placeholder="Tür-Code I">
-                        <button class="btn-door" onclick="enterDoor(1)">Eintreten</button>
-                    </div>
-                </div>
-                
-                <div class="door-unit">
-                    <div class="portal-door">
-                        <span class="icon">🛡</span>
-                        <span class="label">KONTROLLE</span>
-                    </div>
-                    <div class="door-controls">
-                        <input type="password" id="door-2-code" placeholder="Tür-Code II">
-                        <button class="btn-door" onclick="enterDoor(2)">Eintreten</button>
-                    </div>
-                </div>
+                <div class="door-unit" onclick="Core.handleDoor(1)"><div class="portal-door">⚒ WERKSTATT</div></div>
+                <div class="door-unit" onclick="Core.handleDoor(2)"><div class="portal-door">🛡 KONTROLLE</div></div>
             </div>
-        </div>
-
-        <div id="profile-panel">
-            <div class="panel-header">
-                <h4>Status: <span id="user-info-status" style="color: green;">Aktiv</span></h4>
-            </div>
-            <p>Eingeloggt als: <b id="user-info-name"></b></p>
-            <p>Tarif: <span id="user-info-plan"></span></p>
-            <hr>
-            <button class="btn-logout" onclick="AuthSystem.logout()">Abmelden</button>
-            <button class="btn-terminate" onclick="AuthSystem.terminate()">Rechte & Abo kündigen</button>
+            <div class="master-bottom"><input type="password" id="master-code" placeholder="..."><button onclick="Core.masterUnlock()">Unlock</button></div>
         </div>
     </main>
+
+    <div id="room-1" class="room-view" style="display:none;">
+        <div class="workshop-ambient">
+            <div class="bookshelf"><div class="folder-black" id="archive-folder">CORE ARCHIV</div></div>
+            <div class="wooden-desk">
+                <div id="matrix-table" class="engraved-matrix"></div>
+                <div id="premium-upload" class="world-map-btn" style="display:none;">🌍</div>
+            </div>
+            <div class="wooden-chest" onclick="Workshop.openChest()"><div class="chest-label">XIX</div></div>
+            <div id="magic-light" class="magic-light"></div>
+            <button class="btn-exit" onclick="Navigation.toMeadow()">↩ Wiese</button>
+        </div>
+    </div>
+
+    <div id="room-2" class="room-view" style="display:none;">
+        <div class="control-ambient">
+            <div class="partner-header">
+                <div class="p-tab">PARTNER A</div>
+                <div class="p-tab">PARTNER B</div>
+            </div>
+            
+            <div class="service-cart left" id="cart-A">
+                <button onclick="Compliance.upload('A', 'Zahlung')">⬆ Upload PDF (Zahlung)</button>
+                <button onclick="Compliance.download('A')">⬇ Download Berichte</button>
+            </div>
+
+            <div class="grand-table">
+                <div class="ampel-standalone" id="ampel-objekt">
+                    <div class="ampel-bulb" id="bulb-1"></div> <div class="ampel-bulb" id="bulb-2"></div> <div class="ampel-bulb" id="bulb-3"></div> <div class="ampel-bulb" id="bulb-4"></div> <div class="ampel-bulb" id="bulb-5"></div> </div>
+                <div class="table-content">GERICHTSFESTE ÜBERWACHUNG</div>
+            </div>
+
+            <div class="service-cart right" id="cart-B">
+                <button onclick="Compliance.upload('B', 'Bericht')">⬆ Upload PDF (Bericht)</button>
+                <button onclick="Compliance.download('B')">⬇ Download Belege</button>
+            </div>
+
+            <div class="corner-plant">
+                <div class="hidden-archive" onclick="Compliance.exportGerichtsfest()">📜 PROTOKOLL (ANNEX K)</div>
+            </div>
+            <button class="btn-exit" onclick="Navigation.toMeadow()">↩ Wiese</button>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="profile-panel">
+        <h3>Admin Teleporter</h3>
+        <button onclick="Navigation.toRoom(1)">Werkstatt</button>
+        <button onclick="Navigation.toRoom(2)">Kontrolle</button>
+        <button onclick="Core.logout()">Abmelden</button>
+    </div>
 
     <script src="logic.js"></script>
 </body>
