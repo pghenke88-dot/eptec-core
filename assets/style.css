@@ -1,43 +1,143 @@
+/* --- GLOBALE BASIS & VARIABLEN --- */
 :root {
     --primary: #004a99;
-    --glass: rgba(255, 255, 255, 0.85);
+    --secondary: #2ecc40;
+    --danger: #ff4136;
+    --warning: #ffdc00;
+    --glass: rgba(255, 255, 255, 0.88);
     --shadow: 0 10px 30px rgba(0,0,0,0.15);
+    --font-main: 'Segoe UI', Roboto, sans-serif;
 }
 
-body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; overflow: hidden; }
+* { box-sizing: border-box; }
+body, html { 
+    margin: 0; padding: 0; font-family: var(--font-main); 
+    height: 100%; overflow: hidden; background: #f4f7f6; 
+}
 
+/* --- STAGE 1 & 2: LOGIN & PORTAL --- */
 .grassy-meadow {
     background: linear-gradient(135deg, #74be15 0%, #3a7d0d 100%);
     display: flex; align-items: center; justify-content: center;
 }
 
+.login-container {
+    text-align: center; width: 320px;
+}
+
+.hidden-admin-input {
+    width: 100%; border: none; background: rgba(0,0,0,0.05);
+    padding: 12px; border-radius: 8px; text-align: center;
+    font-size: 1rem; margin: 20px 0;
+}
+
+/* --- HEADER & OS-NAVIGATION --- */
+.os-header {
+    background: #fff; padding: 10px 40px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #ddd; height: 60px;
+}
+
+.language-nav button {
+    background: #eee; border: none; padding: 5px 10px;
+    margin-right: 5px; border-radius: 4px; cursor: pointer;
+    font-weight: bold; transition: 0.2s;
+}
+
+.language-nav button:hover { background: var(--primary); color: white; }
+
+.admin-orb {
+    width: 35px; height: 35px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #007bff, #002a5c);
+    cursor: pointer; box-shadow: 0 0 10px rgba(0,123,255,0.5);
+    transition: transform 0.3s;
+}
+
+.admin-orb:hover { transform: scale(1.1) rotate(15deg); }
+
+/* --- RÄUME & LAYOUT --- */
+.room-setup {
+    padding: 30px; height: calc(100vh - 120px); 
+    overflow-y: auto; display: flex; flex-direction: column; align-items: center;
+}
+
 .glass-box {
-    background: var(--glass); backdrop-filter: blur(12px);
-    border-radius: 20px; border: 1px solid rgba(255,255,255,0.3);
-    box-shadow: var(--shadow); padding: 30px;
+    background: var(--glass); backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px); border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.4); box-shadow: var(--shadow);
+    padding: 25px; width: 100%; max-width: 900px;
 }
 
-.login-container { text-align: center; width: 300px; }
-.hidden-admin-input { border: none; background: #eee; padding: 12px; border-radius: 8px; width: 80%; margin: 20px 0; }
+/* --- DIE 11 SCHACHTELN & ANNEX --- */
+.toy-box-container { width: 100%; max-width: 900px; margin-top: 30px; text-align: center; }
 
-.os-header { background: #fff; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-.admin-orb { width: 35px; height: 35px; background: radial-gradient(circle, #007bff, #002a5c); border-radius: 50%; cursor: pointer; }
-
-.room-setup { padding: 40px; height: calc(100vh - 120px); overflow-y: auto; }
-.parts-grid, .annex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 15px; margin: 20px 0; }
-
-.part-box, .annex-box { 
-    background: #fff; padding: 20px; border-radius: 12px; text-align: center; font-weight: bold;
-    cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-bottom: 4px solid var(--primary); transition: 0.2s;
+.parts-grid, .annex-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 12px; margin: 20px 0;
 }
-.part-box:hover { transform: translateY(-3px); background: var(--primary); color: #fff; }
 
-.traffic-light { display: flex; gap: 15px; margin-top: 30px; }
+.part-box, .annex-box {
+    background: #fff; padding: 15px; border-radius: 10px;
+    font-weight: bold; cursor: pointer; text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-bottom: 4px solid var(--primary); transition: 0.2s;
+}
+
+.part-box:hover, .annex-box:hover {
+    transform: translateY(-4px); background: var(--primary); color: #fff;
+}
+
+.annex-box { border-bottom-color: #555; } /* Unterscheidung Annex */
+
+/* --- CONTROLLING BEREICH --- */
+.price-display {
+    display: flex; justify-content: space-around; 
+    margin-bottom: 20px; font-size: 1.1rem; font-weight: bold;
+}
+
+.price-display p { margin: 0; color: var(--primary); }
+
+.negotiation-area {
+    min-height: 200px; display: flex; flex-direction: column; align-items: center;
+}
+
+#table-water-glasses {
+    font-size: 2rem; margin: 20px 0; min-height: 40px;
+}
+
+.servierwagen {
+    width: 100px; height: 60px; background: #ddd; border-radius: 5px;
+    cursor: pointer; position: relative; transition: 0.3s;
+}
+
+.tischdecke-kariert {
+    width: 100%; height: 20px; background: repeating-linear-gradient(45deg, #fff, #fff 5px, #ff4136 5px, #ff4136 10px);
+}
+
+.traffic-light {
+    display: flex; gap: 15px; margin-top: 30px;
+}
+
 .light { width: 40px; height: 40px; border-radius: 50%; opacity: 0.2; }
 .light.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
-.red { background: #ff4136; } .yellow { background: #ffdc00; } .green { background: #2ecc40; }
+.red { background: var(--danger); }
+.yellow { background: var(--warning); }
+.green { background: var(--secondary); }
 
+/* --- MODAL --- */
 .modal-hidden { display: none !important; }
-#content-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:2000; }
+#content-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); display: flex; align-items: center;
+    justify-content: center; z-index: 3000;
+}
 
-footer { position: fixed; bottom: 0; width: 100%; text-align: center; padding: 15px; background: #fff; border-top: 1px solid #eee; font-size: 0.85rem; }
+.modal-content { max-width: 600px; width: 90%; position: relative; }
+.close-btn { position: absolute; top: 15px; right: 20px; font-size: 2rem; cursor: pointer; color: #999; }
+
+/* --- FOOTER --- */
+#main-footer {
+    position: fixed; bottom: 0; width: 100%; height: 60px;
+    background: #fff; border-top: 1px solid #ddd;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
