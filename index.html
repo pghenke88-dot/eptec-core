@@ -30,6 +30,7 @@
                     <div id="parts-container" class="parts-grid"></div>
                 </div>
             </div>
+
             <div id="app-2-setup" class="room-setup" style="display:none;">
                 <div id="table-water-glasses"></div>
                 <div class="servierwagen" onclick="triggerUpload()">
@@ -40,8 +41,9 @@
 
         <div id="content-modal" class="modal-hidden">
             <div class="modal-content glass-box">
-                <span onclick="closeModal()" style="cursor:pointer; float:right;">&times;</span>
+                <span onclick="closeModal()" style="cursor:pointer; float:right; font-size: 24px;">&times;</span>
                 <h2 id="modal-title"></h2>
+                <hr>
                 <div id="modal-body"></div>
             </div>
         </div>
@@ -50,15 +52,6 @@
     <footer id="main-footer" style="display:none;">
         <a href="javascript:void(0)" id="footer-agb-link">AGB</a>
     </footer>
-
-    <script type="application/json" id="multi-lang-assets">
-    {
-      "languages": {
-        "de": { "status_msg": "System Aktiv", "agb_btn": "AGB" },
-        "en": { "status_msg": "System Active", "agb_btn": "T&C" }
-      }
-    }
-    </script>
 
     <script src="scripts/audit_trail.js" defer></script>
     <script src="scripts/bank_bridge.js" defer></script>
