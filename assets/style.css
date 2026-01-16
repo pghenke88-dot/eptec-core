@@ -1,4 +1,4 @@
-/* EPTEC MASTER STYLE - Methode Henke */
+/* EPTEC MASTER STYLE - Methode Henke (Version 2.0 mit Storyline) */
 
 :root {
     --glass: rgba(255, 255, 255, 0.2);
@@ -15,41 +15,54 @@ body, html {
     height: 100%;
     font-family: 'Segoe UI', sans-serif;
     overflow-x: hidden;
+    transition: background 2s ease-in-out; /* Weicher Wechsel der Welten */
 }
 
-/* Der Wiesen-Hintergrund */
-.grassy-meadow {
-    background: linear-gradient(135deg, #7ed957 0%, #2ecc40 100%);
+/* 1. DIE WELTEN (Wiese & Marmorsaal) */
+/* Standardzustand: Die Wiese */
+.world-meadow {
+    background: url('../assets/gruene_wiese.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* Wenn wir "durch das Loch fallen" (wird per JS aktiviert) */
+.world-wonderland {
+    background: url('../assets/marmor_saal_tueren.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* 2. DER LOGIN-BEREICH (Deine wachsenden Balken) */
+.auth-container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    gap: 20px;
 }
 
-/* Glass-Morphism Effekt */
-.glass-box {
+.input-balken {
+    width: 0;                /* Startet klein laut deiner Geschichte */
+    height: 50px;
+    opacity: 0;
     background: var(--glass);
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 15px;
-    box-shadow: var(--shadow);
-    padding: 20px;
-    color: #fff;
-}
-
-/* Login-Bereich */
-.hidden-admin-input {
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid #fff;
     color: #fff;
     text-align: center;
     font-size: 1.2rem;
     outline: none;
-    width: 100%;
+    /* Animation: Balken wachsen nacheinander auf */
+    animation: balkenWachsen 1.2s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards;
 }
 
-/* Workspace Layout */
+.input-balken:nth-child(2) { animation-delay: 0.3s; }
+
+@keyframes balkenWachsen {
+    to { width: 350px; opacity: 1; }
+}
+
+/* 3. DEINE BESTEHENDEN ELEMENTE (Erhalten und integriert) */
+
 .os-header {
     display: flex;
     justify-content: space-between;
@@ -58,18 +71,16 @@ body, html {
 }
 
 .admin-orb {
-    width: 30px;
-    height: 30px;
+    width: 30px; height: 30px;
     background: #fff;
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 0 15px rgba(255,255,255,0.8);
 }
 
-/* Die Boxen-Gitter (Parts I-XI) */
 .parts-grid, .annex-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 15px;
     margin-top: 20px;
 }
@@ -77,6 +88,7 @@ body, html {
 .part-box, .annex-box {
     aspect-ratio: 1;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     cursor: pointer;
@@ -84,35 +96,17 @@ body, html {
     background: var(--glass);
     font-weight: bold;
     transition: transform 0.2s, background 0.3s;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 5px;
 }
 
-.part-box:hover { transform: scale(1.1); }
+.part-box:hover { transform: scale(1.1); background: rgba(255,255,255,0.4); }
 
-/* Ampel-Farben (Gesteuert durch logic.js) */
-.status-gray  { border: 2px solid #ccc; color: #ccc; }
+/* Ampel-Farben */
 .status-GREEN { border: 2px solid var(--green); color: var(--green); background: rgba(46, 204, 64, 0.2); }
 .status-YELLOW { border: 2px solid var(--yellow); color: var(--yellow); background: rgba(255, 220, 0, 0.2); }
 .status-RED { border: 2px solid var(--red); color: var(--red); background: rgba(255, 65, 54, 0.2); animation: pulse 2s infinite; }
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 65, 54, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(255, 65, 54, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 65, 54, 0); }
-}
-
-/* Modals */
-.modal-hidden { display: none; }
-#content-modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 5000;
-}
-
-.modal-content { width: 80%; max-width: 500px; }
 
 /* Servierwagen & Wassergläser */
 .servierwagen {
@@ -122,9 +116,32 @@ body, html {
     margin: 20px auto;
     cursor: pointer;
     position: relative;
+    border: 1px solid #ccc;
 }
 .tischdecke-kariert {
     width: 100%; height: 50%;
     background-image: linear-gradient(45deg, #ff0000 25%, transparent 25%), linear-gradient(-45deg, #ff0000 25%, transparent 25%);
     background-size: 10px 10px;
+}
+
+/* Modals */
+.modal-hidden { display: none; }
+#content-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+}
+.modal-content { 
+    background: var(--glass); 
+    backdrop-filter: blur(15px);
+    padding: 30px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    color: white;
+    width: 80%;
+    max-width: 600px;
 }
