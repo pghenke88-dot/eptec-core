@@ -1,4 +1,13 @@
-/* Dein neues Admin-Design */
+/* 1. GRUND-DESIGN & ATMOSPHÄRE */
+body.grassy-meadow {
+    background: linear-gradient(to bottom, #87CEEB 0%, #7CB342 100%);
+    margin: 0; 
+    height: 100vh; 
+    overflow: hidden; 
+    font-family: "Times New Roman", serif;
+}
+
+/* 2. ADMIN-SICHERHEIT (LOGIN & OVERLAY) */
 .hidden-admin-input {
     background: transparent;
     border: none;
@@ -6,24 +15,7 @@
     outline: none;
     width: 100%;
     text-align: center;
-}
-
-.admin-orb {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    background: radial-gradient(circle, #00f2ff, #0066ff);
-    border-radius: 50%;
-    cursor: pointer;
-    z-index: 10000;
-    animation: waber 4s infinite ease-in-out;
-}
-
-@keyframes waber {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); box-shadow: 0 0 30px #00f2ff; }
+    cursor: default;
 }
 
 .admin-overlay {
@@ -36,47 +28,72 @@
     gap: 50px;
     z-index: 9999;
 }
-/* GRUND-DESIGN & WIESE */
-body.grassy-meadow {
-    background: linear-gradient(to bottom, #87CEEB 0%, #7CB342 100%);
-    margin: 0; height: 100vh; overflow: hidden; font-family: "Times New Roman", serif;
-}
 
-/* LOGIN-BEREICH */
-.hidden-admin-input {
-    background: transparent; border: none; color: transparent;
-    outline: none; width: 100%; text-align: center; cursor: default;
-}
-
-/* DER WABERNDE BALL (ORB) */
+/* 3. DER ADMIN-ORB (WABERNDER BALL) */
 .admin-orb {
-    position: fixed; top: 20px; right: 20px; width: 60px; height: 60px;
+    position: fixed; 
+    top: 20px; 
+    right: 20px; 
+    width: 60px; 
+    height: 60px;
     background: radial-gradient(circle, #ffcc00, #ff3300, #00ccff);
-    background-size: 400%; border-radius: 50%; cursor: pointer;
-    z-index: 10000; animation: lava 10s infinite, waber 6s infinite;
+    background-size: 400%; 
+    border-radius: 50%; 
+    cursor: pointer;
+    z-index: 10000; 
+    animation: lava 10s infinite, waber 4s infinite ease-in-out;
 }
-@keyframes lava { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes waber { 0%, 100% { transform: scale(1); border-radius: 50%; } 50% { transform: scale(1.1); border-radius: 42% 58% 45% 55%; } }
 
-/* RAUM-SETUP */
+@keyframes lava { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes waber {
+    0%, 100% { transform: scale(1); border-radius: 50%; }
+    50% { transform: scale(1.1); border-radius: 42% 58% 45% 55%; box-shadow: 0 0 30px #00f2ff; }
+}
+
+/* 4. RAUM-KOMPONENTEN (APP 1: BAU) */
 .room-setup { position: relative; width: 100vw; height: 90vh; display: flex; flex-direction: column; align-items: center; }
 
-/* SCHREIBTISCH & WELTKARTE (App 1) */
-.desk-surface { width: 80%; height: 50%; background: #5d4037; border: 10px solid #3e2723; position: relative; margin-top: 50px; }
-.worldmap-zone { position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; background: rgba(255, 235, 156, 0.2); border: 1px dashed #fff; }
-.radiergummi-btn { width: 40px; height: 20px; background: #4caf50; cursor: pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
+.desk-surface { 
+    width: 80%; height: 50%; background: #5d4037; border: 10px solid #3e2723; 
+    position: relative; margin-top: 50px; 
+}
 
-/* VERHANDLUNGSTISCH & GLÄSER (App 2) */
+.worldmap-zone { 
+    position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; 
+    background: rgba(255, 235, 156, 0.2); border: 1px dashed #fff; 
+}
+
+.radiergummi-btn { 
+    width: 40px; height: 20px; background: #4caf50; cursor: pointer; 
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3); 
+}
+
+/* 5. VERHANDLUNGSTISCH & ELEMENTE (APP 2: CONTROL) */
 #table-water-glasses { display: flex; gap: 10px; margin-top: 100px; height: 50px; }
-.wasserglas { width: 20px; height: 35px; background: rgba(0, 191, 255, 0.5); border: 1px solid white; border-radius: 0 0 5px 5px; }
 
-/* SERVIERWAGEN & TISCHDECKE */
-.servierwagen { width: 120px; height: 160px; background: #3e2723; position: absolute; bottom: 10%; cursor: pointer; transition: transform 0.3s; }
+.wasserglas { 
+    width: 20px; height: 35px; background: rgba(0, 191, 255, 0.5); 
+    border: 1px solid white; border-radius: 0 0 5px 5px; 
+}
+
+.servierwagen { 
+    width: 120px; height: 160px; background: #3e2723; 
+    position: absolute; bottom: 10%; cursor: pointer; transition: transform 0.3s; 
+}
 .servierwagen:hover { transform: scale(1.05); }
-.tischdecke-kariert { width: 100%; height: 35%; background: repeating-linear-gradient(45deg, #fff, #fff 10px, #d32f2f 10px, #d32f2f 20px); }
 
-/* AMPEL */
-.traffic-light { width: 40px; background: #222; padding: 10px; border-radius: 10px; position: absolute; right: 5%; top: 20%; }
+.tischdecke-kariert { 
+    width: 100%; height: 35%; 
+    background: repeating-linear-gradient(45deg, #fff, #fff 10px, #d32f2f 10px, #d32f2f 20px); 
+}
+
+/* 6. AMPEL-STEUERUNG */
+.traffic-light { 
+    width: 40px; background: #222; padding: 10px; border-radius: 10px; 
+    position: absolute; right: 5%; top: 20%; 
+}
 .light { width: 30px; height: 30px; border-radius: 50%; margin-bottom: 8px; opacity: 0.1; }
-.light.red { background: red; } .light.yellow { background: yellow; } .light.green { background: green; }
+.light.red { background: red; } 
+.light.yellow { background: yellow; } 
+.light.green { background: green; }
 .light.active { opacity: 1; box-shadow: 0 0 15px currentColor; }
