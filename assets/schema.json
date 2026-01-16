@@ -1,0 +1,14 @@
+{
+  "kisten": {
+    "betrieb": {
+      "name": "Framework Betrieb",
+      "languages": ["de", "en", "es"],
+      "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Part IV", "Part V", "Part VI", "Part VII", "Part VIII", "Part IX", "Part X", "Part XI", "Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G", "Annex H", "Annex I"]
+    },
+    "agentur": {
+      "name": "Agency Framework",
+      "languages": ["en"],
+      "structure": ["Part I", "Part II", "Annex J", "Annex K", "Annex L", "Annex M"]
+    }
+  }
+}
