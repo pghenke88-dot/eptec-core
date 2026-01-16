@@ -1,56 +1,94 @@
-body, html { margin: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+/* RESET & BASIS */
+* { box-sizing: border-box; }
+body, html { 
+    margin: 0; padding: 0; height: 100%; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    overflow: hidden; 
+}
 
-/* Die Wiese und Sonne per Code */
+/* HINTERGRUND: WIESE & SONNE */
 .grassy-meadow {
-    height: 100vh;
-    background: linear-gradient(to bottom, #87CEEB 0%, #b4e391 50%, #2e8b57 100%);
+    height: 100vh; width: 100vw;
+    background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 30%, #b4e391 60%, #2e8b57 100%);
     display: flex; justify-content: center; align-items: center;
     position: relative;
 }
 
 .sun {
-    position: absolute; top: 40px; left: 60px;
-    width: 80px; height: 80px;
-    background: radial-gradient(circle, #fff700, #ffae00);
-    border-radius: 50%; box-shadow: 0 0 40px #ffae00;
+    position: absolute; top: 60px; left: 100px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, #fff700 0%, #ffae00 70%, #ff8c00 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 80px #ffae00, 0 0 200px rgba(255, 174, 0, 0.4);
 }
 
-/* Milchglas-Effekt */
+/* AUTHENTIFIZIERUNG (MILCHGLAS) */
 .glass-mask {
-    position: fixed; inset: 0; z-index: 1000;
+    position: fixed; inset: 0; z-index: 9999;
     background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(25px);
+    backdrop-filter: blur(40px) saturate(150%);
     display: flex; justify-content: center; align-items: center;
 }
 
 .auth-card {
-    background: white; padding: 30px; border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 300px; text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px; border-radius: 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 380px; text-align: center;
+    border: 1px solid white;
 }
 
-/* Admin-Orb */
-.glowing-orb {
-    position: fixed; top: 20px; right: 20px; width: 40px; height: 40px;
-    background: radial-gradient(circle, #00d4ff, #0055ff);
-    border-radius: 50%; box-shadow: 0 0 20px #00d4ff;
-    cursor: pointer; animation: pulse 3s infinite;
+.brand-title { margin: 0; color: #333; letter-spacing: 2px; }
+.brand-subtitle { font-size: 0.8em; color: #666; margin-bottom: 20px; }
+
+/* INPUTS & BUTTONS */
+.input-group { text-align: left; margin-bottom: 15px; }
+.input-group label { display: block; font-size: 0.75em; font-weight: bold; color: #555; margin-bottom: 5px; }
+input, select {
+    width: 100%; padding: 12px; border-radius: 10px;
+    border: 1px solid #ccc; background: #f9f9f9; font-size: 14px;
 }
+.large-input { font-size: 20px; text-align: center; letter-spacing: 5px; }
 
-@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.btn-main {
+    width: 100%; padding: 15px; border: none; border-radius: 12px;
+    background: #2575fc; color: white; font-weight: bold;
+    cursor: pointer; transition: 0.3s; margin-top: 10px;
+}
+.btn-main:hover { background: #1a56c5; transform: translateY(-2px); }
+.btn-main.success { background: #28a745; }
 
-/* Die Glas-Türen */
-.portal-container { display: flex; gap: 40px; }
-.door-unit { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+/* DIE TÜREN */
+.portal-container { display: flex; gap: 80px; }
+.door-unit { display: flex; flex-direction: column; align-items: center; }
+
 .portal-door {
-    width: 150px; height: 250px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid white; border-radius: 75px 75px 5px 5px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 3em; color: white; backdrop-filter: blur(5px);
+    width: 180px; height: 300px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 3px solid rgba(255, 255, 255, 0.6);
+    border-radius: 90px 90px 10px 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px); transition: 0.4s;
 }
+.portal-door .icon { font-size: 4em; color: white; margin-bottom: 10px; }
+.portal-door .label { color: white; font-weight: bold; letter-spacing: 2px; }
 
-input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-.btn-main { background: #ff9900; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; }
-.btn-door { background: white; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; }
-#profile-panel { position: fixed; top: 70px; right: 20px; background: white; padding: 15px; border-radius: 10px; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-.btn-danger { color: red; border: 1px solid red; background: none; cursor: pointer; width: 100%; }
+.door-controls { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ADMIN ORB */
+.glowing-orb {
+    position: fixed; top: 30px; right: 30px; width: 50px; height: 50px;
+    background: radial-gradient(circle, #00d4ff, #0055ff);
+    border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 30px #00d4ff; animation: pulse 4s infinite ease-in-out;
+}
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.15); opacity: 1; } }
+
+/* PROFILE PANEL */
+#profile-panel {
+    position: fixed; top: 100px; right: 30px; background: white;
+    width: 250px; padding: 20px; border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; z-index: 1000;
+}
+.btn-logout { width: 100%; padding: 10px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
+.btn-terminate { width: 100%; padding: 10px; background: none; color: #dc3545; border: 1px solid #dc3545; border-radius: 5px; cursor: pointer; }
