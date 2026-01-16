@@ -1,170 +1,177 @@
-/* --- BASIS-STYLING --- */
+/* --- BASIS & VARIABLEN --- */
 :root {
-    --primary-color: #007bff;
-    --bg-color: #f4f7f6;
-    --text-color: #333;
+    --primary: #007bff;
+    --primary-dark: #0056b3;
+    --bg: #f4f7f6;
     --white: #ffffff;
+    --text: #333;
     --shadow: 0 4px 15px rgba(0,0,0,0.1);
+    --glass: rgba(255, 255, 255, 0.75);
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
     margin: 0;
     padding: 0;
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
-/* --- HEADER & SPRACHE --- */
-header {
+/* --- HEADER & NAVIGATION --- */
+.os-header {
     background: var(--white);
-    padding: 1rem 2rem;
+    padding: 0.8rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 900;
 }
 
-#language-nav button {
-    background: #e0e0e0;
+.language-nav {
+    display: flex;
+    gap: 12px;
+}
+
+.language-nav button {
+    background: #eee;
     border: none;
-    padding: 8px 15px;
-    margin-left: 5px;
-    border-radius: 5px;
+    padding: 6px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    font-weight: bold;
+    font-weight: 600;
     transition: 0.3s;
 }
 
-#language-nav button:hover {
-    background: var(--primary-color);
+.language-nav button:hover {
+    background: var(--primary);
     color: white;
 }
 
-/* --- HERO / PRÄAMBEL BEREICH --- */
-#hero-section {
-    max-width: 900px;
-    margin: 40px auto;
-    text-align: center;
-    padding: 0 20px;
-}
-
-.glass-box {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    padding: 25px;
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: var(--shadow);
-    margin-top: 20px;
-}
-
-/* --- GRID FÜR DIE 11 KISTEN (PARTS) --- */
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 20px;
-    max-width: 1100px;
-    margin: 40px auto;
-    padding: 20px;
-}
-
-.part-box {
-    background: var(--white);
-    height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--primary-color);
-    box-shadow: var(--shadow);
-    transition: all 0.3s ease;
-    border-bottom: 4px solid var(--primary-color);
-}
-
-.part-box:hover {
-    transform: translateY(-5px);
-    background: var(--primary-color);
-    color: var(--white);
-}
-
-/* --- ANNEX BEREICH --- */
-#annex-section {
-    text-align: center;
-    margin-bottom: 60px;
-}
-
-.annex-links button {
-    background: #555;
-    color: white;
-    border: none;
-    width: 40px;
-    height: 40px;
-    margin: 5px;
+/* --- ADMIN ORB (MAGISCHER SCHALTER) --- */
+.admin-orb {
+    width: 35px;
+    height: 35px;
+    background: radial-gradient(circle at 30% 30%, var(--primary), #002b5c);
     border-radius: 50%;
     cursor: pointer;
-    transition: 0.3s;
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+    transition: transform 0.3s ease;
 }
 
-.annex-links button:hover {
-    background: #000;
+.admin-orb:hover {
     transform: scale(1.1);
 }
 
-/* --- MODAL (POP-UP) STYLING --- */
+/* --- RAUM-LAYOUTS --- */
+.room-setup {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* --- DIE SPIELZEUGKISTE (I-XI) --- */
+.toy-box-container {
+    text-align: center;
+}
+
+.parts-grid, .annex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.part-box, .annex-box {
+    background: var(--white);
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: grab;
+    font-weight: bold;
+    box-shadow: var(--shadow);
+    transition: 0.3s;
+    border-bottom: 3px solid var(--primary);
+}
+
+.part-box:hover, .annex-box:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-3px);
+}
+
+/* --- GLAS-EFFEKT (MODALS & BOXEN) --- */
+.glass-box {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+}
+
+/* --- MODAL (POP-UP) --- */
 #content-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex; /* Standardmäßig Flex für die Zentrierung */
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    transition: opacity 0.3s ease;
 }
 
 .modal-hidden {
-    display: none !important; /* Versteckt das Modal komplett */
+    display: none !important;
 }
 
 .modal-content {
-    background: var(--white);
+    background: white;
     width: 90%;
-    max-width: 600px;
+    max-width: 650px;
+    max-height: 80vh;
+    overflow-y: auto;
     padding: 40px;
     border-radius: 20px;
     position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    animation: slideIn 0.3s ease-out;
+    animation: fadeIn 0.3s ease;
 }
 
-@keyframes slideIn {
-    from { transform: translateY(-30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .close-btn {
     position: absolute;
     top: 15px;
     right: 20px;
-    font-size: 30px;
+    font-size: 28px;
     cursor: pointer;
     color: #999;
 }
 
-.close-btn:hover { color: #333; }
-
 /* --- FOOTER --- */
 footer {
     text-align: center;
-    padding: 20px;
-    color: #777;
-    font-size: 0.9rem;
+    padding: 40px 20px;
+    color: #888;
+    font-size: 0.85rem;
 }
