@@ -4,89 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Universal Framework - Betrieb & Agentur</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/footer.css">
+    <link rel="stylesheet" href="assets/ui_elements.css">
 </head>
 <body class="lang-de mode-app1">
 
     <div id="legal-overlay" class="overlay">
         <div class="modal">
-            <h1>Rechtlicher Hinweis & Haftungsausschluss</h1>
-            <p>Die Nutzung dieses Frameworks erfolgt auf eigenes Risiko. Der Betreiber ist in keinem Fall haftbar für rechtliche oder wirtschaftliche Folgen. Es gilt ausschließlich das Recht der Bundesrepublik Deutschland. Mit dem Start bestätigen Sie die AGB vollumfänglich.</p>
-            <button onclick="app.acceptLegal()" class="btn-start">Ich akzeptiere & Starte</button>
+            <h1>Haftungsausschluss & Rechtlicher Rahmen</h1>
+            <p>Die Nutzung erfolgt auf eigenes Risiko. Der Betreiber übernimmt keinerlei Haftung für die Inhalte oder daraus resultierende Verträge. Es gilt deutsches Recht. Mit dem Start akzeptieren Sie die AGB vollumfänglich.</p>
+            <button onclick="app.acceptLegal()" class="btn-start">Akzeptieren & Starten</button>
         </div>
     </div>
 
     <header>
-        <div class="nav-main">
-            <button onclick="app.switchApp(1)" id="btn-app1">App 1: Wunderland</button>
-            <button onclick="app.switchApp(2)" id="btn-app2">App 2: Professional</button>
-        </div>
-        <div class="nav-lang">
+        <nav class="main-nav">
+            <button onclick="app.switchApp(1)" id="nav-app1">App 1: Wunderland</button>
+            <button onclick="app.switchApp(2)" id="nav-app2">App 2: Professional</button>
+        </nav>
+        <div class="language-picker">
             <button onclick="app.setLanguage('de')">DE</button>
             <button onclick="app.setLanguage('en')">EN</button>
             <button onclick="app.setLanguage('es')">ES</button>
         </div>
     </header>
 
-    <main id="app-container">
+    <main id="framework-content">
         
         <section id="view-app1">
-            <div class="kisten-lager">
-                <div class="kiste" id="kiste-betrieb" onclick="app.openKiste('betrieb')">
-                    <span class="icon">📦</span>
+            <div class="kisten-container">
+                <div class="toy-box" id="box-betrieb" onclick="app.openKiste('betrieb')">
+                    <div class="box-icon">📦</div>
                     <label>Framework Betrieb</label>
                 </div>
-                <div class="kiste" id="kiste-agentur" onclick="app.openKiste('agentur')">
-                    <span class="icon">💼</span>
+                <div class="toy-box" id="box-agentur" onclick="app.openKiste('agentur')">
+                    <div class="box-icon">💼</div>
                     <label>Agency Framework (EN)</label>
                 </div>
             </div>
 
-            <div id="breadcrumb">Navigation: Start</div>
+            <nav id="breadcrumb-path">Navigation: Start</nav>
 
-            <div id="module-selector" class="grid-selector">
+            <div id="module-selector" class="selection-grid">
                 </div>
 
-            <div id="construction-zone">
-                <div class="form-slot-container">
-                    <div id="slots"></div>
+            <div id="construction-area">
+                <div class="blueprint-form">
+                    <div id="snippet-slots">
+                        </div>
                 </div>
             </div>
         </section>
 
         <section id="view-app2" class="hidden">
-            <div id="secret-register-bar">
-                <div class="register-status">
-                    <span id="seal-icon" onclick="app.exportSecretRegister()">🛡️</span>
-                    <div id="live-ticker">Secret Register: Active (Annex J-M Compliance)</div>
+            <div id="compliance-bar">
+                <div class="status-indicator">
+                    <span id="secret-seal" title="Export Register" onclick="app.exportSecretRegister()">🛡️</span>
+                    <div id="ticker-text">Status: Annex J-M Compliance Check active</div>
                 </div>
             </div>
 
-            <div class="pro-grid-212">
-                <div class="side-panel">
-                    <h3>User A</h3>
-                    <div class="upload-group">
-                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-a">
-                        <label>Bericht</label><input type="file" id="u-rep-a">
+            <div class="grid-212">
+                <div class="panel user-a">
+                    <h4>User A</h4>
+                    <div class="upload-zone">
+                        <label>Zahlungsnachweis</label>
+                        <input type="file" onchange="app.logAction('A: Upload Zahlung')">
+                        <label>Bericht</label>
+                        <input type="file" onchange="app.logAction('A: Upload Bericht')">
                     </div>
                 </div>
 
-                <div class="center-panel">
-                    <div class="module-title-display">Aktives Modul (aus App 1)</div>
-                    <textarea id="main-contract-field" placeholder="Zentrales Vertragsfeld..."></textarea>
+                <div class="panel center-contract">
+                    <div class="current-module-title">Vertrags-Fokus</div>
+                    <textarea id="contract-editor" placeholder="Vertragsinhalt hier bearbeiten..."></textarea>
                     
-                    <div class="compliance-ampel">
-                        <div class="ampel-btn green" onclick="app.logCompliance('Status Green: All Clear')"></div>
-                        <div class="ampel-btn yellow" onclick="app.logCompliance('Status Yellow: Escalation Triggered')"></div>
-                        <div class="ampel-btn red" onclick="app.logCompliance('Status Red: Emergency Stop')"></div>
+                    <div class="ampel-system">
+                        <div class="light green" onclick="app.logAction('STATUS GRÜN: Konformität bestätigt')"></div>
+                        <div class="light yellow" onclick="app.logAction('STATUS GELB: Eskalation eingeleitet')"></div>
+                        <div class="light red" onclick="app.logAction('STATUS ROT: Notstopp / Verstoß')"></div>
                     </div>
                 </div>
 
-                <div class="side-panel">
-                    <h3>Partner B</h3>
-                    <div class="upload-group">
-                        <label>Zahlungsbeleg</label><input type="file" id="u-pay-b">
-                        <label>Bericht</label><input type="file" id="u-rep-b">
+                <div class="panel user-b">
+                    <h4>Partner B</h4>
+                    <div class="upload-zone">
+                        <label>Zahlungsnachweis</label>
+                        <input type="file" onchange="app.logAction('B: Upload Zahlung')">
+                        <label>Bericht</label>
+                        <input type="file" onchange="app.logAction('B: Upload Bericht')">
                     </div>
                 </div>
             </div>
@@ -94,11 +102,18 @@
 
     </main>
 
-    <div id="paywall-overlay" class="hidden">
+    <footer>
+        <div id="footer-legal-note">
+            Framework © 2026 - Alle Rechte vorbehalten.
+        </div>
+    </footer>
+
+    <div id="paywall" class="hidden overlay">
         <div class="modal">
-            <h2>Premium Zugriff</h2>
-            <p>Dieses Modul erfordert ein aktives Abonnement.</p>
-            <button onclick="app.redirectToStripe()" class="btn-pay">Abo via Stripe/PayPal</button>
+            <h3>Premium Modul</h3>
+            <p>Um dieses Modul (Part/Annex) freizuschalten, ist eine Bezahlung erforderlich.</p>
+            <button onclick="app.redirectToStripe()" class="pay-btn">Jetzt bezahlen (Stripe/PayPal)</button>
+            <button onclick="app.closePaywall()" class="close-btn">Abbrechen</button>
         </div>
     </div>
 
