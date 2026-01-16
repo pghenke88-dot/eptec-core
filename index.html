@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC Business-Guard</title>
+    <title>EPTEC Business-Guard - Methode Henke</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="grassy-meadow">
 
     <div id="start-admin-gate">
         <div class="login-container glass-box">
+            <h2 id="brand-name">EPTEC</h2>
             <input type="password" id="admin-gate-1" class="hidden-admin-input" autofocus placeholder="Master-Code">
+            <p onclick="triggerResetFlow()" style="cursor:pointer; font-size: 0.7rem; color: #666; margin-top:10px;">Reset anfordern</p>
         </div>
     </div>
 
@@ -25,16 +27,24 @@
 
         <div id="room-content-area">
             <div id="app-1-setup" class="room-setup">
+                <div class="workspace glass-box">
+                    <div id="weltkarte-upload" class="worldmap-zone"></div>
+                    <div id="drop-zone-rillen" class="grid-rillen"></div>
+                </div>
+
                 <div class="toy-box-container">
                     <h3>MEIN VERTRAG MEINE RECHTE !</h3>
-                    <div class="parts-grid" id="parts-container"></div>
+                    <div class="parts-grid" id="parts-container">
+                        </div>
+                    <div class="annex-grid" id="annex-container">
+                        </div>
                 </div>
             </div>
 
             <div id="app-2-setup" class="room-setup" style="display:none;">
-                <div class="price-display glass-box" style="margin-bottom: 20px; text-align: center;">
-                    <p id="price-f1">Basis: --</p>
-                    <p id="price-f2">Premium: --</p>
+                <div class="price-display glass-box">
+                    <p id="price-f1">F1: --</p>
+                    <p id="price-f2">F2: --</p>
                 </div>
                 <div class="negotiation-area glass-box">
                     <div id="table-water-glasses"></div>
@@ -42,6 +52,19 @@
                         <div class="tischdecke-kariert"></div>
                     </div>
                 </div>
+                <div class="traffic-light">
+                    <div id="light-r" class="light red"></div>
+                    <div id="light-y" class="light yellow"></div>
+                    <div id="light-g" class="light green active"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-modal" class="modal-hidden">
+            <div class="modal-content glass-box">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <h2 id="modal-title">Info</h2>
+                <div id="modal-body"></div>
             </div>
         </div>
     </main>
@@ -53,12 +76,16 @@
 
     <script type="application/json" id="multi-lang-assets">
     {
-        "languages": {
-            "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status_msg": "System-Status: Aktiv", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
-            "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status_msg": "System Status: Active", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } }
-        }
-    }
-    </script>
-    <script src="logic.js"></script>
-</body>
-</html>
+      "brand": "EPTEC",
+      "system": "Business-Guard",
+      "languages": {
+        "de": { "lang": "Deutsch", "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)", "status_msg": "System-Status: Aktiv", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "en": { "lang": "English", "agb_btn": "Terms and Conditions (T&C)", "status_msg": "System Status: Active", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "it": { "lang": "Italiano", "agb_btn": "Termini e Condizioni", "status_msg": "Verifica stato", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "es": { "lang": "Español", "agb_btn": "Términos y Condiciones", "status_msg": "Estado del sistema", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "fr": { "lang": "Français", "agb_btn": "Conditions Générales", "status_msg": "État du système", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "ar": { "lang": "العربية", "agb_btn": "الشروط والأحكام", "status_msg": "حالة النظام", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "cn": { "lang": "中文", "agb_btn": "条款和条件", "status_msg": "系统状态", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "jp": { "lang": "日本語", "agb_btn": "利用規約と法的情報", "status_msg": "システムステータスを確認", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "nl": { "lang": "Nederlands", "agb_btn": "Algemene Voorwaarden", "status_msg": "Systeemstatus controleren", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "34.90" } } },
+        "pt": { "lang": "Português", "agb_btn": "Termos e Condizioni", "status_msg": "Verificar status", "plans": { "f1": { "price_basis": "19.90" }, "f2": { "price_premium": "
