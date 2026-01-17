@@ -652,3 +652,4 @@ const EPTEC_BRAIN = (() => {
     runAction
   };
 })();
+window.EPTEC_BRAIN = EPTEC_BRAIN;
