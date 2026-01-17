@@ -5,7 +5,7 @@
  */
 
 const EPTEC_BRAIN = {
-    // --- 1. SYSTEM-KONFIGURATION & SICHERHEIT ---
+    // --- 1. SYSTEM-KONFIGURATION & SICHERHEIT (UNGEKÜRZT) ---
     Config: {
         MASTER_GATE: "PatrickGeorgHenke200288", 
         MASTER_DOOR: "PatrickGeorgHenke6264",   
@@ -22,7 +22,7 @@ const EPTEC_BRAIN = {
         SESSION_START: new Date().toISOString()
     },
 
-    // --- 2. AUDIO-ENGINE ---
+    // --- 2. AUDIO-ENGINE (UNGEKÜRZT) ---
     Audio: {
         state: "ambient",
         play: function(soundID, volume = 1.0) {
@@ -42,7 +42,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 3. AUTHENTIFIZIERUNG ---
+    // --- 3. AUTHENTIFIZIERUNG (UNGEKÜRZT) ---
     Auth: {
         verifyAdmin: function(inputCode, level) {
             if (level === 1 && inputCode === EPTEC_BRAIN.Config.MASTER_GATE) {
@@ -51,6 +51,7 @@ const EPTEC_BRAIN = {
                 return true;
             }
             if (level === 2 && inputCode === EPTEC_BRAIN.Config.MASTER_DOOR) {
+                EPTEC_BRAIN.Config.ADMIN_MODE = true; // Admin-Status setzen
                 EPTEC_BRAIN.Compliance.log("SECURITY", "Master-Door Zugriff autorisiert.");
                 return true;
             }
@@ -58,7 +59,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 4. NAVIGATION & TUNNEL ---
+    // --- 4. NAVIGATION & TUNNEL (UNGEKÜRZT) ---
     Navigation: {
         currentLocation: "Wiese",
         triggerTunnel: function(targetRoom) {
@@ -88,7 +89,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 5. WERKSTATT, PDF-ENGINE & UPLOAD-SCHNITTSTELLE ---
+    // --- 5. WERKSTATT, PDF-ENGINE & UPLOAD-SCHNITTSTELLE (UNGEKÜRZT) ---
     Workshop: {
         render: function() {
             const container = document.querySelector('.engraved-matrix');
@@ -142,7 +143,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 6. SITZUNGSSAAL & ADMIN ---
+    // --- 6. SITZUNGSSAAL & ADMIN (UNGEKÜRZT) ---
     Control: {
         setAmpel: function(level) {
             const spiegel = document.getElementById('spiegel-nachricht');
@@ -162,7 +163,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 7. COMPLIANCE & ANNEX K ---
+    // --- 7. COMPLIANCE & ANNEX K (UNGEKÜRZT) ---
     Compliance: {
         archive: [],
         log: function(type, detail) {
@@ -174,7 +175,7 @@ const EPTEC_BRAIN = {
         }
     },
 
-    // --- 8. OBJEKT-INTERAKTIONEN (TISCH, PFLANZE, SERVIERWAGEN) ---
+    // --- 8. OBJEKT-INTERAKTIONEN (UNGEKÜRZT) ---
     Interaction: {
         triggerServierwagen: function(action) {
             if(action === 'download') EPTEC_BRAIN.Workshop.exportPDF();
@@ -198,7 +199,23 @@ const EPTEC_BRAIN = {
                 }
             }
         }
+    },
+
+    // --- NEU: DER SEMANTISCHE ASSEMBLER (Zusatz für No-Coding-Feeding) ---
+    // Diese Sektion sorgt dafür, dass sich der Brain aus Doc, Style und Locals bedient.
+    Assembler: {
+        sync: function(logicID) {
+            // Holt semantische Ganztexte aus Doc basierend auf der ID/Code
+            const content = EPTEC_DOCS.getContentByCode(logicID); 
+            const style = EPTEC_STYLE.getAsset(logicID);
+            
+            if(style.sound) EPTEC_BRAIN.Audio.play(style.sound);
+            
+            // Verknüpft deine Master-Logik automatisch mit der UI
+            if(logicID === "TischR1") EPTEC_BRAIN.Interaction.triggerTischR1('upload');
+            // ... usw ...
+        }
     }
 };
 
-console.log("EPTEC MASTER LOGIC v.2026 vollständig initialisiert.");
+console.log("EPTEC MASTER LOGIC v.2026 vollständig initialisiert und bereit zur Fütterung.");;
