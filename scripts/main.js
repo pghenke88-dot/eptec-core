@@ -1,7 +1,6 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – UI wiring + flag cannon + built-in translations (no backend)
- * Works even if locales/*.json are broken or missing.
+ * EPTEC MAIN – flag cannon + built-in i18n (NO dir switching, NO JSON fetch)
  */
 
 (() => {
@@ -10,7 +9,6 @@
   let currentLang = "de";
   let clockTimer = null;
 
-  // Built-in translations (no JSON needed)
   const I18N = {
     de: {
       login_username: "Benutzername",
@@ -96,12 +94,12 @@
       isOpen() ? close() : open();
     });
 
-    // IMPORTANT: listen on .lang-item (your abbreviation buttons)
+    // This is the key: we listen on your abbreviation buttons
     rail.querySelectorAll(".lang-item").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const lang = btn.getAttribute("data-lang");
+        const lang = (btn.getAttribute("data-lang") || "").toLowerCase().trim();
         if (!lang) return;
         window.SoundEngine?.flagClick?.();
         setLanguage(lang);
@@ -116,40 +114,37 @@
   }
 
   function setLanguage(lang) {
-    currentLang = String(lang || "en").toLowerCase().trim() || "en";
-    document.documentElement.setAttribute("dir", currentLang === "ar" ? "rtl" : "ltr");
+    // Only de/en are guaranteed here; other buttons keep current language stable
+    if (lang === "de" || lang === "en") currentLang = lang;
+    // IMPORTANT: do NOT touch documentElement.dir -> prevents layout jumping
     applyTranslations();
     updateClockOnce();
   }
 
   // ---------- UI ----------
   function bindUI() {
-    // input focus sound
     document.querySelectorAll("input").forEach((inp) => {
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
     });
 
-    // Login placeholder
     document.getElementById("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       alert("Login-Backend noch nicht aktiv.");
     });
 
-    // Register modal
     document.getElementById("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("register-screen");
     });
     document.getElementById("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
 
-    // Forgot modal
     document.getElementById("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("forgot-screen");
     });
     document.getElementById("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
 
-    // Admin gate -> tunnel
+    // Admin
     const submit = document.getElementById("admin-submit");
     const input = document.getElementById("admin-code");
 
@@ -182,7 +177,6 @@
       if (e.key === "Enter") attempt();
     });
 
-    // Legal placeholders
     document.getElementById("link-imprint")?.addEventListener("click", () => alert("Impressum wird geladen."));
     document.getElementById("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
     document.getElementById("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
@@ -263,7 +257,6 @@
     }
   }
 
-  // helpers
   function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = String(text ?? "");
