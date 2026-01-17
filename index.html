@@ -14,61 +14,115 @@
     /* Desktop safety */
     #meadow-view { display: flex !important; }
     .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
+
+    /* Make UI readable even if other CSS is tiny */
+    .entry-btn { min-height: 44px; padding: 10px 16px; font-size: 16px; border-radius: 12px; }
+    .entry-input { min-height: 44px; padding: 10px 14px; font-size: 16px; border-radius: 12px; }
+    .legal-footer { display:flex; justify-content:center; align-items:center; gap:10px; padding: 10px 12px; }
+    .legal-link { cursor:pointer; text-decoration: underline; }
+
+    /* --- FLAG CANNON UI --- */
+    .lang-switcher{
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      user-select: none;
+    }
+    #lang-toggle{
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      line-height: 1;
+    }
+    #lang-rail{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform-origin: right center;
+      transform: translateX(12px) scaleX(0);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+    .lang-open #lang-rail{
+      transform: translateX(0) scaleX(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lang-item{
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(0,0,0,.20);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 16px; /* label will be used if emoji flags render as letters */
+      line-height: 1;
+      transition: transform 160ms ease, background 160ms ease;
+      color: white;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .lang-item:hover{ transform: translateY(-2px); background: rgba(0,0,0,.32); }
   </style>
 </head>
 
 <body>
 
-  <!-- SYSTEM CLOCK (persistent, no text translation needed) -->
+  <!-- SYSTEM CLOCK -->
   <div id="system-clock" class="system-clock"></div>
 
   <!-- ENTRY SCENE / MEADOW -->
   <section id="meadow-view" class="grassy-meadow">
 
-    <!-- LANGUAGE SWITCHER -->
-    <div id="language-switcher" class="lang-switcher">
-      <span data-lang="en" class="lang-flag">🇬🇧</span>
-      <span data-lang="de" class="lang-flag">🇩🇪</span>
-      <span data-lang="es" class="lang-flag">🇪🇸</span>
-      <span data-lang="fr" class="lang-flag">🇫🇷</span>
-      <span data-lang="it" class="lang-flag">🇮🇹</span>
-      <span data-lang="pt" class="lang-flag">🇵🇹</span>
-      <span data-lang="nl" class="lang-flag">🇳🇱</span>
-      <span data-lang="ru" class="lang-flag">🇷🇺</span>
-      <span data-lang="uk" class="lang-flag">🇺🇦</span>
-      <span data-lang="ar" class="lang-flag">🇸🇦</span>
-      <span data-lang="zh" class="lang-flag">🇨🇳</span>
-      <span data-lang="jp" class="lang-flag">🇯🇵</span>
+    <!-- LANGUAGE SWITCHER (one button -> flags shoot out left) -->
+    <div id="language-switcher" class="lang-switcher" aria-label="Language">
+      <div id="lang-rail" aria-hidden="true">
+        <button class="lang-item" type="button" data-lang="en" title="English">EN</button>
+        <button class="lang-item" type="button" data-lang="de" title="Deutsch">DE</button>
+        <button class="lang-item" type="button" data-lang="es" title="Español">ES</button>
+        <button class="lang-item" type="button" data-lang="fr" title="Français">FR</button>
+        <button class="lang-item" type="button" data-lang="it" title="Italiano">IT</button>
+        <button class="lang-item" type="button" data-lang="pt" title="Português">PT</button>
+        <button class="lang-item" type="button" data-lang="nl" title="Nederlands">NL</button>
+        <button class="lang-item" type="button" data-lang="ru" title="Русский">RU</button>
+        <button class="lang-item" type="button" data-lang="uk" title="Українська">UA</button>
+        <button class="lang-item" type="button" data-lang="ar" title="العربية">AR</button>
+        <button class="lang-item" type="button" data-lang="zh" title="中文">ZH</button>
+        <button class="lang-item" type="button" data-lang="ja" title="日本語">JA</button>
+      </div>
+
+      <button id="lang-toggle" type="button" aria-expanded="false" title="Language">🌐</button>
     </div>
 
     <!-- LOGIN UI -->
     <div id="entry-ui" class="entry-ui">
 
-      <!-- GROWING INPUTS -->
-      <input id="login-username"
-             class="entry-input grow-in"
-             placeholder=""
-             autocomplete="username">
+      <input id="login-username" class="entry-input grow-in" placeholder="" autocomplete="username">
+      <input id="login-password" class="entry-input grow-in" type="password" placeholder="" autocomplete="current-password">
 
-      <input id="login-password"
-             class="entry-input grow-in"
-             type="password"
-             placeholder=""
-             autocomplete="current-password">
-
-      <!-- ACTION BUTTONS -->
       <div class="entry-actions plop-in">
         <button id="btn-login" class="entry-btn"></button>
         <button id="btn-register" class="entry-btn"></button>
         <button id="btn-forgot" class="entry-btn"></button>
       </div>
 
-      <!-- ADMIN GATE -->
       <div id="admin-gate" class="admin-gate plop-in">
-        <input id="admin-code"
-               class="entry-input"
-               placeholder=""
-               autocomplete="off">
+        <input id="admin-code" class="entry-input" placeholder="" autocomplete="off">
         <button id="admin-submit" class="entry-btn"></button>
       </div>
 
@@ -125,22 +179,28 @@
     </div>
   </section>
 
+  <!-- ROOM 1: so tunnel has somewhere to go -->
+  <section id="room-1-view" style="display:none;">
+    <div class="engraved-matrix"></div>
+  </section>
+
+  <!-- ROOM 2 placeholder -->
+  <section id="room-2-view" style="display:none;">
+    <div style="padding:40px;color:white;">ROOM 2 – placeholder</div>
+  </section>
+
   <!-- WHITE FLASH -->
-  <div id="eptec-white-flash"
-       class="white-flash-hidden"
-       aria-hidden="true"></div>
+  <div id="eptec-white-flash" class="white-flash-hidden" aria-hidden="true"></div>
 
   <!-- TUNNEL FALL -->
-  <div id="eptec-tunnel"
-       class="tunnel-hidden"
-       aria-hidden="true">
+  <div id="eptec-tunnel" class="tunnel-hidden" aria-hidden="true">
     <div class="tunnel-wall"></div>
   </div>
 
- <!-- SCRIPTS -->
-<script src="scripts/sounds.js" defer></script>
-<script src="scripts/logic.js" defer></script>
-<script src="scripts/main.js" defer></script>
+  <!-- SCRIPTS -->
+  <script src="scripts/sounds.js" defer></script>
+  <script src="scripts/logic.js" defer></script>
+  <script src="scripts/main.js" defer></script>
+
 </body>
 </html>
-
