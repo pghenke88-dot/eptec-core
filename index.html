@@ -15,13 +15,57 @@
     #meadow-view { display: flex !important; }
     .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
 
-    /* Make UI readable even if other CSS is tiny */
+    /* ---- WIESE: pure CSS (no images, no 404) ---- */
+    #meadow-view.grassy-meadow{
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* sky + horizon + grass */
+      background:
+        radial-gradient(1200px 700px at 70% 20%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%),
+        radial-gradient(900px 600px at 20% 15%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%),
+        linear-gradient(to bottom,
+          #87ceeb 0%,
+          #cfefff 35%,
+          #f6fbff 45%,
+          #70c46a 46%,
+          #4ea24a 100%);
+    }
+    /* subtle grass texture */
+    #meadow-view.grassy-meadow::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        repeating-linear-gradient(90deg, rgba(0,0,0,.04) 0 1px, rgba(0,0,0,0) 1px 8px),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.03) 0 1px, rgba(0,0,0,0) 1px 10px);
+      opacity:.25;
+      pointer-events:none;
+      transform: translateY(46%);
+    }
+    /* little haze at horizon */
+    #meadow-view.grassy-meadow::after{
+      content:"";
+      position:absolute;
+      left:-10%;
+      right:-10%;
+      top:42%;
+      height:20%;
+      background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,0));
+      opacity:.65;
+      pointer-events:none;
+    }
+
+    /* ---- Make UI readable ---- */
     .entry-btn { min-height: 44px; padding: 10px 16px; font-size: 16px; border-radius: 12px; }
     .entry-input { min-height: 44px; padding: 10px 14px; font-size: 16px; border-radius: 12px; }
     .legal-footer { display:flex; justify-content:center; align-items:center; gap:10px; padding: 10px 12px; }
     .legal-link { cursor:pointer; text-decoration: underline; }
 
-    /* --- FLAG CANNON UI --- */
+    /* ---- FLAG CANNON (now outside meadow, never clipped) ---- */
     .lang-switcher{
       position: fixed;
       top: 14px;
@@ -45,6 +89,7 @@
       place-items: center;
       font-size: 20px;
       line-height: 1;
+      color: white;
     }
     #lang-rail{
       display: flex;
@@ -71,7 +116,7 @@
       cursor: pointer;
       display: grid;
       place-items: center;
-      font-size: 16px; /* label will be used if emoji flags render as letters */
+      font-size: 16px;
       line-height: 1;
       transition: transform 160ms ease, background 160ms ease;
       color: white;
@@ -83,31 +128,30 @@
 
 <body>
 
+  <!-- LANGUAGE SWITCHER OUTSIDE MEADOW (important) -->
+  <div id="language-switcher" class="lang-switcher" aria-label="Language">
+    <div id="lang-rail" aria-hidden="true">
+      <button class="lang-item" type="button" data-lang="en" title="English">EN</button>
+      <button class="lang-item" type="button" data-lang="de" title="Deutsch">DE</button>
+      <button class="lang-item" type="button" data-lang="es" title="Español">ES</button>
+      <button class="lang-item" type="button" data-lang="fr" title="Français">FR</button>
+      <button class="lang-item" type="button" data-lang="it" title="Italiano">IT</button>
+      <button class="lang-item" type="button" data-lang="pt" title="Português">PT</button>
+      <button class="lang-item" type="button" data-lang="nl" title="Nederlands">NL</button>
+      <button class="lang-item" type="button" data-lang="ru" title="Русский">RU</button>
+      <button class="lang-item" type="button" data-lang="uk" title="Українська">UA</button>
+      <button class="lang-item" type="button" data-lang="ar" title="العربية">AR</button>
+      <button class="lang-item" type="button" data-lang="zh" title="中文">ZH</button>
+      <button class="lang-item" type="button" data-lang="ja" title="日本語">JA</button>
+    </div>
+    <button id="lang-toggle" type="button" aria-expanded="false" title="Language">🌐</button>
+  </div>
+
   <!-- SYSTEM CLOCK -->
   <div id="system-clock" class="system-clock"></div>
 
   <!-- ENTRY SCENE / MEADOW -->
   <section id="meadow-view" class="grassy-meadow">
-
-    <!-- LANGUAGE SWITCHER (one button -> flags shoot out left) -->
-    <div id="language-switcher" class="lang-switcher" aria-label="Language">
-      <div id="lang-rail" aria-hidden="true">
-        <button class="lang-item" type="button" data-lang="en" title="English">EN</button>
-        <button class="lang-item" type="button" data-lang="de" title="Deutsch">DE</button>
-        <button class="lang-item" type="button" data-lang="es" title="Español">ES</button>
-        <button class="lang-item" type="button" data-lang="fr" title="Français">FR</button>
-        <button class="lang-item" type="button" data-lang="it" title="Italiano">IT</button>
-        <button class="lang-item" type="button" data-lang="pt" title="Português">PT</button>
-        <button class="lang-item" type="button" data-lang="nl" title="Nederlands">NL</button>
-        <button class="lang-item" type="button" data-lang="ru" title="Русский">RU</button>
-        <button class="lang-item" type="button" data-lang="uk" title="Українська">UA</button>
-        <button class="lang-item" type="button" data-lang="ar" title="العربية">AR</button>
-        <button class="lang-item" type="button" data-lang="zh" title="中文">ZH</button>
-        <button class="lang-item" type="button" data-lang="ja" title="日本語">JA</button>
-      </div>
-
-      <button id="lang-toggle" type="button" aria-expanded="false" title="Language">🌐</button>
-    </div>
 
     <!-- LOGIN UI -->
     <div id="entry-ui" class="entry-ui">
@@ -142,49 +186,41 @@
   <!-- REGISTER MODAL -->
   <section id="register-screen" class="modal modal-hidden">
     <div class="modal-card register-card">
-
       <div id="register-title" class="modal-title"></div>
-
       <input id="reg-first-name" class="entry-input" placeholder="">
       <input id="reg-last-name" class="entry-input" placeholder="">
       <input id="reg-birthdate" class="entry-input" placeholder="">
       <input id="reg-email" class="entry-input" placeholder="">
       <input id="reg-username" class="entry-input" placeholder="">
       <input id="reg-password" class="entry-input" type="password" placeholder="">
-
       <div id="reg-rules-username" class="rule-text"></div>
       <div id="reg-rules-password" class="rule-text"></div>
-
       <div id="reg-suggestions" class="suggestions modal-hidden">
         <div id="reg-suggestion-title" class="suggestions-title"></div>
         <div id="reg-suggestion-1" class="suggestion"></div>
         <div id="reg-suggestion-2" class="suggestion"></div>
       </div>
-
       <button id="reg-submit" class="entry-btn locked"></button>
       <button id="reg-close" class="entry-btn secondary"></button>
-
     </div>
   </section>
 
   <!-- FORGOT PASSWORD MODAL -->
   <section id="forgot-screen" class="modal modal-hidden">
     <div class="modal-card forgot-card">
-
       <div id="forgot-title" class="modal-title"></div>
       <input id="forgot-identity" class="entry-input" placeholder="">
       <button id="forgot-submit" class="entry-btn"></button>
       <button id="forgot-close" class="entry-btn secondary"></button>
-
     </div>
   </section>
 
-  <!-- ROOM 1: so tunnel has somewhere to go -->
+  <!-- ROOM 1 -->
   <section id="room-1-view" style="display:none;">
     <div class="engraved-matrix"></div>
   </section>
 
-  <!-- ROOM 2 placeholder -->
+  <!-- ROOM 2 -->
   <section id="room-2-view" style="display:none;">
     <div style="padding:40px;color:white;">ROOM 2 – placeholder</div>
   </section>
