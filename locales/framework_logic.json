@@ -27,3 +27,39 @@
     }
   }
 }
+{
+  "ui": {
+    "defaultLang": "en",
+    "legal": {
+      "imprintId": "link-imprint",
+      "termsId": "link-terms"
+    }
+  },
+  "sounds": {
+    "ambient": {
+      "birds": "birds",
+      "wind": "wind",
+      "water": "water"
+    },
+    "ui": {
+      "focus": "ui_focus",
+      "confirm": "ui_confirm",
+      "flag": "flag_click"
+    },
+    "transition": {
+      "tunnel": "tunnel_fall"
+    }
+  },
+  "effects": {
+    "whiteFlash": {
+      "elementId": "eptec-white-flash",
+      "activeClass": "white-flash-active",
+      "durationMs": 300
+    },
+    "tunnelFall": {
+      "elementId": "eptec-tunnel",
+      "activeClass": "tunnel-active",
+      "durationMs": 1350
+    }
+  }
+}
