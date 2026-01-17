@@ -1,6 +1,7 @@
 /* =========================================================
    EPTEC MAIN CONTROLLER
    Verbindet UI ↔ Logic ↔ Sound ↔ Navigation
+   No backend, no decisions – only wiring.
    ========================================================= */
 
 (() => {
@@ -10,11 +11,25 @@
      1) STATE
   ----------------------------- */
   let currentLang = "de";
+  let isBound = false;
 
   /* -----------------------------
-     2) DOM READY
+     2) BOOT (defer-friendly)
   ----------------------------- */
-  document.addEventListener("DOMContentLoaded", () => {
+  bootWhenReady();
+
+  function bootWhenReady() {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", boot, { once: true });
+    } else {
+      boot();
+    }
+  }
+
+  function boot() {
+    if (isBound) return;
+    isBound = true;
+
     bindLanguageSwitcher();
     bindLoginUI();
     bindRegisterUI();
@@ -24,16 +39,53 @@
     bindGlobalAudioUnlock();
 
     console.log("EPTEC MAIN: UI gebunden");
-  });
+  }
 
   /* -----------------------------
-     3) LANGUAGE SWITCH
+     3) HELPERS
+  ----------------------------- */
+  const $ = (id) => document.getElementById(id);
+
+  function getBrain() {
+    return window.EPTEC_BRAIN || null;
+  }
+
+  function safeCall(fn, label = "MAIN") {
+    try {
+      return fn();
+    } catch (e) {
+      console.error(`[EPTEC:${label}]`, e);
+      return undefined;
+    }
+  }
+
+  function show(el) {
+    if (!el) return;
+    el.classList.remove("modal-hidden");
+  }
+
+  function hide(el) {
+    if (!el) return;
+    el.classList.add("modal-hidden");
+  }
+
+  function resetTunnelFx() {
+    $("eptec-white-flash")?.classList.remove("white-flash-active");
+
+    const tunnel = $("eptec-tunnel");
+    tunnel?.classList.add("tunnel-hidden");
+    tunnel?.classList.remove("tunnel-active");
+  }
+
+  /* -----------------------------
+     4) LANGUAGE SWITCH
   ----------------------------- */
   function bindLanguageSwitcher() {
-    document.querySelectorAll(".lang-flag").forEach(flag => {
+    document.querySelectorAll(".lang-flag").forEach((flag) => {
       flag.addEventListener("click", () => {
         const lang = flag.dataset.lang;
         if (!lang) return;
+
         currentLang = lang;
         console.log("Sprache gewechselt:", lang);
       });
@@ -41,133 +93,133 @@
   }
 
   /* -----------------------------
-     4) LOGIN / ENTRY
+     5) LOGIN / ENTRY
   ----------------------------- */
   function bindLoginUI() {
-    const btnLogin = document.getElementById("btn-login");
+    const btnLogin = $("btn-login");
     if (!btnLogin) return;
 
     btnLogin.addEventListener("click", () => {
-      SoundEngine?.uiConfirm();
+      window.SoundEngine?.uiConfirm?.();
       alert("Login-Backend noch nicht aktiv.");
     });
   }
 
   /* -----------------------------
-     5) REGISTER FLOW
+     6) REGISTER FLOW
   ----------------------------- */
   function bindRegisterUI() {
-    const btnRegister = document.getElementById("btn-register");
-    const screen = document.getElementById("register-screen");
-    const close = document.getElementById("reg-close");
+    const btnRegister = $("btn-register");
+    const screen = $("register-screen");
+    const close = $("reg-close");
 
     if (btnRegister && screen) {
       btnRegister.addEventListener("click", () => {
-        SoundEngine?.uiFocus();
-        screen.classList.remove("modal-hidden");
+        window.SoundEngine?.uiFocus?.();
+        show(screen);
       });
     }
 
     if (close && screen) {
-      close.addEventListener("click", () => {
-        screen.classList.add("modal-hidden");
-      });
+      close.addEventListener("click", () => hide(screen));
     }
   }
 
   /* -----------------------------
-     6) FORGOT PASSWORD
+     7) FORGOT PASSWORD
   ----------------------------- */
   function bindForgotUI() {
-    const btnForgot = document.getElementById("btn-forgot");
-    const screen = document.getElementById("forgot-screen");
-    const close = document.getElementById("forgot-close");
+    const btnForgot = $("btn-forgot");
+    const screen = $("forgot-screen");
+    const close = $("forgot-close");
 
     if (btnForgot && screen) {
       btnForgot.addEventListener("click", () => {
-        SoundEngine?.uiFocus();
-        screen.classList.remove("modal-hidden");
+        window.SoundEngine?.uiFocus?.();
+        show(screen);
       });
     }
 
     if (close && screen) {
-      close.addEventListener("click", () => {
-        screen.classList.add("modal-hidden");
-      });
+      close.addEventListener("click", () => hide(screen));
     }
   }
 
   /* -----------------------------
-     7) ADMIN GATE → TUNNEL
+     8) ADMIN GATE → TUNNEL
   ----------------------------- */
   function bindAdminGate() {
-    const submit = document.getElementById("admin-submit");
-    const input = document.getElementById("admin-code");
-
+    const submit = $("admin-submit");
+    const input = $("admin-code");
     if (!submit || !input) return;
 
-    submit.addEventListener("click", () => {
-      const code = input.value.trim();
+    const attempt = () => safeCall(() => {
+      const code = String(input.value || "").trim();
       if (!code) return;
 
-      const brain = window.EPTEC_BRAIN;
-      if (!brain) return;
+      const brain = getBrain();
+      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) {
+        console.warn("EPTEC_BRAIN fehlt oder ist unvollständig.");
+        alert("System nicht bereit (Brain fehlt).");
+        return;
+      }
 
-      const ok =
+      const ok = !!(
         brain.Auth.verifyAdmin(code, 1) ||
-        brain.Auth.verifyAdmin(code, 2);
+        brain.Auth.verifyAdmin(code, 2)
+      );
 
       if (!ok) {
         alert("Zugriff verweigert");
         return;
       }
 
-      // === SUCCESS ===
-      SoundEngine?.playAdminUnlock();
-      SoundEngine?.tunnelFall();
+      // SUCCESS
+      resetTunnelFx();
 
-      document.getElementById("eptec-white-flash")
-        ?.classList.add("white-flash-active");
+      window.SoundEngine?.playAdminUnlock?.();
+      window.SoundEngine?.tunnelFall?.();
 
-      const tunnel = document.getElementById("eptec-tunnel");
+      $("eptec-white-flash")?.classList.add("white-flash-active");
+
+      const tunnel = $("eptec-tunnel");
       tunnel?.classList.remove("tunnel-hidden");
       tunnel?.classList.add("tunnel-active");
 
-      // Zielraum (R1 als Beispiel)
       setTimeout(() => {
-        brain.Navigation.triggerTunnel("R1");
+        safeCall(() => brain.Navigation.triggerTunnel("R1"), "admin-tunnel");
+        setTimeout(resetTunnelFx, 2500);
       }, 600);
+    }, "admin-attempt");
+
+    submit.addEventListener("click", attempt);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") attempt();
     });
   }
 
   /* -----------------------------
-     8) LEGAL LINKS
+     9) LEGAL LINKS (Placeholders)
   ----------------------------- */
   function bindLegalLinks() {
-    document.getElementById("link-imprint")?.addEventListener("click", () => {
-      alert("Impressum wird geladen.");
-    });
-
-    document.getElementById("link-terms")?.addEventListener("click", () => {
-      alert("AGB werden geladen.");
-    });
-
-    document.getElementById("link-support")?.addEventListener("click", () => {
-      alert("Support wird geladen.");
-    });
+    $("link-imprint")?.addEventListener("click", () => alert("Impressum wird geladen."));
+    $("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
+    $("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
   }
 
   /* -----------------------------
-     9) AUDIO UNLOCK (Browser Policy)
+     10) AUDIO UNLOCK (Browser Policy)
   ----------------------------- */
   function bindGlobalAudioUnlock() {
     const once = () => {
-      SoundEngine?.unlockAudio?.();
+      window.SoundEngine?.unlockAudio?.();
       window.removeEventListener("pointerdown", once);
       window.removeEventListener("keydown", once);
+      window.removeEventListener("touchstart", once);
     };
+
     window.addEventListener("pointerdown", once, { passive: true });
     window.addEventListener("keydown", once);
+    window.addEventListener("touchstart", once, { passive: true });
   }
-
 })();
