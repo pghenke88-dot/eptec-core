@@ -78,3 +78,6 @@ async function loadFooter() {
         console.log("Kein Footer gefunden.");
     }
 }
+window.addEventListener("click", () => {
+  SoundEngine.startAmbient();
+}, { once: true });
