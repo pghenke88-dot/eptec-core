@@ -1,51 +1,45 @@
 /* =========================================================
    scripts/sounds.js
-   EPTEC SOUND ENGINE – WebAudio + File Audio (robust)
+   EPTEC SOUND ENGINE – WebAudio + File Audio (robust + GH Pages safe)
+   - auto-detects folder: "assets/sounds/en/" OR "assets/sounds en/"
+   - avoids 404 spam by checking existence once
    ========================================================= */
 
 (() => {
   "use strict";
 
-  // === 1) CONFIG: set this to your real folder ===
-  // If your repo uses "assets/sounds en/" (with space), keep it like this:
-  const SOUND_BASE = "assets/sounds en/";
-  // If you use "assets/sounds/en/" (no space), use:
-  // const SOUND_BASE = "assets/sounds/en/";
+  // Prefer no-space path (GitHub Pages friendly), but we auto-detect anyway
+  const BASE_CANDIDATES = [
+    "assets/sounds/en/",
+    "assets/sounds en/"
+  ];
 
-  // === 2) SAFE HELPERS ===
-  const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
-  const safe = (fn) => {
-    try { return fn(); } catch { return undefined; }
+  const FILES = {
+    wind: "wind.mp3",
+    birds: "birds.mp3",
+    water: "water.mp3",
+    ui_focus: "ui_focus.mp3",
+    ui_confirm: "ui_confirm.mp3",
+    flag_click: "flag_click.mp3",
+    tunnel_fall: "tunnel_fall.mp3"
   };
 
-  // === 3) WebAudio context (for synthetic FX) ===
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  // --- WebAudio for synth FX ---
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = AudioCtx ? new AudioCtx() : null;
   let unlocked = false;
 
   async function unlockAudio() {
     if (unlocked) return true;
 
-    // Resume WebAudio (required on many browsers)
-    if (audioCtx.state === "suspended") {
+    if (audioCtx && audioCtx.state === "suspended") {
       await audioCtx.resume().catch(() => {});
     }
 
-    // Prime HTMLAudio elements (autoplay policy)
-    // We do a silent play/pause to "unlock" after a user gesture.
-    const primables = Object.values(EPTEC_SOUNDS.ambient)
-      .concat(Object.values(EPTEC_SOUNDS.ui))
-      .concat(Object.values(EPTEC_SOUNDS.transition));
-
-    for (const a of primables) {
-      if (!a) continue;
-      a.muted = true;
-      a.currentTime = 0;
-      // play() may still fail, we ignore
-      // If it succeeds, immediately pause.
-      await a.play().then(() => a.pause()).catch(() => {});
-      a.muted = false;
-    }
-
+    // We don't force-play missing files; we only prime loaded audios later.
     unlocked = true;
     return true;
   }
@@ -55,16 +49,116 @@
       window.removeEventListener("pointerdown", once);
       window.removeEventListener("keydown", once);
       await unlockAudio();
+      await primeLoadedAudio();
     };
     window.addEventListener("pointerdown", once, { passive: true });
     window.addEventListener("keydown", once);
   }
-
   bindUnlockOnce();
 
-  // === 4) SYNTH FX (WebAudio) ===
+  // --- existence cache to prevent spam ---
+  const existsCache = new Map(); // url -> boolean
+  async function exists(url) {
+    if (existsCache.has(url)) return existsCache.get(url);
+    try {
+      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
+      const ok = !!r.ok;
+      existsCache.set(url, ok);
+      return ok;
+    } catch {
+      existsCache.set(url, false);
+      return false;
+    }
+  }
+
+  // --- detect base folder ---
+  let SOUND_BASE = null;
+
+  async function detectBase() {
+    if (SOUND_BASE) return SOUND_BASE;
+
+    // Pick a "probe" file that should exist if sounds are installed
+    const probeName = FILES.ui_confirm;
+
+    for (const base of BASE_CANDIDATES) {
+      const url = base + probeName;
+      if (await exists(url)) {
+        SOUND_BASE = base;
+        return SOUND_BASE;
+      }
+    }
+
+    // If nothing exists, still set default to no-space folder to be consistent
+    SOUND_BASE = BASE_CANDIDATES[0];
+    return SOUND_BASE;
+  }
+
+  // --- audio registry (lazy) ---
+  const EPTEC_SOUNDS = {
+    ambient: { wind: null, birds: null, water: null },
+    ui: { focus: null, confirm: null, flag: null },
+    transition: { tunnel: null }
+  };
+
+  const loadedAudios = []; // to prime after unlock
+
+  async function loadAudio(fileKey, { loop = false, volume = 0.7 } = {}) {
+    const base = await detectBase();
+    const file = FILES[fileKey];
+    if (!file) return null;
+
+    const url = base + file;
+
+    if (!(await exists(url))) return null;
+
+    const a = new Audio(url);
+    a.loop = !!loop;
+    a.volume = clamp01(volume);
+    a.preload = "auto";
+    loadedAudios.push(a);
+    return a;
+  }
+
+  async function ensureLoaded() {
+    // ambient
+    if (!EPTEC_SOUNDS.ambient.wind) EPTEC_SOUNDS.ambient.wind = await loadAudio("wind", { loop: true, volume: 0.28 });
+    if (!EPTEC_SOUNDS.ambient.birds) EPTEC_SOUNDS.ambient.birds = await loadAudio("birds", { loop: true, volume: 0.22 });
+    if (!EPTEC_SOUNDS.ambient.water) EPTEC_SOUNDS.ambient.water = await loadAudio("water", { loop: true, volume: 0.20 });
+
+    // ui
+    if (!EPTEC_SOUNDS.ui.focus) EPTEC_SOUNDS.ui.focus = await loadAudio("ui_focus", { loop: false, volume: 0.70 });
+    if (!EPTEC_SOUNDS.ui.confirm) EPTEC_SOUNDS.ui.confirm = await loadAudio("ui_confirm", { loop: false, volume: 0.80 });
+    if (!EPTEC_SOUNDS.ui.flag) EPTEC_SOUNDS.ui.flag = await loadAudio("flag_click", { loop: false, volume: 0.80 });
+
+    // transition
+    if (!EPTEC_SOUNDS.transition.tunnel) EPTEC_SOUNDS.transition.tunnel = await loadAudio("tunnel_fall", { loop: false, volume: 0.90 });
+  }
+
+  async function primeLoadedAudio() {
+    // Try silent play/pause to satisfy some mobile policies
+    if (!unlocked) return;
+    for (const a of loadedAudios) {
+      if (!a) continue;
+      try {
+        a.muted = true;
+        a.currentTime = 0;
+        await a.play().then(() => a.pause()).catch(() => {});
+        a.muted = false;
+      } catch {}
+    }
+  }
+
+  function playAudio(a, { volume = 1 } = {}) {
+    if (!a || !unlocked) return;
+    a.volume = clamp01(volume);
+    try { a.currentTime = 0; } catch {}
+    a.play().catch(() => {});
+  }
+
+  // --- Synth FX ---
   function playAdminUnlock() {
     safe(() => {
+      if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -86,6 +180,7 @@
 
   function playDoorSound() {
     safe(() => {
+      if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -106,6 +201,7 @@
 
   function playClickSoundSynth() {
     safe(() => {
+      if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -123,66 +219,19 @@
     });
   }
 
-  // === 5) FILE AUDIO (MP3/OGG/WAV) ===
-  const EPTEC_SOUNDS = {
-    ambient: {
-      wind: new Audio(`${SOUND_BASE}wind.mp3`),
-      birds: new Audio(`${SOUND_BASE}birds.mp3`),
-      water: new Audio(`${SOUND_BASE}water.mp3`)
-    },
-    ui: {
-      focus: new Audio(`${SOUND_BASE}ui_focus.mp3`),
-      confirm: new Audio(`${SOUND_BASE}ui_confirm.mp3`),
-      flag: new Audio(`${SOUND_BASE}flag_click.mp3`)
-    },
-    transition: {
-      tunnel: new Audio(`${SOUND_BASE}tunnel_fall.mp3`)
-    }
-  };
-
-  // Ambient Setup
-  for (const key in EPTEC_SOUNDS.ambient) {
-    const a = EPTEC_SOUNDS.ambient[key];
-    if (!a) continue;
-    a.loop = true;
-    a.volume = 0.3;
-    a.preload = "auto";
-  }
-
-  // UI/Transition setup
-  for (const group of [EPTEC_SOUNDS.ui, EPTEC_SOUNDS.transition]) {
-    for (const key in group) {
-      const a = group[key];
-      if (!a) continue;
-      a.loop = false;
-      a.volume = 0.7;
-      a.preload = "auto";
-    }
-  }
-
-  function playAudio(a, { volume = 1 } = {}) {
-    if (!a) return;
-    a.volume = clamp01(volume);
-    try {
-      a.currentTime = 0;
-    } catch {}
-    a.play().catch(() => {});
-  }
-
-  // === 6) PUBLIC API ===
+  // --- Public API ---
   window.SoundEngine = {
-    // must be called on a user gesture if you want guaranteed audio start
     unlockAudio,
 
-    // Ambient
-    startAmbient() {
-      // NOTE: will only reliably work after unlockAudio/user gesture
+    async startAmbient() {
+      await ensureLoaded();
       playAudio(EPTEC_SOUNDS.ambient.wind, { volume: 0.28 });
       playAudio(EPTEC_SOUNDS.ambient.birds, { volume: 0.22 });
       playAudio(EPTEC_SOUNDS.ambient.water, { volume: 0.20 });
     },
 
-    stopAmbient() {
+    async stopAmbient() {
+      await ensureLoaded();
       for (const k in EPTEC_SOUNDS.ambient) {
         const a = EPTEC_SOUNDS.ambient[k];
         if (!a) continue;
@@ -191,13 +240,11 @@
       }
     },
 
-    // UI file sounds
-    uiFocus() { playAudio(EPTEC_SOUNDS.ui.focus, { volume: 0.7 }); },
-    uiConfirm() { playAudio(EPTEC_SOUNDS.ui.confirm, { volume: 0.8 }); },
-    flagClick() { playAudio(EPTEC_SOUNDS.ui.flag, { volume: 0.8 }); },
-    tunnelFall() { playAudio(EPTEC_SOUNDS.transition.tunnel, { volume: 0.9 }); },
+    async uiFocus() { await ensureLoaded(); playAudio(EPTEC_SOUNDS.ui.focus, { volume: 0.7 }); },
+    async uiConfirm() { await ensureLoaded(); playAudio(EPTEC_SOUNDS.ui.confirm, { volume: 0.8 }); },
+    async flagClick() { await ensureLoaded(); playAudio(EPTEC_SOUNDS.ui.flag, { volume: 0.8 }); },
+    async tunnelFall() { await ensureLoaded(); playAudio(EPTEC_SOUNDS.transition.tunnel, { volume: 0.9 }); },
 
-    // Synth FX (no external assets needed)
     playAdminUnlock,
     playDoorSound,
     playClickSoundSynth
