@@ -1,188 +1,88 @@
 /* ============================================================
-   EPTEC UI-ELEMENTS: Allgemeine Komponenten & Design
+   assets/imagine.css
+   EPTEC IMAGINE: Szenen, Raum, Dramaturgie
    ============================================================ */
 
-/* Variablen aus style.css werden hier auch verwendet */
-:root {
-    --eptec-blue: #004a99;
-    --dark: #1a1a1a;
-    --light: #f8f9fa;
-    --border-color: #ccc;
-    --red-light: #ff0000;
-    --yellow-light: #ffcc00;
-    --green-light: #00ff00;
-    --traffic-light-body: #333;
-    --inactive-light-bg: #111;
+/* =======================
+   SCENE: MEADOW
+   ======================= */
+
+.grassy-meadow {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #87ceeb 0%,
+    #cfefff 40%,
+    #6fbf73 100%
+  );
+  overflow: hidden;
 }
 
-/* --- EPTEC Ampel Design --- */
-
-/* Wrapper für die zentrierte Darstellung der Ampel und Text */
-.traffic-light-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 30px auto;
-    gap: 15px; /* Abstand zwischen Text und Ampel */
+.sun {
+  position: absolute;
+  top: 6%;
+  right: 12%;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, #fff7b2, #ffd54f);
+  border-radius: 50%;
+  filter: blur(1px);
+  opacity: 0.95;
 }
 
-/* Ampel Gehäuse */
-.traffic-light {
-    width: 60px;
-    height: 180px;
-    background: var(--traffic-light-body);
-    border-radius: 12px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* Gleichmäßiger Abstand zwischen den Lichtern */
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5); /* Leichter Innenschatten für Tiefe */
+.stream {
+  position: absolute;
+  bottom: 12%;
+  left: 12%;
+  width: 46%;
+  height: 7%;
+  background: linear-gradient(to right, #81d4fa, #4fc3f7);
+  border-radius: 60%;
+  opacity: 0.55;
+  filter: blur(1px);
 }
 
-/* Einzelnes Licht im Grundzustand */
-.light {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin: 0 auto; /* Zentriert die Lichter im Gehäuse */
-    background: var(--inactive-light-bg); /* Dunkler Hintergrund für inaktive Lichter */
-    opacity: 0.2; /* Inaktive Lichter sind leicht transparent */
-    transition: all 0.3s ease-in-out; /* Sanfter Übergang beim Aktivieren */
+/* =======================
+   SCENE: TUNNEL FALL
+   ======================= */
+
+#eptec-tunnel {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, #2b1d0f 0%, #000 70%);
+  overflow: hidden;
+  z-index: 999998;
+  opacity: 0;
 }
 
-/* Aktive Zustände der Lichter mit Leuchteffekt */
-.red.active { 
-    background: var(--red-light); 
-    box-shadow: 0 0 20px var(--red-light); 
-    opacity: 1; 
+.tunnel-hidden { display: none; }
+
+.tunnel-active {
+  display: block;
+  animation: tunnelFadeIn 120ms linear forwards;
 }
 
-.yellow.active { 
-    background: var(--yellow-light); 
-    box-shadow: 0 0 20px var(--yellow-light); 
-    opacity: 1; 
+@keyframes tunnelFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.green.active { 
-    background: var(--green-light); 
-    box-shadow: 0 0 20px var(--green-light); 
-    opacity: 1; 
+.tunnel-wall {
+  position: absolute;
+  inset: -50%;
+  background:
+    repeating-radial-gradient(
+      circle at center,
+      rgba(255,255,255,0.06) 0px,
+      rgba(255,255,255,0.02) 40px,
+      rgba(0,0,0,0.92) 80px
+    );
+  transform-origin: center;
+  animation: tunnelFall 1350ms linear forwards;
 }
 
-/* --- Workflow & Content-Area Styling --- */
-
-#workflow-container {
-    background: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    margin: 40px auto;
-    max-width: 800px;
-    text-align: left; /* Text in der Content-Area linksbündig */
-}
-
-#step-indicator {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--eptec-blue);
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--eptec-blue);
-    padding-bottom: 10px;
-}
-
-#content-area {
-    min-height: 200px; /* Mindesthöhe, damit der Bereich nicht zusammenfällt */
-    padding: 15px 0;
-}
-
-#action-bar {
-    display: flex;
-    justify-content: flex-end; /* Buttons rechtsbündig */
-    gap: 10px;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
-}
-
-/* Buttons in der Action-Bar */
-#action-bar button {
-    padding: 12px 25px;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-#prevBtn {
-    background: #f0f0f0;
-    color: var(--dark);
-    border: 1px solid var(--border-color);
-}
-#prevBtn:hover {
-    background: #e0e0e0;
-}
-
-#nextBtn, #downloadBtn {
-    background: var(--eptec-blue);
-    color: white;
-    border: 1px solid var(--eptec-blue);
-}
-#nextBtn:hover, #downloadBtn:hover {
-    background: #003a7a;
-}
-
-/* Zustand für deaktivierte Buttons */
-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: #cccccc !important;
-    color: #888888 !important;
-    border-color: #bbbbbb !important;
-}
-
-/* --- Modales Fenster (für AGB oder andere Popups) --- */
-.modal {
-    display: none; /* Standardmäßig ausgeblendet */
-    position: fixed; /* Fixiert über allem */
-    z-index: 1000; /* Ganz oben */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* Scrollbar, wenn Inhalt zu groß */
-    background-color: rgba(0,0,0,0.4); /* Leichter schwarzer Hintergrund */
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background-color: var(--light);
-    margin: auto;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-    width: 80%;
-    max-width: 700px;
-    position: relative;
-    max-height: 80vh; /* Maximale Höhe des Modals */
-    overflow-y: auto; /* Intern scrollbar, wenn Inhalt zu lang */
-    color: var(--dark);
-    text-align: left;
-}
-
-.close-button {
-    color: #aaa;
-    position: absolute;
-    top: 15px;
-    right: 25px;
-    font-size: 30px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: var(--eptec-blue);
-    text-decoration: none;
-    cursor: pointer;
+@keyframes tunnelFall {
+  0%   { transform: scale(0.2) rotate(0deg); }
+  100% { transform: scale(2.6) rotate(10deg); }
 }
