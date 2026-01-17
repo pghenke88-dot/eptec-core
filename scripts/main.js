@@ -1,25 +1,17 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – fully robust UI wiring + Flag Cannon + i18n
- * - No external locales/*.json needed (prevents JSON/404 issues)
- * - Stable layout: dir stays LTR for all except Arabic
- * - All languages switch texts (if no translation yet, shows English fallback)
- * - Register/Forgot modals reliably open/close
- * - Admin gate triggers tunnel via EPTEC_BRAIN
+ * EPTEC MAIN – stable i18n + flag cannon + UI wiring
+ * - No JSON fetch (prevents locale errors)
+ * - RTL only for Arabic
+ * - All main labels translated for FR etc.
  */
 
 (() => {
   "use strict";
 
-  // --------- STATE ----------
-  let currentLang = "en"; // default EN (as you observed)
+  let currentLang = "en";
   let clockTimer = null;
 
-  // --------- I18N DATA ----------
-  // Strategy:
-  // - DE and EN are fully defined
-  // - other languages have at least a label set; missing keys fallback to EN
-  // - Arabic sets RTL; all others remain LTR to prevent layout jumping
   const I18N = {
     en: {
       _dir: "ltr",
@@ -69,19 +61,222 @@
       forgot_hint: "E-Mail oder Benutzername",
       forgot_submit: "Link anfordern"
     },
-
-    // Other languages: fallback-to-EN for any missing keys.
-    // You can later fill these properly; switching will still work now.
-    es: { _dir: "ltr", login_btn: "Iniciar sesión", register_btn: "Registrarse", forgot_btn: "Olvidé mi contraseña" },
-    fr: { _dir: "ltr", login_btn: "Connexion", register_btn: "S’inscrire", forgot_btn: "Mot de passe oublié" },
-    it: { _dir: "ltr", login_btn: "Accedi", register_btn: "Registrati", forgot_btn: "Password dimenticata" },
-    pt: { _dir: "ltr", login_btn: "Entrar", register_btn: "Registrar", forgot_btn: "Esqueci a senha" },
-    nl: { _dir: "ltr", login_btn: "Inloggen", register_btn: "Registreren", forgot_btn: "Wachtwoord vergeten" },
-    ru: { _dir: "ltr", login_btn: "Войти", register_btn: "Регистрация", forgot_btn: "Забыли пароль" },
-    uk: { _dir: "ltr", login_btn: "Увійти", register_btn: "Реєстрація", forgot_btn: "Забули пароль" },
-    zh: { _dir: "ltr", login_btn: "登录", register_btn: "注册", forgot_btn: "忘记密码" },
-    ja: { _dir: "ltr", login_btn: "ログイン", register_btn: "登録", forgot_btn: "パスワードを忘れた" },
-
+    fr: {
+      _dir: "ltr",
+      login_username: "Nom d’utilisateur",
+      login_password: "Mot de passe",
+      login_btn: "Connexion",
+      register_btn: "S’inscrire",
+      forgot_btn: "Mot de passe oublié",
+      admin_code: "Code admin",
+      admin_submit: "Entrer (Admin)",
+      legal_imprint: "Mentions légales",
+      legal_terms: "Conditions",
+      legal_support: "Support",
+      register_title: "Inscription",
+      register_first_name: "Prénom",
+      register_last_name: "Nom",
+      register_birthdate: "Date de naissance",
+      register_email: "Adresse e-mail",
+      register_submit: "Finaliser la vérification",
+      register_submit_locked: "Finaliser (bloqué)",
+      system_close: "Fermer",
+      forgot_title: "Réinitialiser le mot de passe",
+      forgot_hint: "E-mail ou nom d’utilisateur",
+      forgot_submit: "Demander le lien"
+    },
+    es: {
+      _dir: "ltr",
+      login_username: "Usuario",
+      login_password: "Contraseña",
+      login_btn: "Iniciar sesión",
+      register_btn: "Registrarse",
+      forgot_btn: "Olvidé mi contraseña",
+      admin_code: "Código admin",
+      admin_submit: "Entrar (Admin)",
+      legal_imprint: "Aviso legal",
+      legal_terms: "Términos",
+      legal_support: "Soporte",
+      register_title: "Registro",
+      register_first_name: "Nombre",
+      register_last_name: "Apellido",
+      register_birthdate: "Fecha de nacimiento",
+      register_email: "Correo electrónico",
+      register_submit: "Completar verificación",
+      register_submit_locked: "Completar (bloqueado)",
+      system_close: "Cerrar",
+      forgot_title: "Restablecer contraseña",
+      forgot_hint: "Correo o usuario",
+      forgot_submit: "Solicitar enlace"
+    },
+    it: {
+      _dir: "ltr",
+      login_username: "Nome utente",
+      login_password: "Password",
+      login_btn: "Accedi",
+      register_btn: "Registrati",
+      forgot_btn: "Password dimenticata",
+      admin_code: "Codice admin",
+      admin_submit: "Entra (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Termini",
+      legal_support: "Supporto",
+      register_title: "Registrazione",
+      register_first_name: "Nome",
+      register_last_name: "Cognome",
+      register_birthdate: "Data di nascita",
+      register_email: "E-mail",
+      register_submit: "Completa verifica",
+      register_submit_locked: "Completa (bloccato)",
+      system_close: "Chiudi",
+      forgot_title: "Reimposta password",
+      forgot_hint: "E-mail o utente",
+      forgot_submit: "Richiedi link"
+    },
+    pt: {
+      _dir: "ltr",
+      login_username: "Usuário",
+      login_password: "Senha",
+      login_btn: "Entrar",
+      register_btn: "Registrar",
+      forgot_btn: "Esqueci a senha",
+      admin_code: "Código admin",
+      admin_submit: "Entrar (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Termos",
+      legal_support: "Suporte",
+      register_title: "Registro",
+      register_first_name: "Nome",
+      register_last_name: "Sobrenome",
+      register_birthdate: "Data de nascimento",
+      register_email: "E-mail",
+      register_submit: "Concluir verificação",
+      register_submit_locked: "Concluir (bloqueado)",
+      system_close: "Fechar",
+      forgot_title: "Redefinir senha",
+      forgot_hint: "E-mail ou usuário",
+      forgot_submit: "Solicitar link"
+    },
+    nl: {
+      _dir: "ltr",
+      login_username: "Gebruikersnaam",
+      login_password: "Wachtwoord",
+      login_btn: "Inloggen",
+      register_btn: "Registreren",
+      forgot_btn: "Wachtwoord vergeten",
+      admin_code: "Admincode",
+      admin_submit: "Enter (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Voorwaarden",
+      legal_support: "Support",
+      register_title: "Registratie",
+      register_first_name: "Voornaam",
+      register_last_name: "Achternaam",
+      register_birthdate: "Geboortedatum",
+      register_email: "E-mail",
+      register_submit: "Verificatie afronden",
+      register_submit_locked: "Afronden (vergrendeld)",
+      system_close: "Sluiten",
+      forgot_title: "Wachtwoord resetten",
+      forgot_hint: "E-mail of gebruikersnaam",
+      forgot_submit: "Link aanvragen"
+    },
+    ru: {
+      _dir: "ltr",
+      login_username: "Имя пользователя",
+      login_password: "Пароль",
+      login_btn: "Войти",
+      register_btn: "Регистрация",
+      forgot_btn: "Забыли пароль",
+      admin_code: "Админ-код",
+      admin_submit: "Вход (Админ)",
+      legal_imprint: "Реквизиты",
+      legal_terms: "Условия",
+      legal_support: "Поддержка",
+      register_title: "Регистрация",
+      register_first_name: "Имя",
+      register_last_name: "Фамилия",
+      register_birthdate: "Дата рождения",
+      register_email: "E-mail",
+      register_submit: "Завершить проверку",
+      register_submit_locked: "Завершить (заблок.)",
+      system_close: "Закрыть",
+      forgot_title: "Сброс пароля",
+      forgot_hint: "E-mail или пользователь",
+      forgot_submit: "Запросить ссылку"
+    },
+    uk: {
+      _dir: "ltr",
+      login_username: "Ім’я користувача",
+      login_password: "Пароль",
+      login_btn: "Увійти",
+      register_btn: "Реєстрація",
+      forgot_btn: "Забули пароль",
+      admin_code: "Код адміна",
+      admin_submit: "Вхід (Адмін)",
+      legal_imprint: "Реквізити",
+      legal_terms: "Умови",
+      legal_support: "Підтримка",
+      register_title: "Реєстрація",
+      register_first_name: "Ім’я",
+      register_last_name: "Прізвище",
+      register_birthdate: "Дата народження",
+      register_email: "E-mail",
+      register_submit: "Завершити перевірку",
+      register_submit_locked: "Завершити (заблок.)",
+      system_close: "Закрити",
+      forgot_title: "Скидання пароля",
+      forgot_hint: "E-mail або користувач",
+      forgot_submit: "Запросити посилання"
+    },
+    zh: {
+      _dir: "ltr",
+      login_username: "用户名",
+      login_password: "密码",
+      login_btn: "登录",
+      register_btn: "注册",
+      forgot_btn: "忘记密码",
+      admin_code: "管理员代码",
+      admin_submit: "进入(管理员)",
+      legal_imprint: "声明",
+      legal_terms: "条款",
+      legal_support: "支持",
+      register_title: "注册",
+      register_first_name: "名",
+      register_last_name: "姓",
+      register_birthdate: "出生日期",
+      register_email: "邮箱",
+      register_submit: "完成验证",
+      register_submit_locked: "完成验证(锁定)",
+      system_close: "关闭",
+      forgot_title: "重置密码",
+      forgot_hint: "邮箱或用户名",
+      forgot_submit: "请求链接"
+    },
+    ja: {
+      _dir: "ltr",
+      login_username: "ユーザー名",
+      login_password: "パスワード",
+      login_btn: "ログイン",
+      register_btn: "登録",
+      forgot_btn: "パスワードを忘れた",
+      admin_code: "管理コード",
+      admin_submit: "入室(管理)",
+      legal_imprint: "表示",
+      legal_terms: "規約",
+      legal_support: "サポート",
+      register_title: "登録",
+      register_first_name: "名",
+      register_last_name: "姓",
+      register_birthdate: "生年月日",
+      register_email: "メール",
+      register_submit: "認証を完了",
+      register_submit_locked: "認証(ロック)",
+      system_close: "閉じる",
+      forgot_title: "パスワード再設定",
+      forgot_hint: "メール/ユーザー名",
+      forgot_submit: "リンクを要求"
+    },
     ar: {
       _dir: "rtl",
       login_username: "اسم المستخدم",
@@ -91,7 +286,7 @@
       forgot_btn: "نسيت كلمة المرور",
       admin_code: "رمز المسؤول",
       admin_submit: "دخول (مسؤول)",
-      legal_imprint: "بيانات",
+      legal_imprint: "البيانات",
       legal_terms: "الشروط",
       legal_support: "الدعم",
       register_title: "التسجيل",
@@ -100,7 +295,7 @@
       register_birthdate: "تاريخ الميلاد",
       register_email: "البريد الإلكتروني",
       register_submit: "إكمال التحقق",
-      register_submit_locked: "إكمال التحقق (مقفل)",
+      register_submit_locked: "إكمال (مقفل)",
       system_close: "إغلاق",
       forgot_title: "إعادة تعيين كلمة المرور",
       forgot_hint: "البريد أو اسم المستخدم",
@@ -110,64 +305,36 @@
 
   function normalizeLang(lang) {
     const l = String(lang || "en").toLowerCase().trim();
-    // map common variants
     if (l === "jp") return "ja";
     if (l === "ua") return "uk";
     return l;
   }
 
-  function dict(lang) {
-    const l = normalizeLang(lang);
-    return I18N[l] || I18N.en;
+  function getDict(lang) {
+    return I18N[normalizeLang(lang)] || I18N.en;
   }
 
   function t(key, fallback = "") {
-    // fallback chain: currentLang -> EN -> provided fallback
-    const d = dict(currentLang);
-    if (typeof d[key] === "string" && d[key]) return d[key];
-    const en = I18N.en;
-    if (typeof en[key] === "string" && en[key]) return en[key];
-    return fallback;
+    const d = getDict(currentLang);
+    return d[key] ?? I18N.en[key] ?? fallback;
   }
 
-  // --------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
-    // Bindings
     bindFlagCannon();
-    bindUIButtons();
-    bindAdminGate();
-    bindLegalLinks();
-    bindGlobalAudioUnlock();
-    bindInputFocusSound();
-
-    // Apply initial language
-    setLanguage(currentLang);
-
-    // Clock
+    bindUI();
+    applyTranslations();
     startClock();
-
     console.log("EPTEC MAIN: boot OK");
   });
 
-  // --------- LANGUAGE SWITCH (FLAG CANNON) ----------
   function bindFlagCannon() {
-    const switcher = byId("language-switcher");
-    const toggle = byId("lang-toggle");
-    const rail = byId("lang-rail");
+    const switcher = document.getElementById("language-switcher");
+    const toggle = document.getElementById("lang-toggle");
+    const rail = document.getElementById("lang-rail");
     if (!switcher || !toggle || !rail) return;
 
-    const open = () => {
-      switcher.classList.add("lang-open");
-      toggle.setAttribute("aria-expanded", "true");
-      rail.setAttribute("aria-hidden", "false");
-    };
-
-    const close = () => {
-      switcher.classList.remove("lang-open");
-      toggle.setAttribute("aria-expanded", "false");
-      rail.setAttribute("aria-hidden", "true");
-    };
-
+    const open = () => switcher.classList.add("lang-open");
+    const close = () => switcher.classList.remove("lang-open");
     const isOpen = () => switcher.classList.contains("lang-open");
 
     toggle.addEventListener("click", (e) => {
@@ -177,71 +344,48 @@
       isOpen() ? close() : open();
     });
 
-    // The important part: listen on `.lang-item` buttons (your abbreviations)
     rail.querySelectorAll(".lang-item").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         const lang = normalizeLang(btn.getAttribute("data-lang"));
         window.SoundEngine?.flagClick?.();
-
         setLanguage(lang);
-        highlightActiveLang(lang);
-
         close();
       });
     });
 
-    // click outside closes
     document.addEventListener("click", close);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") close();
     });
   }
 
-  function highlightActiveLang(lang) {
-    const rail = byId("lang-rail");
-    if (!rail) return;
-    const norm = normalizeLang(lang);
-    rail.querySelectorAll(".lang-item").forEach((btn) => {
-      const b = normalizeLang(btn.getAttribute("data-lang"));
-      btn.setAttribute("aria-pressed", b === norm ? "true" : "false");
-      // no CSS required; aria-pressed is still useful for accessibility
-    });
-  }
-
   function setLanguage(lang) {
     currentLang = normalizeLang(lang);
 
-    // IMPORTANT: prevent layout jumping
-    // Only Arabic switches to RTL; all other languages remain LTR.
-    const d = dict(currentLang);
-    document.documentElement.setAttribute("dir", d._dir === "rtl" ? "rtl" : "ltr");
+    // RTL ONLY for Arabic → prevents layout flipping for other languages
+    const dir = getDict(currentLang)._dir === "rtl" ? "rtl" : "ltr";
+    document.documentElement.setAttribute("dir", dir);
 
     applyTranslations();
     updateClockOnce();
   }
 
-  // --------- APPLY TEXTS ----------
   function applyTranslations() {
-    // LOGIN
     setPlaceholder("login-username", t("login_username", "Username"));
     setPlaceholder("login-password", t("login_password", "Password"));
     setText("btn-login", t("login_btn", "Login"));
     setText("btn-register", t("register_btn", "Register"));
     setText("btn-forgot", t("forgot_btn", "Forgot password"));
 
-    // ADMIN
     setPlaceholder("admin-code", t("admin_code", "Admin code"));
     setText("admin-submit", t("admin_submit", "Enter (Admin)"));
 
-    // LEGAL
     setText("link-imprint", t("legal_imprint", "Imprint"));
     setText("link-terms", t("legal_terms", "Terms"));
     setText("link-support", t("legal_support", "Support"));
 
-    // REGISTER MODAL
     setText("register-title", t("register_title", "Registration"));
     setPlaceholder("reg-first-name", t("register_first_name", "First name"));
     setPlaceholder("reg-last-name", t("register_last_name", "Last name"));
@@ -252,57 +396,46 @@
 
     const regSubmit = byId("reg-submit");
     if (regSubmit) {
-      const locked = regSubmit.classList.contains("locked");
-      regSubmit.textContent = locked
+      regSubmit.textContent = regSubmit.classList.contains("locked")
         ? t("register_submit_locked", "Complete verification (locked)")
         : t("register_submit", "Complete verification");
     }
     setText("reg-close", t("system_close", "Close"));
 
-    // FORGOT MODAL
     setText("forgot-title", t("forgot_title", "Reset password"));
     setPlaceholder("forgot-identity", t("forgot_hint", "Enter email or username"));
     setText("forgot-submit", t("forgot_submit", "Request link"));
     setText("forgot-close", t("system_close", "Close"));
   }
 
-  // --------- UI BUTTONS ----------
-  function bindUIButtons() {
-    // Login placeholder (no backend)
+  function bindUI() {
+    document.querySelectorAll("input").forEach((inp) => {
+      inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
+    });
+
     byId("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       alert("Login-Backend noch nicht aktiv.");
     });
 
-    // Register modal
     byId("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("register-screen");
     });
     byId("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
 
-    // Forgot modal
     byId("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("forgot-screen");
     });
     byId("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
-  }
 
-  function bindInputFocusSound() {
-    document.querySelectorAll("input").forEach((inp) => {
-      inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
-    });
-  }
-
-  // --------- ADMIN GATE → TUNNEL ----------
-  function bindAdminGate() {
+    // Admin
     const submit = byId("admin-submit");
     const input = byId("admin-code");
-    if (!submit || !input) return;
 
     const attempt = () => {
-      const code = String(input.value || "").trim();
+      const code = String(input?.value || "").trim();
       if (!code) return;
 
       const brain = window.EPTEC_BRAIN;
@@ -318,7 +451,6 @@
       window.SoundEngine?.tunnelFall?.();
 
       byId("eptec-white-flash")?.classList.add("white-flash-active");
-
       const tunnel = byId("eptec-tunnel");
       tunnel?.classList.remove("tunnel-hidden");
       tunnel?.classList.add("tunnel-active");
@@ -326,21 +458,16 @@
       setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
     };
 
-    submit.addEventListener("click", attempt);
-    input.addEventListener("keydown", (e) => {
+    submit?.addEventListener("click", attempt);
+    input?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") attempt();
     });
-  }
 
-  // --------- LEGAL LINKS ----------
-  function bindLegalLinks() {
-    byId("link-imprint")?.addEventListener("click", () => alert("Impressum wird geladen."));
+    byId("link-imprint")?.addEventListener("click", () => alert("Imprint wird geladen."));
     byId("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
     byId("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
-  }
 
-  // --------- AUDIO UNLOCK ----------
-  function bindGlobalAudioUnlock() {
+    // Audio unlock
     const once = () => {
       window.SoundEngine?.unlockAudio?.();
       window.removeEventListener("pointerdown", once);
@@ -352,31 +479,19 @@
     window.addEventListener("touchstart", once, { passive: true });
   }
 
-  // --------- MODALS ----------
-  function showModal(id) {
-    const el = byId(id);
-    if (!el) return;
-    el.classList.remove("modal-hidden");
-  }
+  function showModal(id) { byId(id)?.classList.remove("modal-hidden"); }
+  function hideModal(id) { byId(id)?.classList.add("modal-hidden"); }
 
-  function hideModal(id) {
-    const el = byId(id);
-    if (!el) return;
-    el.classList.add("modal-hidden");
-  }
-
-  // --------- CLOCK ----------
+  // Clock
   function startClock() {
     stopClock();
     updateClockOnce();
     clockTimer = setInterval(updateClockOnce, 60_000);
   }
-
   function stopClock() {
     if (clockTimer) clearInterval(clockTimer);
     clockTimer = null;
   }
-
   function updateClockOnce() {
     const el = byId("system-clock");
     if (!el) return;
@@ -388,18 +503,8 @@
     }
   }
 
-  // --------- DOM HELPERS ----------
+  // DOM helpers
   function byId(id) { return document.getElementById(id); }
-
-  function setText(id, text) {
-    const el = byId(id);
-    if (!el) return;
-    el.textContent = String(text ?? "");
-  }
-
-  function setPlaceholder(id, text) {
-    const el = byId(id);
-    if (!el) return;
-    el.setAttribute("placeholder", String(text ?? ""));
-  }
+  function setText(id, text) { const el = byId(id); if (el) el.textContent = String(text ?? ""); }
+  function setPlaceholder(id, text) { const el = byId(id); if (el) el.setAttribute("placeholder", String(text ?? "")); }
 })();
