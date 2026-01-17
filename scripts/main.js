@@ -1,9 +1,8 @@
 /**
  * scripts/main.js
  * EPTEC MAIN – stable i18n + flag cannon + UI wiring
- * - No JSON fetch (prevents locale errors)
  * - RTL only for Arabic
- * - All main labels translated for FR etc.
+ * - Legal triad translated for ALL languages (fallback to EN)
  */
 
 (() => {
@@ -324,7 +323,6 @@
     bindUI();
     applyTranslations();
     startClock();
-    console.log("EPTEC MAIN: boot OK");
   });
 
   function bindFlagCannon() {
@@ -363,11 +361,7 @@
 
   function setLanguage(lang) {
     currentLang = normalizeLang(lang);
-
-    // RTL ONLY for Arabic → prevents layout flipping for other languages
-    const dir = getDict(currentLang)._dir === "rtl" ? "rtl" : "ltr";
-    document.documentElement.setAttribute("dir", dir);
-
+    document.documentElement.setAttribute("dir", getDict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
     applyTranslations();
     updateClockOnce();
   }
@@ -394,7 +388,7 @@
     setPlaceholder("reg-username", t("login_username", "Username"));
     setPlaceholder("reg-password", t("login_password", "Password"));
 
-    const regSubmit = byId("reg-submit");
+    const regSubmit = document.getElementById("reg-submit");
     if (regSubmit) {
       regSubmit.textContent = regSubmit.classList.contains("locked")
         ? t("register_submit_locked", "Complete verification (locked)")
@@ -413,76 +407,53 @@
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
     });
 
-    byId("btn-login")?.addEventListener("click", () => {
+    document.getElementById("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       alert("Login-Backend noch nicht aktiv.");
     });
 
-    byId("btn-register")?.addEventListener("click", () => {
+    document.getElementById("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("register-screen");
     });
-    byId("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
+    document.getElementById("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
 
-    byId("btn-forgot")?.addEventListener("click", () => {
+    document.getElementById("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("forgot-screen");
     });
-    byId("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
+    document.getElementById("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
 
-    // Admin
-    const submit = byId("admin-submit");
-    const input = byId("admin-code");
+    const submit = document.getElementById("admin-submit");
+    const input = document.getElementById("admin-code");
 
     const attempt = () => {
       const code = String(input?.value || "").trim();
       if (!code) return;
-
       const brain = window.EPTEC_BRAIN;
-      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) {
-        alert("System nicht bereit (Brain fehlt).");
-        return;
-      }
-
+      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) return alert("System nicht bereit.");
       const ok = brain.Auth.verifyAdmin(code, 1) || brain.Auth.verifyAdmin(code, 2);
       if (!ok) return alert("Zugriff verweigert");
-
       window.SoundEngine?.playAdminUnlock?.();
       window.SoundEngine?.tunnelFall?.();
-
-      byId("eptec-white-flash")?.classList.add("white-flash-active");
-      const tunnel = byId("eptec-tunnel");
+      document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
+      const tunnel = document.getElementById("eptec-tunnel");
       tunnel?.classList.remove("tunnel-hidden");
       tunnel?.classList.add("tunnel-active");
-
       setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
     };
 
     submit?.addEventListener("click", attempt);
-    input?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") attempt();
-    });
+    input?.addEventListener("keydown", (e) => e.key === "Enter" && attempt());
 
-    byId("link-imprint")?.addEventListener("click", () => alert("Imprint wird geladen."));
-    byId("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
-    byId("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
-
-    // Audio unlock
-    const once = () => {
-      window.SoundEngine?.unlockAudio?.();
-      window.removeEventListener("pointerdown", once);
-      window.removeEventListener("keydown", once);
-      window.removeEventListener("touchstart", once);
-    };
-    window.addEventListener("pointerdown", once, { passive: true });
-    window.addEventListener("keydown", once);
-    window.addEventListener("touchstart", once, { passive: true });
+    document.getElementById("link-imprint")?.addEventListener("click", () => alert("Imprint wird geladen."));
+    document.getElementById("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
+    document.getElementById("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
   }
 
-  function showModal(id) { byId(id)?.classList.remove("modal-hidden"); }
-  function hideModal(id) { byId(id)?.classList.add("modal-hidden"); }
+  function showModal(id) { document.getElementById(id)?.classList.remove("modal-hidden"); }
+  function hideModal(id) { document.getElementById(id)?.classList.add("modal-hidden"); }
 
-  // Clock
   function startClock() {
     stopClock();
     updateClockOnce();
@@ -493,18 +464,13 @@
     clockTimer = null;
   }
   function updateClockOnce() {
-    const el = byId("system-clock");
+    const el = document.getElementById("system-clock");
     if (!el) return;
     const now = new Date();
-    try {
-      el.textContent = now.toLocaleString(currentLang, { dateStyle: "medium", timeStyle: "short" });
-    } catch {
-      el.textContent = now.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" });
-    }
+    try { el.textContent = now.toLocaleString(currentLang, { dateStyle: "medium", timeStyle: "short" }); }
+    catch { el.textContent = now.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); }
   }
 
-  // DOM helpers
-  function byId(id) { return document.getElementById(id); }
-  function setText(id, text) { const el = byId(id); if (el) el.textContent = String(text ?? ""); }
-  function setPlaceholder(id, text) { const el = byId(id); if (el) el.setAttribute("placeholder", String(text ?? "")); }
+  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = String(v ?? ""); }
+  function setPlaceholder(id, v) { const el = document.getElementById(id); if (el) el.setAttribute("placeholder", String(v ?? "")); }
 })();
