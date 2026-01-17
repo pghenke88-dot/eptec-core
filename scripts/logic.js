@@ -449,7 +449,6 @@ const EPTEC_BRAIN = (() => {
       const rendered = await renderTemplate(base, ctx);
 
       // 4) Render safely as preformatted text by default (0% XSS headaches)
-      // If you intentionally want HTML in docs, set meta.render.mode="html" for that doc action.
       container.innerHTML = `
         <div id="printable-area" class="doc-view"
              style="background:white;color:black;padding:40px;font-family:monospace;white-space:pre-wrap;">
@@ -652,3 +651,6 @@ const EPTEC_BRAIN = (() => {
     runAction
   };
 })();
+
+// ✅ REQUIRED: make the brain truly global for main.js
+window.EPTEC_BRAIN = EPTEC_BRAIN;
