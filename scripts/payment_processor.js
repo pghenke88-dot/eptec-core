@@ -1,16 +1,30 @@
-// Integration von Stripe/PayPal für die EPTEC-Gebühren
-const paymentGateway = {
-    method: ["Visa", "Mastercard", "PayPal"],
-    currency: "EUR",
-    
-    async createSubscription(userId, planType) {
-        console.log(`Erstelle Abo für ${userId} Typ: ${planType}`);
-        // Hier wird die Verbindung zum Zahlungsanbieter hergestellt
-        // Der Nutzer gibt seine Daten auf der gesicherten Seite des Anbieters ein
-    },
+// EPTEC PaymentProcessor
+// Zweck: Ausführung des Zahlungsprozesses
+// GitHub Pages kompatibel (Stripe Hosted)
 
-    verifyPaymentStatus(transactionId) {
-        // Prüft, ob das Geld auf deinem Konto eingegangen ist
-        return "Payment_Confirmed";
+const PaymentProcessor = {
+
+  initiateCheckout(planId) {
+    if (!planId) {
+      console.warn("Kein Plan angegeben.");
+      return;
     }
+
+    const plan = PaymentGate?.plans?.[planId];
+
+    if (!plan || !plan.stripeLink) {
+      console.warn("Kein gültiger Zahlungsplan:", planId);
+      alert("Diese Zahlungsoption ist derzeit nicht verfügbar.");
+      return;
+    }
+
+    console.log("Starte Zahlung:", plan.label);
+    window.location.href = plan.stripeLink;
+  },
+
+  getStatus() {
+    // Hosted Stripe → Status extern
+    return "EXTERNAL_MANAGED";
+  }
+
 };
