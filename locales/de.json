@@ -76,3 +76,57 @@
     }
   }
 }
+{
+  "app_name": "",
+  "login_username": "",
+  "login_password": "",
+  "login_btn": "",
+  "register_btn": "",
+  "forgot_btn": "",
+
+  "admin_code": "",
+  "admin_submit": "",
+  "admin_hint": "",
+
+  "register_title": "",
+  "register_first_name": "",
+  "register_last_name": "",
+  "register_birthdate": "",
+  "register_email": "",
+  "register_username_rules": "",
+  "register_password_rules": "",
+  "register_submit": "",
+  "register_submit_locked": "",
+  "register_ready": "",
+  "register_not_ready": "",
+  "register_username_taken": "",
+  "register_username_available": "",
+  "register_suggestion_title": "",
+  "register_suggestion_1": "",
+  "register_suggestion_2": "",
+  "register_verification_sent": "",
+  "register_verification_mail_subject": "",
+  "register_verification_mail_body": "",
+  "register_verified": "",
+
+  "forgot_title": "",
+  "forgot_hint": "",
+  "forgot_submit": "",
+  "forgot_mail_sent": "",
+  "forgot_new_password": "",
+  "forgot_confirm": "",
+  "forgot_done": "",
+
+  "legal_imprint": "",
+  "legal_terms": "",
+
+  "lang_choose": "",
+  "lang_active": "",
+
+  "system_ok": "",
+  "system_cancel": "",
+  "system_close": "",
+  "system_loading": "",
+  "system_error": "",
+  "login_error_invalid": ""
+}
