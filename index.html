@@ -1,91 +1,4 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPTEC MASTER CONTROL</title>
-    
-    <link rel="stylesheet" href="assets/style.css">
-    <link rel="stylesheet" href="assets/ui_elements.css">
-    <link rel="stylesheet" href="assets/imagine.css">
-    <link rel="stylesheet" href="assets/hidden.css">
-
-    <style>
-        /* Notfall-Fix für Desktop-Sichtbarkeit */
-        #meadow-view { display: flex !important; } 
-        .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
-    </style>
-</head>
-<body>
-
-    <section id="meadow-view" class="grassy-meadow">
-        <div class="portal-door" onclick="EPTEC_BRAIN.Navigation.triggerTunnel('R1')">
-            </div>
-    </section>
-
-    <section id="room-1-view" class="room-view workshop-ambient">
-        <button class="btn-exit" onclick="location.reload()">EXIT</button>
-        <div class="wooden-desk">
-            <div class="engraved-matrix">
-                </div>
-        </div>
-        <div data-logic-id="HauptTerminal" style="position: absolute; bottom: 20px; right: 20px;"></div>
-    </section>
-
-    <section id="room-2-view" class="room-view control-ambient">
-        <div class="service-cart">
-            <div data-logic-id="ZentralerTisch"></div>
-        </div>
-        
-        <div id="spiegel-nachricht">Warten auf System-Eingabe...</div>
-
-        <div class="ampel-standalone">
-            <div class="ampel-bulb" id="bulb-1"></div>
-            <div class="ampel-bulb" id="bulb-2"></div>
-            <div class="ampel-bulb" id="bulb-3"></div>
-        </div>
-
-        <div class="corner-plant">🌿
-            <div class="hidden-archive" onclick="EPTEC_BRAIN.Compliance.exportAnnexK()">ANNEX K EXPORT</div>
-        </div>
-    </section>
-
-    <audio id="snd-wurmloch" src="assets/sounds de/wurmloch.mp3"></audio>
-    <audio id="snd-wind" src="assets/sounds de/wind.mp3" loop></audio>
-    <audio id="snd-feder" src="assets/sounds de/feder.mp3"></audio>
-    <audio id="snd-dielen-knacken" src="assets/sounds de/knacken.mp3"></audio>
-
-    <script id="multi-lang-assets" type="application/json">
-    {
-        "kisten": {
-            "betrieb": { 
-                "structure": ["Präambel", "Part 0", "Part I", "Part II", "Part III", "Part IV", "Part V", "Part VI", "Part VII", "Part VIII", "Part IX", "Part X", "Part XI", "Annex A", "Annex B", "Annex C", "Annex D", "Annex E", "Annex F", "Annex G", "Annex H", "Annex I"] 
-            }
-        },
-        "languages": {
-            "de": {
-                "nf1_template": "PRÜFPROTOKOLL\nOBJEKT: [HIER_ABWEICHUNG_EINFÜGEN]\nPRÜFER: [NUTZER_NAME]\nSTATUS: VALIDIERUNG ERFOLGREICH."
-            }
-        },
-        "objectMeta": {
-            "HauptTerminal": {
-                "source": "style",
-                "styleInstruction": "border: 2px solid var(--gold); padding: 10px; color: gold; cursor: pointer;",
-                "label": "TERMINAL (UPLOAD)",
-                "action": "upload",
-                "sound": "snd-feder"
-            }
-        }
-    }
-    </script>
-
-    <script src="scripts/state_manager.js"></script>
-    <script src="scripts/security_vault.js"></script>
-    <script src="scripts/logic.js"></script> <script src="scripts/main.js"></script>
-
-</body>
-</html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -96,16 +9,23 @@
   <link rel="stylesheet" href="assets/ui_elements.css">
   <link rel="stylesheet" href="assets/imagine.css">
   <link rel="stylesheet" href="assets/hidden.css">
+
+  <style>
+    /* Desktop safety */
+    #meadow-view { display: flex !important; }
+    .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
+  </style>
 </head>
 
 <body>
 
-  <!-- MEADOW / ENTRY SCENE -->
-  <section id="meadow-view" class="grassy-meadow">
-    <div class="sun"></div>
-    <div class="stream"></div>
+  <!-- SYSTEM CLOCK (persistent, no text translation needed) -->
+  <div id="system-clock" class="system-clock"></div>
 
-    <!-- LANGUAGE SELECTOR (always visible) -->
+  <!-- ENTRY SCENE / MEADOW -->
+  <section id="meadow-view" class="grassy-meadow">
+
+    <!-- LANGUAGE SWITCHER -->
     <div id="language-switcher" class="lang-switcher">
       <span data-lang="en" class="lang-flag">🇬🇧</span>
       <span data-lang="de" class="lang-flag">🇩🇪</span>
@@ -121,88 +41,106 @@
       <span data-lang="jp" class="lang-flag">🇯🇵</span>
     </div>
 
-    <!-- ENTRY UI -->
+    <!-- LOGIN UI -->
     <div id="entry-ui" class="entry-ui">
 
-      <!-- two rectangles grow into these fields -->
-      <input id="login-username" class="entry-input grow-in" placeholder="" autocomplete="username" />
-      <input id="login-password" class="entry-input grow-in" placeholder="" type="password" autocomplete="current-password" />
+      <!-- GROWING INPUTS -->
+      <input id="login-username"
+             class="entry-input grow-in"
+             placeholder=""
+             autocomplete="username">
 
-      <!-- buttons appear with "plop" -->
+      <input id="login-password"
+             class="entry-input grow-in"
+             type="password"
+             placeholder=""
+             autocomplete="current-password">
+
+      <!-- ACTION BUTTONS -->
       <div class="entry-actions plop-in">
         <button id="btn-login" class="entry-btn"></button>
         <button id="btn-register" class="entry-btn"></button>
         <button id="btn-forgot" class="entry-btn"></button>
       </div>
 
-      <!-- ADMIN GATE (visible in UI layout; you can hide it via OS/CSS if you want) -->
+      <!-- ADMIN GATE -->
       <div id="admin-gate" class="admin-gate plop-in">
-        <input id="admin-code" class="entry-input" placeholder="" autocomplete="off" />
+        <input id="admin-code"
+               class="entry-input"
+               placeholder=""
+               autocomplete="off">
         <button id="admin-submit" class="entry-btn"></button>
       </div>
 
     </div>
 
-    <!-- LEGAL LINKS (start EN, switch after language selection) -->
+    <!-- LEGAL FOOTER -->
     <div id="legal-footer" class="legal-footer">
       <span id="link-imprint" class="legal-link"></span>
       <span class="legal-sep">|</span>
       <span id="link-terms" class="legal-link"></span>
+      <span class="legal-sep">|</span>
+      <span id="link-support" class="legal-link"></span>
     </div>
 
   </section>
 
-  <!-- REGISTER SCREEN (green-ish background with white boxes) -->
+  <!-- REGISTER MODAL -->
   <section id="register-screen" class="modal modal-hidden">
     <div class="modal-card register-card">
-      <div class="modal-title" id="register-title"></div>
 
-      <input id="reg-first-name" class="entry-input" placeholder="" />
-      <input id="reg-last-name" class="entry-input" placeholder="" />
-      <input id="reg-birthdate" class="entry-input" placeholder="" />
-      <input id="reg-email" class="entry-input" placeholder="" />
-      <input id="reg-username" class="entry-input" placeholder="" />
-      <input id="reg-password" class="entry-input" placeholder="" type="password" />
+      <div id="register-title" class="modal-title"></div>
+
+      <input id="reg-first-name" class="entry-input" placeholder="">
+      <input id="reg-last-name" class="entry-input" placeholder="">
+      <input id="reg-birthdate" class="entry-input" placeholder="">
+      <input id="reg-email" class="entry-input" placeholder="">
+      <input id="reg-username" class="entry-input" placeholder="">
+      <input id="reg-password" class="entry-input" type="password" placeholder="">
 
       <div id="reg-rules-username" class="rule-text"></div>
       <div id="reg-rules-password" class="rule-text"></div>
 
       <div id="reg-suggestions" class="suggestions modal-hidden">
-        <div class="suggestions-title" id="reg-suggestion-title"></div>
-        <div class="suggestion" id="reg-suggestion-1"></div>
-        <div class="suggestion" id="reg-suggestion-2"></div>
+        <div id="reg-suggestion-title" class="suggestions-title"></div>
+        <div id="reg-suggestion-1" class="suggestion"></div>
+        <div id="reg-suggestion-2" class="suggestion"></div>
       </div>
 
       <button id="reg-submit" class="entry-btn locked"></button>
       <button id="reg-close" class="entry-btn secondary"></button>
+
     </div>
   </section>
 
-  <!-- FORGOT PASSWORD (picture-in-picture modal) -->
+  <!-- FORGOT PASSWORD MODAL -->
   <section id="forgot-screen" class="modal modal-hidden">
     <div class="modal-card forgot-card">
-      <div class="modal-title" id="forgot-title"></div>
-      <input id="forgot-identity" class="entry-input" placeholder="" />
+
+      <div id="forgot-title" class="modal-title"></div>
+      <input id="forgot-identity" class="entry-input" placeholder="">
       <button id="forgot-submit" class="entry-btn"></button>
       <button id="forgot-close" class="entry-btn secondary"></button>
+
     </div>
   </section>
 
-  <!-- WHITE FLASH (0.3s) -->
-  <div id="eptec-white-flash" class="white-flash-hidden" aria-hidden="true"></div>
+  <!-- WHITE FLASH -->
+  <div id="eptec-white-flash"
+       class="white-flash-hidden"
+       aria-hidden="true"></div>
 
-  <!-- TUNNEL FALL (1.2–1.5s) -->
-  <div id="eptec-tunnel" class="tunnel-hidden" aria-hidden="true">
+  <!-- TUNNEL FALL -->
+  <div id="eptec-tunnel"
+       class="tunnel-hidden"
+       aria-hidden="true">
     <div class="tunnel-wall"></div>
   </div>
 
-  <!-- Optional footer placeholder (if you use loadFooter) -->
-  <div id="footer-placeholder"></div>
-
-  <!-- Your existing scripts -->
+  <!-- SCRIPTS -->
   <script src="scripts/main.js"></script>
   <script src="scripts/logic.js"></script>
   <script src="scripts/sounds.js"></script>
+
 </body>
 </html>
-<div id="system-clock" class="system-clock"></div>
