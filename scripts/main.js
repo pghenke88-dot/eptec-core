@@ -1,6 +1,7 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – UI wiring + "flag cannon" + built-in i18n (no backend)
+ * EPTEC MAIN – UI wiring + flag cannon + built-in translations (no backend)
+ * Works even if locales/*.json are broken or missing.
  */
 
 (() => {
@@ -9,36 +10,8 @@
   let currentLang = "de";
   let clockTimer = null;
 
-  // Built-in translations (no JSON files required)
+  // Built-in translations (no JSON needed)
   const I18N = {
-    en: {
-      login_username: "Username",
-      login_password: "Password",
-      login_btn: "Login",
-      register_btn: "Register",
-      forgot_btn: "Forgot password",
-      admin_code: "Admin code",
-      admin_submit: "Enter (Admin)",
-      legal_imprint: "Imprint",
-      legal_terms: "Terms",
-      legal_support: "Support",
-      register_title: "Registration",
-      register_first_name: "First name",
-      register_last_name: "Last name",
-      register_birthdate: "Date of birth",
-      register_email: "Email address",
-      register_username_rules: "",
-      register_password_rules: "",
-      register_suggestion_title: "Suggestions",
-      register_suggestion_1: "",
-      register_suggestion_2: "",
-      register_submit: "Complete verification",
-      register_submit_locked: "Complete verification (locked)",
-      system_close: "Close",
-      forgot_title: "Reset password",
-      forgot_hint: "Enter email or username",
-      forgot_submit: "Request link"
-    },
     de: {
       login_username: "Benutzername",
       login_password: "Passwort",
@@ -55,42 +28,53 @@
       register_last_name: "Nachname",
       register_birthdate: "Geburtsdatum",
       register_email: "E-Mail",
-      register_username_rules: "",
-      register_password_rules: "",
-      register_suggestion_title: "Vorschläge",
-      register_suggestion_1: "",
-      register_suggestion_2: "",
-      register_submit: "Verifizierung abschließen",
-      register_submit_locked: "Verifizierung abschließen (gesperrt)",
       system_close: "Schließen",
       forgot_title: "Passwort zurücksetzen",
       forgot_hint: "E-Mail oder Benutzername",
-      forgot_submit: "Link anfordern"
+      forgot_submit: "Link anfordern",
+      register_submit: "Verifizierung abschließen",
+      register_submit_locked: "Verifizierung abschließen (gesperrt)"
+    },
+    en: {
+      login_username: "Username",
+      login_password: "Password",
+      login_btn: "Login",
+      register_btn: "Register",
+      forgot_btn: "Forgot password",
+      admin_code: "Admin code",
+      admin_submit: "Enter (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Terms",
+      legal_support: "Support",
+      register_title: "Registration",
+      register_first_name: "First name",
+      register_last_name: "Last name",
+      register_birthdate: "Date of birth",
+      register_email: "Email address",
+      system_close: "Close",
+      forgot_title: "Reset password",
+      forgot_hint: "Enter email or username",
+      forgot_submit: "Request link",
+      register_submit: "Complete verification",
+      register_submit_locked: "Complete verification (locked)"
     }
   };
 
-  function dict(lang) {
-    return I18N[lang] || I18N.en;
-  }
-  function t(key, fallback = "") {
-    const d = dict(currentLang);
-    return (typeof d[key] === "string" && d[key]) ? d[key] : fallback;
-  }
+  const t = (key, fallback = "") => (I18N[currentLang]?.[key] ?? fallback);
 
-  // BOOT
   document.addEventListener("DOMContentLoaded", () => {
-    bindLanguageCannon();
+    bindFlagCannon();
     bindUI();
     applyTranslations();
     startClock();
     console.log("EPTEC MAIN: boot OK");
   });
 
-  // Language cannon behavior
-  function bindLanguageCannon() {
-    const switcher = byId("language-switcher");
-    const toggle = byId("lang-toggle");
-    const rail = byId("lang-rail");
+  // ---------- FLAG CANNON ----------
+  function bindFlagCannon() {
+    const switcher = document.getElementById("language-switcher");
+    const toggle = document.getElementById("lang-toggle");
+    const rail = document.getElementById("lang-rail");
     if (!switcher || !toggle || !rail) return;
 
     const open = () => {
@@ -112,6 +96,7 @@
       isOpen() ? close() : open();
     });
 
+    // IMPORTANT: listen on .lang-item (your abbreviation buttons)
     rail.querySelectorAll(".lang-item").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -137,84 +122,39 @@
     updateClockOnce();
   }
 
-  function applyTranslations() {
-    // Login
-    setPlaceholder("login-username", t("login_username", "Username"));
-    setPlaceholder("login-password", t("login_password", "Password"));
-    setText("btn-login", t("login_btn", "Login"));
-    setText("btn-register", t("register_btn", "Register"));
-    setText("btn-forgot", t("forgot_btn", "Forgot password"));
-
-    // Admin
-    setPlaceholder("admin-code", t("admin_code", "Admin code"));
-    setText("admin-submit", t("admin_submit", "Enter (Admin)"));
-
-    // Legal
-    setText("link-imprint", t("legal_imprint", "Imprint"));
-    setText("link-terms", t("legal_terms", "Terms"));
-    setText("link-support", t("legal_support", "Support"));
-
-    // Register
-    setText("register-title", t("register_title", "Registration"));
-    setPlaceholder("reg-first-name", t("register_first_name", "First name"));
-    setPlaceholder("reg-last-name", t("register_last_name", "Last name"));
-    setPlaceholder("reg-birthdate", t("register_birthdate", "Date of birth"));
-    setPlaceholder("reg-email", t("register_email", "Email address"));
-    setPlaceholder("reg-username", t("login_username", "Username"));
-    setPlaceholder("reg-password", t("login_password", "Password"));
-    setText("reg-rules-username", t("register_username_rules", ""));
-    setText("reg-rules-password", t("register_password_rules", ""));
-    setText("reg-suggestion-title", t("register_suggestion_title", "Suggestions"));
-    setText("reg-suggestion-1", t("register_suggestion_1", ""));
-    setText("reg-suggestion-2", t("register_suggestion_2", ""));
-
-    const regSubmit = byId("reg-submit");
-    if (regSubmit) {
-      const isLocked = regSubmit.classList.contains("locked");
-      regSubmit.textContent = isLocked
-        ? t("register_submit_locked", "Complete verification (locked)")
-        : t("register_submit", "Complete verification");
-    }
-    setText("reg-close", t("system_close", "Close"));
-
-    // Forgot
-    setText("forgot-title", t("forgot_title", "Reset password"));
-    setPlaceholder("forgot-identity", t("forgot_hint", "Enter email or username"));
-    setText("forgot-submit", t("forgot_submit", "Request link"));
-    setText("forgot-close", t("system_close", "Close"));
-  }
-
+  // ---------- UI ----------
   function bindUI() {
-    // Focus sounds
+    // input focus sound
     document.querySelectorAll("input").forEach((inp) => {
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
     });
 
-    // Login
-    byId("btn-login")?.addEventListener("click", () => {
+    // Login placeholder
+    document.getElementById("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       alert("Login-Backend noch nicht aktiv.");
     });
 
     // Register modal
-    byId("btn-register")?.addEventListener("click", () => {
+    document.getElementById("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("register-screen");
     });
-    byId("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
+    document.getElementById("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
 
     // Forgot modal
-    byId("btn-forgot")?.addEventListener("click", () => {
+    document.getElementById("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       showModal("forgot-screen");
     });
-    byId("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
+    document.getElementById("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
 
-    // Admin gate
-    const adminSubmit = byId("admin-submit");
-    const adminInput = byId("admin-code");
-    const attemptAdmin = () => {
-      const code = String(adminInput?.value || "").trim();
+    // Admin gate -> tunnel
+    const submit = document.getElementById("admin-submit");
+    const input = document.getElementById("admin-code");
+
+    const attempt = () => {
+      const code = String(input?.value || "").trim();
       if (!code) return;
 
       const brain = window.EPTEC_BRAIN;
@@ -229,24 +169,23 @@
       window.SoundEngine?.playAdminUnlock?.();
       window.SoundEngine?.tunnelFall?.();
 
-      byId("eptec-white-flash")?.classList.add("white-flash-active");
-
-      const tunnel = byId("eptec-tunnel");
+      document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
+      const tunnel = document.getElementById("eptec-tunnel");
       tunnel?.classList.remove("tunnel-hidden");
       tunnel?.classList.add("tunnel-active");
 
       setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
     };
 
-    adminSubmit?.addEventListener("click", attemptAdmin);
-    adminInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") attemptAdmin();
+    submit?.addEventListener("click", attempt);
+    input?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") attempt();
     });
 
-    // Legal links
-    byId("link-imprint")?.addEventListener("click", () => alert("Imprint wird geladen."));
-    byId("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
-    byId("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
+    // Legal placeholders
+    document.getElementById("link-imprint")?.addEventListener("click", () => alert("Impressum wird geladen."));
+    document.getElementById("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
+    document.getElementById("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
 
     // Audio unlock
     const once = () => {
@@ -260,18 +199,50 @@
     window.addEventListener("touchstart", once, { passive: true });
   }
 
-  function showModal(id) {
-    const el = byId(id);
-    if (!el) return;
-    el.classList.remove("modal-hidden");
-  }
-  function hideModal(id) {
-    const el = byId(id);
-    if (!el) return;
-    el.classList.add("modal-hidden");
+  function applyTranslations() {
+    setPlaceholder("login-username", t("login_username", "Username"));
+    setPlaceholder("login-password", t("login_password", "Password"));
+    setText("btn-login", t("login_btn", "Login"));
+    setText("btn-register", t("register_btn", "Register"));
+    setText("btn-forgot", t("forgot_btn", "Forgot"));
+
+    setPlaceholder("admin-code", t("admin_code", "Admin code"));
+    setText("admin-submit", t("admin_submit", "Enter (Admin)"));
+
+    setText("link-imprint", t("legal_imprint", "Imprint"));
+    setText("link-terms", t("legal_terms", "Terms"));
+    setText("link-support", t("legal_support", "Support"));
+
+    setText("register-title", t("register_title", "Registration"));
+    setPlaceholder("reg-first-name", t("register_first_name", "First name"));
+    setPlaceholder("reg-last-name", t("register_last_name", "Last name"));
+    setPlaceholder("reg-birthdate", t("register_birthdate", "Date of birth"));
+    setPlaceholder("reg-email", t("register_email", "Email address"));
+    setPlaceholder("reg-username", t("login_username", "Username"));
+    setPlaceholder("reg-password", t("login_password", "Password"));
+    setText("reg-close", t("system_close", "Close"));
+
+    const regSubmit = document.getElementById("reg-submit");
+    if (regSubmit) {
+      regSubmit.textContent = regSubmit.classList.contains("locked")
+        ? t("register_submit_locked", "Complete verification (locked)")
+        : t("register_submit", "Complete verification");
+    }
+
+    setText("forgot-title", t("forgot_title", "Reset password"));
+    setPlaceholder("forgot-identity", t("forgot_hint", "Enter email or username"));
+    setText("forgot-submit", t("forgot_submit", "Request link"));
+    setText("forgot-close", t("system_close", "Close"));
   }
 
-  // Clock
+  function showModal(id) {
+    document.getElementById(id)?.classList.remove("modal-hidden");
+  }
+  function hideModal(id) {
+    document.getElementById(id)?.classList.add("modal-hidden");
+  }
+
+  // ---------- CLOCK ----------
   function startClock() {
     stopClock();
     updateClockOnce();
@@ -282,7 +253,7 @@
     clockTimer = null;
   }
   function updateClockOnce() {
-    const el = byId("system-clock");
+    const el = document.getElementById("system-clock");
     if (!el) return;
     const now = new Date();
     try {
@@ -292,16 +263,13 @@
     }
   }
 
-  // Helpers
-  function byId(id) { return document.getElementById(id); }
+  // helpers
   function setText(id, text) {
-    const el = byId(id);
-    if (!el) return;
-    el.textContent = String(text ?? "");
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(text ?? "");
   }
   function setPlaceholder(id, text) {
-    const el = byId(id);
-    if (!el) return;
-    el.setAttribute("placeholder", String(text ?? ""));
+    const el = document.getElementById(id);
+    if (el) el.setAttribute("placeholder", String(text ?? ""));
   }
 })();
