@@ -1,16 +1,21 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – stable i18n + flag cannon + UI wiring
- * - RTL only for Arabic
- * - Legal triad translated for ALL languages (fallback to EN)
+ * EPTEC MAIN – full UI controller
+ * - Flag cannon language selector
+ * - Built-in i18n (no locales json needed)
+ * - Ambient audio (wind/birds) after first user gesture
+ * - Tunnel sound on tunnel enter
+ * - Admin gate -> EPTEC_BRAIN navigation
  */
 
 (() => {
   "use strict";
 
+  // ---------- STATE ----------
   let currentLang = "en";
   let clockTimer = null;
 
+  // ---------- BUILT-IN I18N ----------
   const I18N = {
     en: {
       _dir: "ltr",
@@ -309,22 +314,37 @@
     return l;
   }
 
-  function getDict(lang) {
+  function dict(lang) {
     return I18N[normalizeLang(lang)] || I18N.en;
   }
 
   function t(key, fallback = "") {
-    const d = getDict(currentLang);
+    const d = dict(currentLang);
     return d[key] ?? I18N.en[key] ?? fallback;
   }
 
+  // ---------- AUDIO UNLOCK + AMBIENT ----------
+  let audioUnlocked = false;
+  function unlockOnce() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    window.SoundEngine?.unlockAudio?.();
+    window.SoundEngine?.startAmbient?.();
+  }
+  document.addEventListener("pointerdown", unlockOnce, { once: true });
+  document.addEventListener("keydown", unlockOnce, { once: true });
+  document.addEventListener("touchstart", unlockOnce, { once: true, passive: true });
+
+  // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
     bindFlagCannon();
     bindUI();
     applyTranslations();
     startClock();
+    console.log("EPTEC MAIN: boot OK");
   });
 
+  // ---------- FLAG CANNON ----------
   function bindFlagCannon() {
     const switcher = document.getElementById("language-switcher");
     const toggle = document.getElementById("lang-toggle");
@@ -361,11 +381,12 @@
 
   function setLanguage(lang) {
     currentLang = normalizeLang(lang);
-    document.documentElement.setAttribute("dir", getDict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
+    document.documentElement.setAttribute("dir", dict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
     applyTranslations();
     updateClockOnce();
   }
 
+  // ---------- APPLY TEXTS ----------
   function applyTranslations() {
     setPlaceholder("login-username", t("login_username", "Username"));
     setPlaceholder("login-password", t("login_password", "Password"));
@@ -402,6 +423,7 @@
     setText("forgot-close", t("system_close", "Close"));
   }
 
+  // ---------- UI ----------
   function bindUI() {
     document.querySelectorAll("input").forEach((inp) => {
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
@@ -424,22 +446,33 @@
     });
     document.getElementById("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
 
+    // Admin -> tunnel
     const submit = document.getElementById("admin-submit");
     const input = document.getElementById("admin-code");
 
     const attempt = () => {
       const code = String(input?.value || "").trim();
       if (!code) return;
+
       const brain = window.EPTEC_BRAIN;
-      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) return alert("System nicht bereit.");
+      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) {
+        alert("System nicht bereit (Brain fehlt).");
+        return;
+      }
+
       const ok = brain.Auth.verifyAdmin(code, 1) || brain.Auth.verifyAdmin(code, 2);
       if (!ok) return alert("Zugriff verweigert");
-      window.SoundEngine?.playAdminUnlock?.();
+
+      // tunnel sound back
+      window.SoundEngine?.playTunnel?.(); // if you used the playTunnel version
+      // if your SoundEngine exposes tunnelFall instead:
       window.SoundEngine?.tunnelFall?.();
+
       document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
       const tunnel = document.getElementById("eptec-tunnel");
       tunnel?.classList.remove("tunnel-hidden");
       tunnel?.classList.add("tunnel-active");
+
       setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
     };
 
@@ -454,6 +487,7 @@
   function showModal(id) { document.getElementById(id)?.classList.remove("modal-hidden"); }
   function hideModal(id) { document.getElementById(id)?.classList.add("modal-hidden"); }
 
+  // ---------- CLOCK ----------
   function startClock() {
     stopClock();
     updateClockOnce();
@@ -471,6 +505,7 @@
     catch { el.textContent = now.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); }
   }
 
+  // helpers
   function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = String(v ?? ""); }
   function setPlaceholder(id, v) { const el = document.getElementById(id); if (el) el.setAttribute("placeholder", String(v ?? "")); }
 })();
