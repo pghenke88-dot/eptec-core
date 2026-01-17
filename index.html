@@ -85,3 +85,124 @@
 
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EPTEC MASTER CONTROL</title>
+
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/ui_elements.css">
+  <link rel="stylesheet" href="assets/imagine.css">
+  <link rel="stylesheet" href="assets/hidden.css">
+</head>
+
+<body>
+
+  <!-- MEADOW / ENTRY SCENE -->
+  <section id="meadow-view" class="grassy-meadow">
+    <div class="sun"></div>
+    <div class="stream"></div>
+
+    <!-- LANGUAGE SELECTOR (always visible) -->
+    <div id="language-switcher" class="lang-switcher">
+      <span data-lang="en" class="lang-flag">🇬🇧</span>
+      <span data-lang="de" class="lang-flag">🇩🇪</span>
+      <span data-lang="es" class="lang-flag">🇪🇸</span>
+      <span data-lang="fr" class="lang-flag">🇫🇷</span>
+      <span data-lang="it" class="lang-flag">🇮🇹</span>
+      <span data-lang="pt" class="lang-flag">🇵🇹</span>
+      <span data-lang="nl" class="lang-flag">🇳🇱</span>
+      <span data-lang="ru" class="lang-flag">🇷🇺</span>
+      <span data-lang="uk" class="lang-flag">🇺🇦</span>
+      <span data-lang="ar" class="lang-flag">🇸🇦</span>
+      <span data-lang="zh" class="lang-flag">🇨🇳</span>
+      <span data-lang="jp" class="lang-flag">🇯🇵</span>
+    </div>
+
+    <!-- ENTRY UI -->
+    <div id="entry-ui" class="entry-ui">
+
+      <!-- two rectangles grow into these fields -->
+      <input id="login-username" class="entry-input grow-in" placeholder="" autocomplete="username" />
+      <input id="login-password" class="entry-input grow-in" placeholder="" type="password" autocomplete="current-password" />
+
+      <!-- buttons appear with "plop" -->
+      <div class="entry-actions plop-in">
+        <button id="btn-login" class="entry-btn"></button>
+        <button id="btn-register" class="entry-btn"></button>
+        <button id="btn-forgot" class="entry-btn"></button>
+      </div>
+
+      <!-- ADMIN GATE (visible in UI layout; you can hide it via OS/CSS if you want) -->
+      <div id="admin-gate" class="admin-gate plop-in">
+        <input id="admin-code" class="entry-input" placeholder="" autocomplete="off" />
+        <button id="admin-submit" class="entry-btn"></button>
+      </div>
+
+    </div>
+
+    <!-- LEGAL LINKS (start EN, switch after language selection) -->
+    <div id="legal-footer" class="legal-footer">
+      <span id="link-imprint" class="legal-link"></span>
+      <span class="legal-sep">|</span>
+      <span id="link-terms" class="legal-link"></span>
+    </div>
+
+  </section>
+
+  <!-- REGISTER SCREEN (green-ish background with white boxes) -->
+  <section id="register-screen" class="modal modal-hidden">
+    <div class="modal-card register-card">
+      <div class="modal-title" id="register-title"></div>
+
+      <input id="reg-first-name" class="entry-input" placeholder="" />
+      <input id="reg-last-name" class="entry-input" placeholder="" />
+      <input id="reg-birthdate" class="entry-input" placeholder="" />
+      <input id="reg-email" class="entry-input" placeholder="" />
+      <input id="reg-username" class="entry-input" placeholder="" />
+      <input id="reg-password" class="entry-input" placeholder="" type="password" />
+
+      <div id="reg-rules-username" class="rule-text"></div>
+      <div id="reg-rules-password" class="rule-text"></div>
+
+      <div id="reg-suggestions" class="suggestions modal-hidden">
+        <div class="suggestions-title" id="reg-suggestion-title"></div>
+        <div class="suggestion" id="reg-suggestion-1"></div>
+        <div class="suggestion" id="reg-suggestion-2"></div>
+      </div>
+
+      <button id="reg-submit" class="entry-btn locked"></button>
+      <button id="reg-close" class="entry-btn secondary"></button>
+    </div>
+  </section>
+
+  <!-- FORGOT PASSWORD (picture-in-picture modal) -->
+  <section id="forgot-screen" class="modal modal-hidden">
+    <div class="modal-card forgot-card">
+      <div class="modal-title" id="forgot-title"></div>
+      <input id="forgot-identity" class="entry-input" placeholder="" />
+      <button id="forgot-submit" class="entry-btn"></button>
+      <button id="forgot-close" class="entry-btn secondary"></button>
+    </div>
+  </section>
+
+  <!-- WHITE FLASH (0.3s) -->
+  <div id="eptec-white-flash" class="white-flash-hidden" aria-hidden="true"></div>
+
+  <!-- TUNNEL FALL (1.2–1.5s) -->
+  <div id="eptec-tunnel" class="tunnel-hidden" aria-hidden="true">
+    <div class="tunnel-wall"></div>
+  </div>
+
+  <!-- Optional footer placeholder (if you use loadFooter) -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Your existing scripts -->
+  <script src="scripts/main.js"></script>
+  <script src="scripts/logic.js"></script>
+  <script src="scripts/sounds.js"></script>
+
+</body>
+</html>
