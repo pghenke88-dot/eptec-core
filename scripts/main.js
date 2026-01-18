@@ -1,6 +1,7 @@
 /**
  * scripts/main.js
  * EPTEC MAIN – UI controller + Phase-1 backend (mock)
+ * (angepasst: nutzt EPTEC_UI / EPTEC_UI_STATE)
  */
 
 (() => {
@@ -109,11 +110,14 @@
 
   // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
+    // ✅ start UI-Control (bind EPTEC_UI_STATE -> render)
+    window.EPTEC_UI?.init?.();
+
     bindFlagCannon();
     bindUI();
     applyTranslations();
     startClock();
-    bindHashLinks();     // verify/reset links simulation
+    bindHashLinks(); // verify/reset links simulation
     console.log("EPTEC MAIN: boot OK");
   });
 
@@ -208,30 +212,30 @@
       const res = window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p });
       if (!res?.ok) return alert(res?.message || "Login fehlgeschlagen.");
       alert("Login OK. (Phase 1) – Backend ist simuliert.");
-      // später: hier Navigation oder Room triggern, wenn du willst
     });
 
-    // REGISTER MODAL OPEN/CLOSE
+    // REGISTER (✅ now via UI-Control)
     document.getElementById("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
-      showModal("register-screen");
+      window.EPTEC_UI?.openRegister?.();
       refreshRegisterState();
     });
-    document.getElementById("reg-close")?.addEventListener("click", () => hideModal("register-screen"));
 
-    // FORGOT MODAL
+    // FORGOT (✅ now via UI-Control)
     document.getElementById("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
-      showModal("forgot-screen");
+      window.EPTEC_UI?.openForgot?.();
     });
-    document.getElementById("forgot-close")?.addEventListener("click", () => hideModal("forgot-screen"));
+
+    // Forgot close still works either way (ui_controller binds too)
+    document.getElementById("forgot-close")?.addEventListener("click", () => window.EPTEC_UI?.closeModal?.());
+    document.getElementById("reg-close")?.addEventListener("click", () => window.EPTEC_UI?.closeModal?.());
 
     document.getElementById("forgot-submit")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       const identity = document.getElementById("forgot-identity")?.value || "";
       const res = window.EPTEC_MOCK_BACKEND?.requestPasswordReset?.({ identity });
       alert(res?.message || "Reset angefordert.");
-      // optional: mailbox anzeigen, damit User den Link "klicken" kann
       openMailboxOverlay();
     });
 
@@ -265,9 +269,10 @@
     submit?.addEventListener("click", attempt);
     input?.addEventListener("keydown", (e) => e.key === "Enter" && attempt());
 
-    document.getElementById("link-imprint")?.addEventListener("click", () => alert("Imprint wird geladen."));
-    document.getElementById("link-terms")?.addEventListener("click", () => alert("AGB werden geladen."));
-    document.getElementById("link-support")?.addEventListener("click", () => alert("Support wird geladen."));
+    // LEGAL LINKS (✅ now via UI-Control)
+    document.getElementById("link-imprint")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("Impressum"));
+    document.getElementById("link-terms")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("AGB"));
+    document.getElementById("link-support")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("Support"));
 
     // Registration engine bindings
     bindRegistrationFlow();
@@ -315,12 +320,8 @@
     }
 
     function renderRules() {
-      if (rulesUser) {
-        rulesUser.textContent = "Username: min. 5 Zeichen, min. 1 Großbuchstabe, min. 1 Sonderzeichen.";
-      }
-      if (rulesPass) {
-        rulesPass.textContent = "Passwort: min. 8 Zeichen, min. 1 Buchstabe, min. 1 Zahl, min. 1 Sonderzeichen.";
-      }
+      if (rulesUser) rulesUser.textContent = "Username: min. 5 Zeichen, min. 1 Großbuchstabe, min. 1 Sonderzeichen.";
+      if (rulesPass) rulesPass.textContent = "Passwort: min. 8 Zeichen, min. 1 Buchstabe, min. 1 Zahl, min. 1 Sonderzeichen.";
     }
 
     function checkUsernameFree(name) {
@@ -339,18 +340,13 @@
 
       const freeOk = userOk ? checkUsernameFree(name) : false;
 
-      // Suggestions if username is taken but format OK
       if (userOk && !freeOk) showSuggestions(name);
       else hideSuggestions();
 
       const allOk = userOk && passOk && freeOk;
-
       setLocked(!allOk);
 
-      // visual cue (green border) like you described
       submit.style.border = allOk ? "2px solid #20c020" : "1px solid black";
-
-      // little confirm sound when it becomes ready
       if (allOk) window.SoundEngine?.uiConfirm?.();
     }
 
@@ -375,16 +371,13 @@
       if (!res?.ok) return alert(res?.message || "Registrierung fehlgeschlagen.");
 
       alert(res.message || "Registriert. Bitte verifizieren.");
-      // show mailbox (simulated mail)
       openMailboxOverlay();
     });
 
-    // initial
     refresh();
   }
 
   function refreshRegisterState() {
-    // trigger input validation refresh
     const u = document.getElementById("reg-username");
     if (u) u.dispatchEvent(new Event("input"));
   }
@@ -401,7 +394,7 @@
       const token = h.slice("#verify:".length);
       const res = window.EPTEC_MOCK_BACKEND?.verifyByToken?.(token);
       alert(res?.message || "Verifikation ausgeführt.");
-      location.hash = ""; // cleanup
+      location.hash = "";
       return;
     }
     if (h.startsWith("#reset:")) {
@@ -514,9 +507,6 @@
 
     document.body.appendChild(box);
   }
-
-  function showModal(id) { document.getElementById(id)?.classList.remove("modal-hidden"); }
-  function hideModal(id) { document.getElementById(id)?.classList.add("modal-hidden"); }
 
   // ---------- CLOCK ----------
   function startClock() {
