@@ -3,7 +3,7 @@
  * EPTEC SoundEngine – safe audio with auto-fallback (no 404 spam)
  *
  * Folder expectation (you can change BASE):
- *   assets/sounds/en/
+ *   assets/sounds/
  *     ui_confirm.mp3
  *     ui_focus.mp3
  *     flag_click.mp3
@@ -17,7 +17,7 @@
 (() => {
   "use strict";
 
-  const BASE = "assets/sounds/en/"; // adjust if your files live elsewhere
+  const BASE = "assets/sounds/"; // adjust if your files live elsewhere
 
   const FILES = {
     uiConfirm: "ui_confirm.mp3",
@@ -117,7 +117,6 @@
   }
 
   async function startAmbient() {
-    // Gentle meadow ambience: wind + birds (+ water if exists)
     stopAmbient();
     const wind = await playLoop("wind", 0.18);
     const birds = await playLoop("birds", 0.14);
@@ -128,22 +127,18 @@
 
   function unlockAudio() {
     unlocked = true;
-    // small silent poke for Safari-ish policies
     playOneShot("uiConfirm", 0.001);
   }
 
-  // Public API used by your main.js
   window.SoundEngine = {
     unlockAudio,
     startAmbient,
     stopAmbient,
 
-    // UI
     uiConfirm: () => playOneShot("uiConfirm", 0.55),
     uiFocus: () => playOneShot("uiFocus", 0.45),
     flagClick: () => playOneShot("flagClick", 0.45),
 
-    // Admin/Tunnel
     playAdminUnlock: () => playOneShot("adminUnlock", 0.75),
     tunnelFall: () => playOneShot("tunnelFall", 0.9)
   };
