@@ -7,9 +7,12 @@
  * - Placeholder text stays consistent + includes "Stand: <date>"
  * - No backend required
  *
- * Added (non-breaking):
- * - Optional dashboard visual rendering for coupling + codes (Present/Referral)
- * - Works only if the DOM elements exist (no design assumptions)
+ * Dashboard rendering (non-breaking, matches current index.html):
+ * - coupling-banner (single element, no coupling-banner-text required)
+ * - present-status
+ * - referral-code-block + referral-code-value
+ * - construction/controlling status + tier
+ * - next-invoice-date + next-invoice-discount (no block wrapper required)
  */
 
 (() => {
@@ -48,7 +51,6 @@
     setTimeout(() => el.classList.remove("show"), ms);
   }
 
-  // ✅ Generic placeholder (topic-agnostic, avoids mixed-language titles)
   function legalPlaceholderText() {
     const stand = new Date().toLocaleDateString();
     return (
@@ -59,10 +61,7 @@
     );
   }
 
-  // ------------------------------------------------------------
-  // NEW: Optional dashboard rendering (no-op if elements missing)
-  // ------------------------------------------------------------
-
+  // ---------- tiny helpers ----------
   function setText(id, text) {
     const el = $(id);
     if (!el) return false;
@@ -70,17 +69,10 @@
     return true;
   }
 
-  function setValue(id, value) {
+  function setDisplay(id, display) {
     const el = $(id);
     if (!el) return false;
-    if ("value" in el) el.value = String(value ?? "");
-    return true;
-  }
-
-  function setHidden(id, hidden) {
-    const el = $(id);
-    if (!el) return false;
-    el.style.display = hidden ? "none" : "";
+    el.style.display = display;
     return true;
   }
 
@@ -91,69 +83,50 @@
     return true;
   }
 
-  /**
-   * Expected state shape (optional; we don't break if missing):
-   * s.products = {
-   *   construction: { active: true/false, tier: "BASIS"/"PREMIUM" }
-   *   controlling:  { active: true/false, tier: "BASIS"/"PREMIUM" }
-   *   coupled: true/false
-   * }
-   *
-   * s.codes = {
-   *   referral: { code: "REF-...", enabled: true }
-   *   present:  { status: "none"|"active"|"used"|"expired", discountPercent, validUntil }
-   * }
-   *
-   * s.billing = { nextInvoiceDate, nextInvoiceDiscountPercent }
-   */
+  // ---------- dashboard renderer ----------
   function renderDashboard(s) {
-    // 1) Coupling banner (Construction -> Controlling dependency)
-    const coupled = !!(s?.products?.coupled);
-    // Default IDs (you can map your DOM to these later)
-    // - If these don't exist, nothing happens.
-    if (coupled) {
-      setHidden("coupling-banner", false);
-      setText(
-        "coupling-banner-text",
-        "Kopplung aktiv: Wenn du Construction kündigst, endet Controlling automatisch."
-      );
-      setClass("coupling-banner", "system-msg show info");
-    } else {
-      // hide if exists
-      setHidden("coupling-banner", true);
-    }
-
-    // 2) Room status chips (optional)
+    // Rooms
     const c = s?.products?.construction;
     const k = s?.products?.controlling;
 
     if (c) {
       setText("construction-status", c.active ? "Aktiv" : "Inaktiv");
-      setText("construction-tier", c.tier || "");
+      setText("construction-tier", c.tier || "—");
     }
+
     if (k) {
       setText("controlling-status", k.active ? "Aktiv" : "Inaktiv");
-      setText("controlling-tier", k.tier || "");
+      setText("controlling-tier", k.tier || "—");
     }
 
-    // 3) Referral code display (user-generated, unlimited)
+    // Coupling banner (your index has only coupling-banner)
+    const coupled = !!(s?.products?.coupled);
+    const banner = $("coupling-banner");
+    if (banner) {
+      if (coupled) {
+        banner.textContent = "Kopplung aktiv: Wenn du Construction kündigst, endet Controlling automatisch.";
+        banner.className = "system-msg show info";
+        banner.style.display = "";
+      } else {
+        banner.textContent = "";
+        banner.className = "system-msg";
+        banner.style.display = "none";
+      }
+    }
+
+    // Referral code
     const ref = s?.codes?.referral;
-    if (ref && typeof ref.code === "string") {
-      setText("referral-code-value", ref.code);
-      setHidden("referral-code-block", false);
+    if (ref && typeof ref.code === "string" && ref.code.trim()) {
+      setText("referral-code-value", ref.code.trim());
+      setDisplay("referral-code-block", "");
     } else {
-      // If you want it always visible, remove this hide later
-      setHidden("referral-code-block", true);
+      setDisplay("referral-code-block", "none");
     }
 
-    // 4) Present code status (global, 30 days, once per user, next invoice)
+    // Present status
     const pres = s?.codes?.present;
     if (pres) {
-      // If you have an input, keep it as user-entered; do not overwrite.
-      // We only show status messages.
       const status = String(pres.status || "none");
-
-      // Optional: show user-facing status label
       if (status === "active") {
         const pct = pres.discountPercent ?? s?.billing?.nextInvoiceDiscountPercent;
         const until = pres.validUntil ? ` (bis ${pres.validUntil})` : "";
@@ -171,15 +144,14 @@
       }
     }
 
-    // 5) Next billing info (optional)
+    // Billing preview (your index uses next-invoice-date and next-invoice-discount without a wrapper)
     const billing = s?.billing;
     if (billing) {
       if (billing.nextInvoiceDate) setText("next-invoice-date", billing.nextInvoiceDate);
-      if (billing.nextInvoiceDiscountPercent) {
-        setText("next-invoice-discount", `${billing.nextInvoiceDiscountPercent}%`);
-        setHidden("next-invoice-discount-block", false);
-      } else {
-        setHidden("next-invoice-discount-block", true);
+      const d = $("next-invoice-discount");
+      if (d) {
+        const pct = billing.nextInvoiceDiscountPercent;
+        d.textContent = pct ? ` • Rabatt: ${pct}%` : "";
       }
     }
   }
@@ -197,10 +169,8 @@
       const title = $("legal-title");
       const body = $("legal-body");
 
-      // ✅ Do not show raw key ("privacy"/"terms") as title.
-      // main.js will set the localized title via syncLegalTitle().
+      // Do not show raw key as title. main.js sets localized title.
       if (title) title.textContent = "";
-
       if (body) body.textContent = legalPlaceholderText();
     }
 
@@ -211,8 +181,8 @@
     if (r1) r1.style.display = (s.view === "room1") ? "block" : "none";
     if (r2) r2.style.display = (s.view === "room2") ? "block" : "none";
 
-    // NEW: optional dashboard visuals (does nothing if no DOM hooks)
-    try { renderDashboard(s); } catch (_) { /* never break UI */ }
+    // Dashboard visuals (never break UI)
+    try { renderDashboard(s); } catch {}
   }
 
   function init() {
@@ -228,7 +198,7 @@
     openRegister: () => window.EPTEC_UI_STATE?.set({ modal: "register", legalKind: null }),
     openForgot: () => window.EPTEC_UI_STATE?.set({ modal: "forgot", legalKind: null }),
 
-    // legalKind is now stable: imprint | terms | support | privacy
+    // legalKind is stable: imprint | terms | support | privacy
     openLegal: (kind) => window.EPTEC_UI_STATE?.set({ modal: "legal", legalKind: kind || "" }),
 
     closeModal: () => window.EPTEC_UI_STATE?.set({ modal: null }),
