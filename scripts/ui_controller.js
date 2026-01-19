@@ -6,6 +6,10 @@
  * - UI title is NOT set to the raw key anymore (main.js syncLegalTitle() sets localized title)
  * - Placeholder text stays consistent + includes "Stand: <date>"
  * - No backend required
+ *
+ * Added (non-breaking):
+ * - Optional dashboard visual rendering for coupling + codes (Present/Referral)
+ * - Works only if the DOM elements exist (no design assumptions)
  */
 
 (() => {
@@ -55,6 +59,131 @@
     );
   }
 
+  // ------------------------------------------------------------
+  // NEW: Optional dashboard rendering (no-op if elements missing)
+  // ------------------------------------------------------------
+
+  function setText(id, text) {
+    const el = $(id);
+    if (!el) return false;
+    el.textContent = String(text ?? "");
+    return true;
+  }
+
+  function setValue(id, value) {
+    const el = $(id);
+    if (!el) return false;
+    if ("value" in el) el.value = String(value ?? "");
+    return true;
+  }
+
+  function setHidden(id, hidden) {
+    const el = $(id);
+    if (!el) return false;
+    el.style.display = hidden ? "none" : "";
+    return true;
+  }
+
+  function setClass(id, className) {
+    const el = $(id);
+    if (!el) return false;
+    el.className = className;
+    return true;
+  }
+
+  /**
+   * Expected state shape (optional; we don't break if missing):
+   * s.products = {
+   *   construction: { active: true/false, tier: "BASIS"/"PREMIUM" }
+   *   controlling:  { active: true/false, tier: "BASIS"/"PREMIUM" }
+   *   coupled: true/false
+   * }
+   *
+   * s.codes = {
+   *   referral: { code: "REF-...", enabled: true }
+   *   present:  { status: "none"|"active"|"used"|"expired", discountPercent, validUntil }
+   * }
+   *
+   * s.billing = { nextInvoiceDate, nextInvoiceDiscountPercent }
+   */
+  function renderDashboard(s) {
+    // 1) Coupling banner (Construction -> Controlling dependency)
+    const coupled = !!(s?.products?.coupled);
+    // Default IDs (you can map your DOM to these later)
+    // - If these don't exist, nothing happens.
+    if (coupled) {
+      setHidden("coupling-banner", false);
+      setText(
+        "coupling-banner-text",
+        "Kopplung aktiv: Wenn du Construction kündigst, endet Controlling automatisch."
+      );
+      setClass("coupling-banner", "system-msg show info");
+    } else {
+      // hide if exists
+      setHidden("coupling-banner", true);
+    }
+
+    // 2) Room status chips (optional)
+    const c = s?.products?.construction;
+    const k = s?.products?.controlling;
+
+    if (c) {
+      setText("construction-status", c.active ? "Aktiv" : "Inaktiv");
+      setText("construction-tier", c.tier || "");
+    }
+    if (k) {
+      setText("controlling-status", k.active ? "Aktiv" : "Inaktiv");
+      setText("controlling-tier", k.tier || "");
+    }
+
+    // 3) Referral code display (user-generated, unlimited)
+    const ref = s?.codes?.referral;
+    if (ref && typeof ref.code === "string") {
+      setText("referral-code-value", ref.code);
+      setHidden("referral-code-block", false);
+    } else {
+      // If you want it always visible, remove this hide later
+      setHidden("referral-code-block", true);
+    }
+
+    // 4) Present code status (global, 30 days, once per user, next invoice)
+    const pres = s?.codes?.present;
+    if (pres) {
+      // If you have an input, keep it as user-entered; do not overwrite.
+      // We only show status messages.
+      const status = String(pres.status || "none");
+
+      // Optional: show user-facing status label
+      if (status === "active") {
+        const pct = pres.discountPercent ?? s?.billing?.nextInvoiceDiscountPercent;
+        const until = pres.validUntil ? ` (bis ${pres.validUntil})` : "";
+        setText("present-status", `Aktiv: ${pct ? pct + "% " : ""}Rabatt auf die nächste Abrechnung${until}`);
+        setClass("present-status", "system-msg show ok");
+      } else if (status === "used") {
+        setText("present-status", "Ein Present-Code wurde bereits verwendet.");
+        setClass("present-status", "system-msg show info");
+      } else if (status === "expired") {
+        setText("present-status", "Dieser Present-Code ist abgelaufen.");
+        setClass("present-status", "system-msg show warn");
+      } else {
+        setText("present-status", "");
+        setClass("present-status", "system-msg");
+      }
+    }
+
+    // 5) Next billing info (optional)
+    const billing = s?.billing;
+    if (billing) {
+      if (billing.nextInvoiceDate) setText("next-invoice-date", billing.nextInvoiceDate);
+      if (billing.nextInvoiceDiscountPercent) {
+        setText("next-invoice-discount", `${billing.nextInvoiceDiscountPercent}%`);
+        setHidden("next-invoice-discount-block", false);
+      } else {
+        setHidden("next-invoice-discount-block", true);
+      }
+    }
+  }
+
   function render(s) {
     hide($("register-screen"));
     hide($("forgot-screen"));
@@ -81,6 +210,9 @@
     if (meadow) meadow.style.display = (s.view === "meadow") ? "flex" : "none";
     if (r1) r1.style.display = (s.view === "room1") ? "block" : "none";
     if (r2) r2.style.display = (s.view === "room2") ? "block" : "none";
+
+    // NEW: optional dashboard visuals (does nothing if no DOM hooks)
+    try { renderDashboard(s); } catch (_) { /* never break UI */ }
   }
 
   function init() {
@@ -106,5 +238,3 @@
     toast
   };
 })();
-
-
