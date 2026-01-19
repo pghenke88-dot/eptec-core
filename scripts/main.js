@@ -1,6 +1,15 @@
 /**
  * scripts/main.js
  * EPTEC MAIN – FINAL (Admin + User => SAME Tunnel)
+ * Optimized:
+ * - Stable legal keys (imprint/terms/support/privacy) for "mini legal routing"
+ * - UI title stays localized (syncLegalTitle) even though state uses stable keys
+ * - Click tracking via EPTEC_ACTIVITY hook (fallback console)
+ * - Privacy hint/link (register + footer) fully localized (no mixed languages)
+ * - Login always shows feedback (empty OR wrong)
+ * - Rules/Suggestions localized (no hardcoded EN)
+ * - DOB placeholder uses RegistrationEngine.dobFormatHint(lang) if available
+ * - Preferences (clicksound) NOT handled here (SoundEngine is source of truth)
  */
 
 (() => {
@@ -9,6 +18,14 @@
   // ---------- STATE ----------
   let currentLang = "en";
   let clockTimer = null;
+
+  // ---------- LEGAL KEYS (stable routing ids) ----------
+  const LEGAL = Object.freeze({
+    imprint: "imprint",
+    terms: "terms",
+    support: "support",
+    privacy: "privacy"
+  });
 
   // ---------- BUILT-IN I18N ----------
   const I18N = {
@@ -21,9 +38,13 @@
       forgot_btn:"Forgot password",
       admin_code:"Admin code",
       admin_submit:"Enter (Admin)",
+
+      // legal labels (localized display)
       legal_imprint:"Imprint",
       legal_terms:"Terms",
       legal_support:"Support",
+      legal_privacy:"Privacy Policy",
+
       register_title:"Registration",
       register_first_name:"First name",
       register_last_name:"Last name",
@@ -31,11 +52,41 @@
       register_email:"Email address",
       register_submit:"Complete verification",
       register_submit_locked:"Complete verification (locked)",
+
       system_close:"Close",
       forgot_title:"Reset password",
       forgot_hint:"Enter email or username",
-      forgot_submit:"Request link"
+      forgot_submit:"Request link",
+
+      // privacy hint in register modal
+      privacy_hint:"Data processing:",
+
+      // login feedback
+      login_failed:"Login failed.",
+      login_invalid:"Invalid username or password.",
+
+      // localized rules + suggestions title
+      rules_username:"Username: min 5 chars, 1 uppercase, 1 special character.",
+      rules_password:"Password: min 8 chars, 1 letter, 1 number, 1 special character.",
+      suggestions_title:"Suggestions:",
+
+      // other UI strings
+      system_not_ready:"System not ready (Auth missing).",
+      access_denied:"Access denied.",
+      registration_locked:"Registration locked.",
+      registration_failed:"Registration failed.",
+      registration_created:"Registration created (simulation).",
+      reset_requested:"Reset requested (simulation).",
+      verify_done:"Verification done.",
+      reset_done:"Reset done.",
+      set_new_password:"Set new password:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulation)",
+      mailbox_hint:"Click a link to trigger verify/reset (simulation).",
+      mailbox_empty:"(No mails)",
+      mailbox_open_link_prefix:"➡ Open link:"
     },
+
     de: {
       _dir:"ltr",
       login_username:"Benutzername",
@@ -45,9 +96,12 @@
       forgot_btn:"Passwort vergessen",
       admin_code:"Admin-Code",
       admin_submit:"Enter (Admin)",
+
       legal_imprint:"Impressum",
       legal_terms:"AGB",
       legal_support:"Support",
+      legal_privacy:"Datenschutz",
+
       register_title:"Registrierung",
       register_first_name:"Vorname",
       register_last_name:"Nachname",
@@ -55,11 +109,37 @@
       register_email:"E-Mail-Adresse",
       register_submit:"Verifizierung abschließen",
       register_submit_locked:"Verifizierung abschließen (gesperrt)",
+
       system_close:"Schließen",
       forgot_title:"Passwort zurücksetzen",
       forgot_hint:"E-Mail oder Benutzername",
-      forgot_submit:"Link anfordern"
+      forgot_submit:"Link anfordern",
+
+      privacy_hint:"Hinweis zur Datenverarbeitung:",
+
+      login_failed:"Login fehlgeschlagen.",
+      login_invalid:"Benutzername oder Passwort ungültig.",
+
+      rules_username:"Benutzername: mind. 5 Zeichen, 1 Großbuchstabe, 1 Sonderzeichen.",
+      rules_password:"Passwort: mind. 8 Zeichen, 1 Buchstabe, 1 Zahl, 1 Sonderzeichen.",
+      suggestions_title:"Vorschläge:",
+
+      system_not_ready:"System nicht bereit (Auth fehlt).",
+      access_denied:"Zugriff verweigert.",
+      registration_locked:"Registrierung gesperrt.",
+      registration_failed:"Registrierung fehlgeschlagen.",
+      registration_created:"Registrierung erstellt (Simulation).",
+      reset_requested:"Zurücksetzen angefordert (Simulation).",
+      verify_done:"Verifizierung abgeschlossen.",
+      reset_done:"Zurücksetzen abgeschlossen.",
+      set_new_password:"Neues Passwort setzen:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulation)",
+      mailbox_hint:"Klicke einen Link, um Verify/Reset auszulösen (Simulation).",
+      mailbox_empty:"(Keine Mails)",
+      mailbox_open_link_prefix:"➡ Link öffnen:"
     },
+
     fr: {
       _dir:"ltr",
       login_username:"Nom d’utilisateur",
@@ -69,9 +149,12 @@
       forgot_btn:"Mot de passe oublié",
       admin_code:"Code admin",
       admin_submit:"Entrer (Admin)",
+
       legal_imprint:"Mentions légales",
       legal_terms:"Conditions",
       legal_support:"Support",
+      legal_privacy:"Politique de confidentialité",
+
       register_title:"Inscription",
       register_first_name:"Prénom",
       register_last_name:"Nom",
@@ -79,11 +162,37 @@
       register_email:"Adresse e-mail",
       register_submit:"Finaliser la vérification",
       register_submit_locked:"Finaliser (bloqué)",
+
       system_close:"Fermer",
       forgot_title:"Réinitialiser le mot de passe",
       forgot_hint:"E-mail ou nom d’utilisateur",
-      forgot_submit:"Demander le lien"
+      forgot_submit:"Demander le lien",
+
+      privacy_hint:"Traitement des données :",
+
+      login_failed:"Échec de connexion.",
+      login_invalid:"Identifiant ou mot de passe invalide.",
+
+      rules_username:"Nom d’utilisateur : min 5 caractères, 1 majuscule, 1 caractère spécial.",
+      rules_password:"Mot de passe : min 8 caractères, 1 lettre, 1 chiffre, 1 caractère spécial.",
+      suggestions_title:"Suggestions :",
+
+      system_not_ready:"Système non prêt (Auth manquant).",
+      access_denied:"Accès refusé.",
+      registration_locked:"Inscription bloquée.",
+      registration_failed:"Échec de l’inscription.",
+      registration_created:"Inscription créée (simulation).",
+      reset_requested:"Réinitialisation demandée (simulation).",
+      verify_done:"Vérification terminée.",
+      reset_done:"Réinitialisation terminée.",
+      set_new_password:"Définir un nouveau mot de passe :",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulation)",
+      mailbox_hint:"Cliquez sur un lien pour déclencher verify/reset (simulation).",
+      mailbox_empty:"(Aucun e-mail)",
+      mailbox_open_link_prefix:"➡ Ouvrir le lien :"
     },
+
     es: {
       _dir:"ltr",
       login_username:"Usuario",
@@ -93,9 +202,12 @@
       forgot_btn:"Olvidé mi contraseña",
       admin_code:"Código admin",
       admin_submit:"Entrar (Admin)",
+
       legal_imprint:"Aviso legal",
       legal_terms:"Términos",
       legal_support:"Soporte",
+      legal_privacy:"Política de privacidad",
+
       register_title:"Registro",
       register_first_name:"Nombre",
       register_last_name:"Apellido",
@@ -103,11 +215,37 @@
       register_email:"Correo electrónico",
       register_submit:"Completar verificación",
       register_submit_locked:"Completar (bloqueado)",
+
       system_close:"Cerrar",
       forgot_title:"Restablecer contraseña",
       forgot_hint:"Correo o usuario",
-      forgot_submit:"Solicitar enlace"
+      forgot_submit:"Solicitar enlace",
+
+      privacy_hint:"Tratamiento de datos:",
+
+      login_failed:"Error de inicio de sesión.",
+      login_invalid:"Usuario o contraseña inválidos.",
+
+      rules_username:"Usuario: mín. 5 caracteres, 1 mayúscula, 1 carácter especial.",
+      rules_password:"Contraseña: mín. 8 caracteres, 1 letra, 1 número, 1 carácter especial.",
+      suggestions_title:"Sugerencias:",
+
+      system_not_ready:"Sistema no listo (falta Auth).",
+      access_denied:"Acceso denegado.",
+      registration_locked:"Registro bloqueado.",
+      registration_failed:"Error de registro.",
+      registration_created:"Registro creado (simulación).",
+      reset_requested:"Restablecimiento solicitado (simulación).",
+      verify_done:"Verificación completada.",
+      reset_done:"Restablecimiento completado.",
+      set_new_password:"Establecer nueva contraseña:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulación)",
+      mailbox_hint:"Haz clic en un enlace para activar verify/reset (simulación).",
+      mailbox_empty:"(Sin correos)",
+      mailbox_open_link_prefix:"➡ Abrir enlace:"
     },
+
     it: {
       _dir:"ltr",
       login_username:"Nome utente",
@@ -117,9 +255,12 @@
       forgot_btn:"Password dimenticata",
       admin_code:"Codice admin",
       admin_submit:"Entra (Admin)",
+
       legal_imprint:"Imprint",
       legal_terms:"Termini",
       legal_support:"Supporto",
+      legal_privacy:"Informativa sulla privacy",
+
       register_title:"Registrazione",
       register_first_name:"Nome",
       register_last_name:"Cognome",
@@ -127,11 +268,37 @@
       register_email:"E-mail",
       register_submit:"Completa verifica",
       register_submit_locked:"Completa (bloccato)",
+
       system_close:"Chiudi",
       forgot_title:"Reimposta password",
       forgot_hint:"E-mail o utente",
-      forgot_submit:"Richiedi link"
+      forgot_submit:"Richiedi link",
+
+      privacy_hint:"Trattamento dei dati:",
+
+      login_failed:"Accesso non riuscito.",
+      login_invalid:"Nome utente o password non validi.",
+
+      rules_username:"Nome utente: min 5 caratteri, 1 maiuscola, 1 carattere speciale.",
+      rules_password:"Password: min 8 caratteri, 1 lettera, 1 numero, 1 carattere speciale.",
+      suggestions_title:"Suggerimenti:",
+
+      system_not_ready:"Sistema non pronto (Auth mancante).",
+      access_denied:"Accesso negato.",
+      registration_locked:"Registrazione bloccata.",
+      registration_failed:"Registrazione non riuscita.",
+      registration_created:"Registrazione creata (simulazione).",
+      reset_requested:"Reset richiesto (simulazione).",
+      verify_done:"Verifica completata.",
+      reset_done:"Reset completato.",
+      set_new_password:"Imposta nuova password:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulazione)",
+      mailbox_hint:"Clicca un link per attivare verify/reset (simulazione).",
+      mailbox_empty:"(Nessuna mail)",
+      mailbox_open_link_prefix:"➡ Apri link:"
     },
+
     pt: {
       _dir:"ltr",
       login_username:"Usuário",
@@ -141,9 +308,12 @@
       forgot_btn:"Esqueci a senha",
       admin_code:"Código admin",
       admin_submit:"Entrar (Admin)",
+
       legal_imprint:"Imprint",
       legal_terms:"Termos",
       legal_support:"Suporte",
+      legal_privacy:"Política de privacidade",
+
       register_title:"Registro",
       register_first_name:"Nome",
       register_last_name:"Sobrenome",
@@ -151,11 +321,37 @@
       register_email:"E-mail",
       register_submit:"Concluir verificação",
       register_submit_locked:"Concluir (bloqueado)",
+
       system_close:"Fechar",
       forgot_title:"Redefinir senha",
       forgot_hint:"E-mail ou usuário",
-      forgot_submit:"Solicitar link"
+      forgot_submit:"Solicitar link",
+
+      privacy_hint:"Tratamento de dados:",
+
+      login_failed:"Falha no login.",
+      login_invalid:"Usuário ou senha inválidos.",
+
+      rules_username:"Usuário: mín. 5 caracteres, 1 maiúscula, 1 caractere especial.",
+      rules_password:"Senha: mín. 8 caracteres, 1 letra, 1 número, 1 caractere especial.",
+      suggestions_title:"Sugestões:",
+
+      system_not_ready:"Sistema não pronto (Auth ausente).",
+      access_denied:"Acesso negado.",
+      registration_locked:"Registro bloqueado.",
+      registration_failed:"Falha no registro.",
+      registration_created:"Registro criado (simulação).",
+      reset_requested:"Redefinição solicitada (simulação).",
+      verify_done:"Verificação concluída.",
+      reset_done:"Redefinição concluída.",
+      set_new_password:"Definir nova senha:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulação)",
+      mailbox_hint:"Clique em um link para disparar verify/reset (simulação).",
+      mailbox_empty:"(Sem e-mails)",
+      mailbox_open_link_prefix:"➡ Abrir link:"
     },
+
     nl: {
       _dir:"ltr",
       login_username:"Gebruikersnaam",
@@ -165,9 +361,12 @@
       forgot_btn:"Wachtwoord vergeten",
       admin_code:"Admincode",
       admin_submit:"Enter (Admin)",
+
       legal_imprint:"Imprint",
       legal_terms:"Voorwaarden",
       legal_support:"Support",
+      legal_privacy:"Privacybeleid",
+
       register_title:"Registratie",
       register_first_name:"Voornaam",
       register_last_name:"Achternaam",
@@ -175,11 +374,37 @@
       register_email:"E-mail",
       register_submit:"Verificatie afronden",
       register_submit_locked:"Afronden (vergrendeld)",
+
       system_close:"Sluiten",
       forgot_title:"Wachtwoord resetten",
       forgot_hint:"E-mail of gebruikersnaam",
-      forgot_submit:"Link aanvragen"
+      forgot_submit:"Link aanvragen",
+
+      privacy_hint:"Gegevensverwerking:",
+
+      login_failed:"Inloggen mislukt.",
+      login_invalid:"Gebruikersnaam of wachtwoord ongeldig.",
+
+      rules_username:"Gebruikersnaam: min 5 tekens, 1 hoofdletter, 1 speciaal teken.",
+      rules_password:"Wachtwoord: min 8 tekens, 1 letter, 1 cijfer, 1 speciaal teken.",
+      suggestions_title:"Suggesties:",
+
+      system_not_ready:"Systeem niet klaar (Auth ontbreekt).",
+      access_denied:"Toegang geweigerd.",
+      registration_locked:"Registratie vergrendeld.",
+      registration_failed:"Registratie mislukt.",
+      registration_created:"Registratie aangemaakt (simulatie).",
+      reset_requested:"Reset aangevraagd (simulatie).",
+      verify_done:"Verificatie voltooid.",
+      reset_done:"Reset voltooid.",
+      set_new_password:"Nieuw wachtwoord instellen:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Simulatie)",
+      mailbox_hint:"Klik op een link om verify/reset te starten (simulatie).",
+      mailbox_empty:"(Geen mails)",
+      mailbox_open_link_prefix:"➡ Link openen:"
     },
+
     ru: {
       _dir:"ltr",
       login_username:"Имя пользователя",
@@ -189,9 +414,12 @@
       forgot_btn:"Забыли пароль",
       admin_code:"Админ-код",
       admin_submit:"Вход (Админ)",
+
       legal_imprint:"Реквизиты",
       legal_terms:"Условия",
       legal_support:"Поддержка",
+      legal_privacy:"Политика конфиденциальности",
+
       register_title:"Регистрация",
       register_first_name:"Имя",
       register_last_name:"Фамилия",
@@ -199,11 +427,37 @@
       register_email:"E-mail",
       register_submit:"Завершить проверку",
       register_submit_locked:"Завершить (заблок.)",
+
       system_close:"Закрыть",
       forgot_title:"Сброс пароля",
       forgot_hint:"E-mail или пользователь",
-      forgot_submit:"Запросить ссылку"
+      forgot_submit:"Запросить ссылку",
+
+      privacy_hint:"Обработка данных:",
+
+      login_failed:"Ошибка входа.",
+      login_invalid:"Неверное имя пользователя или пароль.",
+
+      rules_username:"Имя пользователя: мин. 5 символов, 1 заглавная, 1 спецсимвол.",
+      rules_password:"Пароль: мин. 8 символов, 1 буква, 1 цифра, 1 спецсимвол.",
+      suggestions_title:"Предложения:",
+
+      system_not_ready:"Система не готова (нет Auth).",
+      access_denied:"Доступ запрещён.",
+      registration_locked:"Регистрация заблокирована.",
+      registration_failed:"Ошибка регистрации.",
+      registration_created:"Регистрация создана (симуляция).",
+      reset_requested:"Запрос сброса (симуляция).",
+      verify_done:"Проверка завершена.",
+      reset_done:"Сброс завершён.",
+      set_new_password:"Установить новый пароль:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Симуляция)",
+      mailbox_hint:"Нажмите ссылку для verify/reset (симуляция).",
+      mailbox_empty:"(Нет писем)",
+      mailbox_open_link_prefix:"➡ Открыть ссылку:"
     },
+
     uk: {
       _dir:"ltr",
       login_username:"Ім’я користувача",
@@ -213,9 +467,12 @@
       forgot_btn:"Забули пароль",
       admin_code:"Код адміна",
       admin_submit:"Вхід (Адмін)",
+
       legal_imprint:"Реквізити",
       legal_terms:"Умови",
       legal_support:"Підтримка",
+      legal_privacy:"Політика конфіденційності",
+
       register_title:"Реєстрація",
       register_first_name:"Ім’я",
       register_last_name:"Прізвище",
@@ -223,11 +480,37 @@
       register_email:"E-mail",
       register_submit:"Завершити перевірку",
       register_submit_locked:"Завершити (заблок.)",
+
       system_close:"Закрити",
       forgot_title:"Скидання пароля",
       forgot_hint:"E-mail або користувач",
-      forgot_submit:"Запросити посилання"
+      forgot_submit:"Запросити посилання",
+
+      privacy_hint:"Обробка даних:",
+
+      login_failed:"Помилка входу.",
+      login_invalid:"Невірне ім’я користувача або пароль.",
+
+      rules_username:"Ім’я користувача: мін. 5 символів, 1 велика літера, 1 спецсимвол.",
+      rules_password:"Пароль: мін. 8 символів, 1 літера, 1 цифра, 1 спецсимвол.",
+      suggestions_title:"Пропозиції:",
+
+      system_not_ready:"Система не готова (немає Auth).",
+      access_denied:"Доступ заборонено.",
+      registration_locked:"Реєстрацію заблоковано.",
+      registration_failed:"Помилка реєстрації.",
+      registration_created:"Реєстрацію створено (симуляція).",
+      reset_requested:"Скидання запитано (симуляція).",
+      verify_done:"Перевірку завершено.",
+      reset_done:"Скидання завершено.",
+      set_new_password:"Встановити новий пароль:",
+
+      mailbox_title:"📨 EPTEC Mailbox (Симуляція)",
+      mailbox_hint:"Натисніть посилання для verify/reset (симуляція).",
+      mailbox_empty:"(Немає листів)",
+      mailbox_open_link_prefix:"➡ Відкрити посилання:"
     },
+
     zh: {
       _dir:"ltr",
       login_username:"用户名",
@@ -237,9 +520,12 @@
       forgot_btn:"忘记密码",
       admin_code:"管理员代码",
       admin_submit:"进入(管理员)",
+
       legal_imprint:"声明",
       legal_terms:"条款",
       legal_support:"支持",
+      legal_privacy:"隐私政策",
+
       register_title:"注册",
       register_first_name:"名",
       register_last_name:"姓",
@@ -247,11 +533,37 @@
       register_email:"邮箱",
       register_submit:"完成验证",
       register_submit_locked:"完成验证(锁定)",
+
       system_close:"关闭",
       forgot_title:"重置密码",
       forgot_hint:"邮箱或用户名",
-      forgot_submit:"请求链接"
+      forgot_submit:"请求链接",
+
+      privacy_hint:"数据处理：",
+
+      login_failed:"登录失败。",
+      login_invalid:"用户名或密码无效。",
+
+      rules_username:"用户名：至少 5 个字符，包含 1 个大写字母和 1 个特殊字符。",
+      rules_password:"密码：至少 8 个字符，包含字母、数字和特殊字符。",
+      suggestions_title:"建议：",
+
+      system_not_ready:"系统未就绪（缺少 Auth）。",
+      access_denied:"拒绝访问。",
+      registration_locked:"注册被锁定。",
+      registration_failed:"注册失败。",
+      registration_created:"注册已创建（模拟）。",
+      reset_requested:"已请求重置（模拟）。",
+      verify_done:"验证完成。",
+      reset_done:"重置完成。",
+      set_new_password:"设置新密码：",
+
+      mailbox_title:"📨 EPTEC 邮箱（模拟）",
+      mailbox_hint:"点击链接触发 verify/reset（模拟）。",
+      mailbox_empty:"（无邮件）",
+      mailbox_open_link_prefix:"➡ 打开链接："
     },
+
     ja: {
       _dir:"ltr",
       login_username:"ユーザー名",
@@ -261,9 +573,12 @@
       forgot_btn:"パスワードを忘れた",
       admin_code:"管理コード",
       admin_submit:"入室(管理)",
+
       legal_imprint:"表示",
       legal_terms:"規約",
       legal_support:"サポート",
+      legal_privacy:"プライバシーポリシー",
+
       register_title:"登録",
       register_first_name:"名",
       register_last_name:"姓",
@@ -271,11 +586,37 @@
       register_email:"メール",
       register_submit:"認証を完了",
       register_submit_locked:"認証(ロック)",
+
       system_close:"閉じる",
       forgot_title:"パスワード再設定",
       forgot_hint:"メール/ユーザー名",
-      forgot_submit:"リンクを要求"
+      forgot_submit:"リンクを要求",
+
+      privacy_hint:"データ処理：",
+
+      login_failed:"ログインに失敗しました。",
+      login_invalid:"ユーザー名またはパスワードが無効です。",
+
+      rules_username:"ユーザー名：5文字以上、英大文字1つ、特殊文字1つ。",
+      rules_password:"パスワード：8文字以上、文字・数字・特殊文字を含む。",
+      suggestions_title:"候補：",
+
+      system_not_ready:"システム未準備（Auth不足）。",
+      access_denied:"アクセス拒否。",
+      registration_locked:"登録がロックされています。",
+      registration_failed:"登録に失敗しました。",
+      registration_created:"登録を作成しました（シミュレーション）。",
+      reset_requested:"リセットを要求しました（シミュレーション）。",
+      verify_done:"認証が完了しました。",
+      reset_done:"リセットが完了しました。",
+      set_new_password:"新しいパスワードを設定：",
+
+      mailbox_title:"📨 EPTEC Mailbox（シミュレーション）",
+      mailbox_hint:"リンクをクリックして verify/reset（シミュレーション）。",
+      mailbox_empty:"（メールなし）",
+      mailbox_open_link_prefix:"➡ リンクを開く："
     },
+
     ar: {
       _dir:"rtl",
       login_username:"اسم المستخدم",
@@ -285,9 +626,12 @@
       forgot_btn:"نسيت كلمة المرور",
       admin_code:"رمز المسؤول",
       admin_submit:"دخول (مسؤول)",
+
       legal_imprint:"البيانات",
       legal_terms:"الشروط",
       legal_support:"الدعم",
+      legal_privacy:"سياسة الخصوصية",
+
       register_title:"التسجيل",
       register_first_name:"الاسم الأول",
       register_last_name:"اسم العائلة",
@@ -295,10 +639,35 @@
       register_email:"البريد الإلكتروني",
       register_submit:"إكمال التحقق",
       register_submit_locked:"إكمال (مقفل)",
+
       system_close:"إغلاق",
       forgot_title:"إعادة تعيين كلمة المرور",
       forgot_hint:"البريد أو اسم المستخدم",
-      forgot_submit:"طلب رابط"
+      forgot_submit:"طلب رابط",
+
+      privacy_hint:"معالجة البيانات:",
+
+      login_failed:"فشل تسجيل الدخول.",
+      login_invalid:"اسم المستخدم أو كلمة المرور غير صحيحة.",
+
+      rules_username:"اسم المستخدم: 5 أحرف على الأقل، حرف كبير واحد، رمز خاص واحد.",
+      rules_password:"كلمة المرور: 8 أحرف على الأقل، حرف، رقم، رمز خاص.",
+      suggestions_title:"اقتراحات:",
+
+      system_not_ready:"النظام غير جاهز (Auth مفقود).",
+      access_denied:"تم رفض الوصول.",
+      registration_locked:"التسجيل مقفل.",
+      registration_failed:"فشل التسجيل.",
+      registration_created:"تم إنشاء التسجيل (محاكاة).",
+      reset_requested:"تم طلب إعادة التعيين (محاكاة).",
+      verify_done:"اكتملت عملية التحقق.",
+      reset_done:"اكتملت إعادة التعيين.",
+      set_new_password:"تعيين كلمة مرور جديدة:",
+
+      mailbox_title:"📨 صندوق بريد EPTEC (محاكاة)",
+      mailbox_hint:"انقر على رابط لتفعيل verify/reset (محاكاة).",
+      mailbox_empty:"(لا توجد رسائل)",
+      mailbox_open_link_prefix:"➡ فتح الرابط:"
     }
   };
 
@@ -310,6 +679,30 @@
   }
   function dict(lang) { return I18N[normalizeLang(lang)] || I18N.en; }
   function t(key, fallback = "") { const d = dict(currentLang); return d[key] ?? I18N.en[key] ?? fallback; }
+
+  // ---------- CLICK TRACKING (we hear every click) ----------
+  function trackClick(eventName, meta = {}) {
+    try { window.EPTEC_ACTIVITY?.log?.(eventName, { ...meta, lang: currentLang }); } catch {}
+    try { console.log("[EPTEC_CLICK]", eventName, { ...meta, lang: currentLang, ts: Date.now() }); } catch {}
+  }
+
+  // ---------- Legal title sync (because state uses stable keys) ----------
+  function syncLegalTitle() {
+    const s = window.EPTEC_UI_STATE?.state;
+    if (!s || s.modal !== "legal") return;
+
+    const key = String(s.legalKind || "");
+    let label = "";
+
+    if (key === LEGAL.imprint) label = t("legal_imprint", "Imprint");
+    else if (key === LEGAL.terms) label = t("legal_terms", "Terms");
+    else if (key === LEGAL.support) label = t("legal_support", "Support");
+    else if (key === LEGAL.privacy) label = t("legal_privacy", "Privacy Policy");
+    else label = key;
+
+    const titleEl = document.getElementById("legal-title");
+    if (titleEl && label) titleEl.textContent = label;
+  }
 
   // ---------- AUDIO UNLOCK + AMBIENT ----------
   let audioUnlocked = false;
@@ -349,6 +742,7 @@
       e.preventDefault();
       e.stopPropagation();
       window.SoundEngine?.flagClick?.();
+      trackClick("click_language_toggle");
       isOpen() ? close() : switcher.classList.add("lang-open");
     });
 
@@ -358,6 +752,7 @@
         e.stopPropagation();
         const lang = normalizeLang(btn.getAttribute("data-lang"));
         window.SoundEngine?.flagClick?.();
+        trackClick("click_language_select", { lang });
         setLanguage(lang);
         close();
       });
@@ -372,6 +767,7 @@
     document.documentElement.setAttribute("dir", dict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
     applyTranslations();
     updateClockOnce();
+    syncLegalTitle();
   }
 
   // ---------- APPLY TEXTS ----------
@@ -388,11 +784,15 @@
     setText("link-imprint", t("legal_imprint", "Imprint"));
     setText("link-terms", t("legal_terms", "Terms"));
     setText("link-support", t("legal_support", "Support"));
+    setText("link-privacy-footer", t("legal_privacy", "Privacy Policy"));
 
     setText("register-title", t("register_title", "Registration"));
     setPlaceholder("reg-first-name", t("register_first_name", "First name"));
     setPlaceholder("reg-last-name", t("register_last_name", "Last name"));
-    setPlaceholder("reg-birthdate", t("register_birthdate", "Date of birth"));
+
+    const dobHint = window.RegistrationEngine?.dobFormatHint?.(currentLang);
+    setPlaceholder("reg-birthdate", dobHint || t("register_birthdate", "Date of birth"));
+
     setPlaceholder("reg-email", t("register_email", "Email address"));
     setPlaceholder("reg-username", t("login_username", "Username"));
     setPlaceholder("reg-password", t("login_password", "Password"));
@@ -409,6 +809,13 @@
     setPlaceholder("forgot-identity", t("forgot_hint", "Enter email or username"));
     setText("forgot-submit", t("forgot_submit", "Request link"));
     setText("forgot-close", t("system_close", "Close"));
+
+    setText("legal-close", t("system_close", "Close"));
+
+    setText("privacy-hint-text", t("privacy_hint", "Data processing:"));
+    setText("link-privacy", t("legal_privacy", "Privacy Policy"));
+
+    syncLegalTitle();
   }
 
   // ---------- UI HELPERS ----------
@@ -418,7 +825,6 @@
 
   // ---------- SINGLE ENTRY TUNNEL (Admin + User) ----------
   function enterSystemViaTunnel() {
-    // sound switch happens inside SoundEngine.tunnelFall() (stops ambient first)
     window.SoundEngine?.tunnelFall?.();
 
     document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
@@ -432,75 +838,86 @@
     }, 600);
   }
 
+  // ---------- Legal open helper (stable key) ----------
+  function openLegalKey(key) {
+    window.EPTEC_UI?.openLegal?.(key);
+    syncLegalTitle();
+  }
+
   // ---------- UI BINDINGS ----------
   function bindUI() {
     document.querySelectorAll("input").forEach((inp) => {
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
     });
 
-    // USER LOGIN => SAME TUNNEL
     document.getElementById("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
+      trackClick("click_login");
 
       const u = String(document.getElementById("login-username")?.value || "").trim();
       const p = String(document.getElementById("login-password")?.value || "").trim();
 
       hideMsg("login-message");
 
-      // silent if empty (no redundant sentence)
-      if (!u || !p) return;
+      if (!u || !p) {
+        showMsg("login-message", t("login_failed", "Login failed."), "error");
+        return;
+      }
 
       const res = window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p });
       if (!res?.ok) {
-        toast(res?.message || "Login failed", "error", 2600);
+        showMsg("login-message", t("login_invalid", "Invalid username or password."), "error");
         return;
       }
 
       enterSystemViaTunnel();
     });
 
-    // REGISTER
     document.getElementById("btn-register")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
+      trackClick("click_register_open");
       hideMsg("register-message");
       window.EPTEC_UI?.openRegister?.();
       refreshRegisterState();
     });
 
-    // FORGOT
     document.getElementById("btn-forgot")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
+      trackClick("click_forgot_open");
       hideMsg("forgot-message");
       window.EPTEC_UI?.openForgot?.();
     });
 
     document.getElementById("forgot-submit")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
+      trackClick("click_forgot_submit");
       const identity = String(document.getElementById("forgot-identity")?.value || "").trim();
       hideMsg("forgot-message");
       if (!identity) return;
       const res = window.EPTEC_MOCK_BACKEND?.requestPasswordReset?.({ identity });
-      toast(res?.message || "Reset requested (simulation)", "warn", 2600);
+      toast(res?.message || t("reset_requested", "Reset requested (simulation)."), "warn", 2600);
       openMailboxOverlay();
     });
 
-    // ADMIN => SAME TUNNEL
     const submit = document.getElementById("admin-submit");
     const input = document.getElementById("admin-code");
 
     const attempt = () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_admin_submit");
+
       const code = String(input?.value || "").trim();
       if (!code) return;
 
       const brain = window.EPTEC_BRAIN;
       if (!brain?.Auth?.verifyAdmin) {
-        toast("System not ready (Auth missing).", "error", 2600);
+        toast(t("system_not_ready", "System not ready (Auth missing)."), "error", 2600);
         return;
       }
 
       const ok = brain.Auth.verifyAdmin(code, 1) || brain.Auth.verifyAdmin(code, 2);
       if (!ok) {
-        toast("Access denied", "error", 2200);
+        toast(t("access_denied", "Access denied."), "error", 2200);
         return;
       }
 
@@ -510,16 +927,40 @@
     submit?.addEventListener("click", attempt);
     input?.addEventListener("keydown", (e) => e.key === "Enter" && attempt());
 
-    // LEGAL via UI-Control
-    document.getElementById("link-imprint")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("Impressum"));
-    document.getElementById("link-terms")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("AGB"));
-    document.getElementById("link-support")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("Support"));
+    // LEGAL (stable keys)
+    document.getElementById("link-imprint")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_legal_imprint");
+      openLegalKey(LEGAL.imprint);
+    });
 
-    // registration engine wiring
+    document.getElementById("link-terms")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_legal_terms");
+      openLegalKey(LEGAL.terms);
+    });
+
+    document.getElementById("link-support")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_legal_support");
+      openLegalKey(LEGAL.support);
+    });
+
+    document.getElementById("link-privacy")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_legal_privacy_register");
+      openLegalKey(LEGAL.privacy);
+    });
+
+    document.getElementById("link-privacy-footer")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_legal_privacy_footer");
+      openLegalKey(LEGAL.privacy);
+    });
+
     bindRegistrationFlow();
   }
 
-  // ---------- REGISTER FLOW (kept as-is, works with RegistrationEngine + Mock Backend) ----------
   function bindRegistrationFlow() {
     const u = document.getElementById("reg-username");
     const p = document.getElementById("reg-password");
@@ -549,7 +990,7 @@
       const arr = window.RegistrationEngine?.usernameSuggestions?.(base) || window.EPTEC_MOCK_BACKEND?.suggestUsernames?.(base) || [];
       if (arr.length < 2) return;
 
-      suggTitle.textContent = "Suggestions:";
+      suggTitle.textContent = t("suggestions_title", "Suggestions:");
       sugg1.textContent = arr[0];
       sugg2.textContent = arr[1];
       suggBox.classList.remove("modal-hidden");
@@ -564,8 +1005,8 @@
     }
 
     function renderRules() {
-      if (rulesUser) rulesUser.textContent = "Username: min 5 chars, 1 uppercase, 1 special character.";
-      if (rulesPass) rulesPass.textContent = "Password: min 8 chars, 1 letter, 1 number, 1 special character.";
+      if (rulesUser) rulesUser.textContent = t("rules_username", "Username: min 5 chars, 1 uppercase, 1 special character.");
+      if (rulesPass) rulesPass.textContent = t("rules_password", "Password: min 8 chars, 1 letter, 1 number, 1 special character.");
     }
 
     function checkUsernameFree(name) {
@@ -598,9 +1039,10 @@
 
     submit.addEventListener("click", () => {
       hideMsg("register-message");
+      trackClick("click_register_submit");
 
       if (submit.classList.contains("locked")) {
-        toast("Registration locked", "warn", 2400);
+        toast(t("registration_locked", "Registration locked."), "warn", 2400);
         return;
       }
 
@@ -617,11 +1059,11 @@
 
       const res = window.EPTEC_MOCK_BACKEND?.register?.(payload);
       if (!res?.ok) {
-        toast(res?.message || "Registration failed", "error", 2600);
+        toast(res?.message || t("registration_failed", "Registration failed."), "error", 2600);
         return;
       }
 
-      toast("Registration created (simulation)", "ok", 2600);
+      toast(t("registration_created", "Registration created (simulation)."), "ok", 2600);
       openMailboxOverlay();
     });
 
@@ -633,7 +1075,6 @@
     if (u) u.dispatchEvent(new Event("input"));
   }
 
-  // ---------- HASH LINKS ----------
   function bindHashLinks() {
     window.addEventListener("hashchange", handleHashAction);
     handleHashAction();
@@ -644,22 +1085,21 @@
     if (h.startsWith("#verify:")) {
       const token = h.slice("#verify:".length);
       const res = window.EPTEC_MOCK_BACKEND?.verifyByToken?.(token);
-      toast(res?.message || "Verification done.", "ok", 2600);
+      toast(res?.message || t("verify_done", "Verification done."), "ok", 2600);
       location.hash = "";
       return;
     }
     if (h.startsWith("#reset:")) {
       const token = h.slice("#reset:".length);
-      const newPw = prompt("Set new password:");
+      const newPw = prompt(t("set_new_password", "Set new password:"));
       if (!newPw) return;
       const res = window.EPTEC_MOCK_BACKEND?.resetPasswordByToken?.({ token, newPassword: newPw });
-      toast(res?.message || "Reset done.", "ok", 2600);
+      toast(res?.message || t("reset_done", "Reset done."), "ok", 2600);
       location.hash = "";
       return;
     }
   }
 
-  // ---------- MAILBOX OVERLAY ----------
   function openMailboxOverlay() {
     const existing = document.getElementById("eptec-mailbox-overlay");
     if (existing) existing.remove();
@@ -685,12 +1125,12 @@
     card.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
 
     const title = document.createElement("div");
-    title.textContent = "📨 EPTEC Mailbox (Simulation)";
+    title.textContent = t("mailbox_title", "📨 EPTEC Mailbox (Simulation)");
     title.style.fontWeight = "700";
     title.style.marginBottom = "10px";
 
     const hint = document.createElement("div");
-    hint.textContent = "Click a link to trigger verify/reset (simulation).";
+    hint.textContent = t("mailbox_hint", "Click a link to trigger verify/reset (simulation).");
     hint.style.fontSize = "14px";
     hint.style.opacity = "0.8";
     hint.style.marginBottom = "12px";
@@ -700,7 +1140,7 @@
 
     if (!mails.length) {
       const empty = document.createElement("div");
-      empty.textContent = "(No mails)";
+      empty.textContent = t("mailbox_empty", "(No mails)");
       list.appendChild(empty);
     } else {
       mails.forEach(m => {
@@ -731,7 +1171,7 @@
         if (m.link) {
           const a = document.createElement("a");
           a.href = m.link;
-          a.textContent = `➡ Open link: ${m.link}`;
+          a.textContent = `${t("mailbox_open_link_prefix", "➡ Open link:")} ${m.link}`;
           a.style.display = "inline-block";
           a.style.marginTop = "6px";
           a.style.cursor = "pointer";
@@ -743,7 +1183,7 @@
     }
 
     const close = document.createElement("button");
-    close.textContent = "Close";
+    close.textContent = t("system_close", "Close");
     close.style.marginTop = "10px";
     close.style.padding = "10px 14px";
     close.style.borderRadius = "12px";
@@ -758,7 +1198,6 @@
     document.body.appendChild(box);
   }
 
-  // ---------- CLOCK (seconds) ----------
   function startClock() {
     stopClock();
     updateClockOnce();
@@ -768,6 +1207,7 @@
     if (clockTimer) clearInterval(clockTimer);
     clockTimer = null;
   }
+
   function updateClockOnce() {
     const el = document.getElementById("system-clock");
     if (!el) return;
