@@ -3,6 +3,11 @@
  * EPTEC SOUND ENGINE – FINAL (HARD CUT)
  * + User Preference: Click Sound ON/OFF (persistent)
  * + Activity log on preference change (optional hook)
+ *
+ * IMPORTANT CHANGE:
+ * - Removed global click binding.
+ * - Click sound plays ONLY when UI explicitly calls SoundEngine.uiConfirm()
+ *   (i.e., "important actions" only).
  */
 
 (() => {
@@ -55,9 +60,7 @@
   }
 
   function setClickSoundEnabled(on) {
-    try {
-      localStorage.setItem(SOUND_PREF_KEY, on ? "1" : "0");
-    } catch {}
+    try { localStorage.setItem(SOUND_PREF_KEY, on ? "1" : "0"); } catch {}
     activity("pref_clicksound_set", { enabled: !!on });
   }
 
@@ -217,7 +220,8 @@
   }
 
   // ------------------------------------------------------------
-  // Global click sound (respects user pref)
+  // Click sound for IMPORTANT actions only
+  // (triggered explicitly via SoundEngine.uiConfirm())
   // ------------------------------------------------------------
   function uiConfirmThrottled() {
     if (!isClickSoundEnabled()) return;
@@ -225,22 +229,6 @@
     if (now - lastUIClickAt < 120) return;
     lastUIClickAt = now;
     playOneShot("uiConfirm", 0.55);
-  }
-
-  function bindGlobalClickSound() {
-    document.addEventListener("click", (e) => {
-      const t = e.target;
-      if (!t || !t.closest) return;
-
-      const clickable =
-        t.closest("button") ||
-        t.closest(".legal-link") ||
-        t.closest(".lang-item") ||
-        t.closest("#lang-toggle") ||
-        t.closest("a");
-
-      if (clickable) uiConfirmThrottled();
-    }, true);
   }
 
   // ------------------------------------------------------------
@@ -252,8 +240,6 @@
     playOneShot("uiConfirm", 0.001); // silent poke
   }
 
-  bindGlobalClickSound();
-
   // ------------------------------------------------------------
   // Public API
   // ------------------------------------------------------------
@@ -264,7 +250,7 @@
 
     uiFocus:   () => playOneShot("uiFocus", 0.45),
 
-    // respects preference
+    // ✅ IMPORTANT actions only (respects preference)
     uiConfirm: () => uiConfirmThrottled(),
 
     flagClick: () => playOneShot("flagClick", 0.45),
