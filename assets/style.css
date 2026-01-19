@@ -1,25 +1,27 @@
 /* ============================================================
    assets/style.css
-   EPTEC STYLE – Bühne / Layout / Räume (keine Szene-Visuals)
-   Definitive, konfliktfreie Version
+   EPTEC STYLE – komplette, konfliktarme Master-Datei
+   Ziel: ruhige UI, nichts springt, Globe bleibt fix, Header schwarz
    ============================================================ */
 
-:root {
+:root{
   --gold: #d4af37;
   --gold-glow: rgba(212, 175, 55, 0.4);
   --oak: #3d2b1f;
   --dark-oak: #261a12;
-  --neon-ampel: #39ff14;
   --paper: #f4f1ea;
 
   --ui-black: #000;
   --ui-white: #fff;
+
+  --msg-bg: rgba(255,255,255,0.92);
+  --toast-bg: rgba(255,255,255,0.92);
 }
 
-/* Global reset (ohne "transition: all" – das macht Performance-Krach) */
-* { box-sizing: border-box; }
+/* Global reset (ohne transition:all) */
+*{ box-sizing: border-box; }
 
-html, body {
+html, body{
   margin: 0;
   padding: 0;
   height: 100%;
@@ -29,268 +31,260 @@ html, body {
 }
 
 /* ============================================================
-   MEADOW STAGE (Layout-only)
-   Visuals kommen aus assets/imagine.css (.grassy-meadow / .sun / .stream)
+   HEADER (Contract Office) – schwarz, weiter unten, ruhig
    ============================================================ */
-
-.grassy-meadow {
-  height: 100vh;
-  width: 100vw;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-/* ============================================================
-   PORTAL (dein Originalobjekt; kompatibel mit "meadow" und Login-UI)
-   ============================================================ */
-
-.portal-door {
-  width: 220px;
-  height: 350px;
-  background: rgba(255, 255, 255, 0.10);
-  border: 4px solid var(--gold);
-  border-radius: 110px 110px 20px 20px;
-  backdrop-filter: blur(15px);
-  box-shadow: 0 0 50px var(--gold-glow), inset 0 0 20px var(--gold-glow);
-  cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-
-.portal-door:hover {
-  transform: translateY(-10px) scale(1.05);
-  box-shadow: 0 0 80px var(--gold), inset 0 0 20px var(--gold-glow);
-}
-
-/* ============================================================
-   ROOM SYSTEM (Layout / Positioning only)
-   ============================================================ */
-
-.room-view {
-  display: none;
-  height: 100vh;
-  width: 100vw;
+.app-header{
   position: fixed;
-  inset: 0;
-  z-index: 500;
-}
-
-/* ROOM 1: Workshop */
-.workshop-ambient {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center, #4a3728 0%, #1a110a 100%);
-}
-
-.wooden-desk {
-  width: 80%;
-  height: 60%;
-  background: var(--oak);
-  border-radius: 20px;
-  border: 8px solid var(--dark-oak);
-  box-shadow: 0 50px 100px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.5);
-  padding: 40px;
-  position: relative;
-}
-
-.engraved-matrix {
-  background: var(--paper);
-  height: 100%;
-  border-radius: 5px;
-  padding: 30px;
-  color: #222;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
-  font-family: ui-monospace, "Courier New", monospace;
-  overflow-y: auto;
-}
-
-/* ROOM 2: Control / Sitzungssaal */
-.control-ambient {
-  height: 100%;
-  display: grid;
-  grid-template-columns: 300px 1fr 300px;
-  padding: 40px;
-  align-items: center;
-  gap: 40px;
-  background: linear-gradient(135deg, #1e130c 0%, #9a8478 100%);
-}
-
-/* Service cart */
-.service-cart {
-  height: 400px;
-  border-radius: 15px;
-  border: 4px solid var(--gold);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  background-image: linear-gradient(rgba(255,255,255,0.8), rgba(200,200,200,0.8));
-}
-
-/* Mirror message */
-#spiegel-nachricht {
-  background: rgba(255, 255, 255, 0.10);
-  backdrop-filter: blur(10px);
-  border: 2px solid var(--gold);
-  color: white;
-  padding: 25px;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 500px;
-  text-align: center;
-  font-size: 1.2rem;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  box-shadow: 0 0 30px var(--gold-glow);
-}
-
-/* Ampel (nur das Objekt-Design; UI-Zustände/Clicks bleiben in Logic/UI) */
-.ampel-standalone {
-  background: #111;
-  padding: 30px;
-  border-radius: 60px;
-  border: 4px solid #333;
-  box-shadow: 0 0 50px rgba(0,0,0,1);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-self: center;
-  align-self: center;
-}
-
-.ampel-bulb {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: #222;
-  border: 4px solid #000;
-  cursor: pointer;
-  opacity: 0.2;
-  transition: opacity 140ms ease, filter 140ms ease, background 140ms ease, box-shadow 140ms ease;
-}
-
-.ampel-bulb.active {
-  opacity: 1;
-  filter: brightness(1.5);
-}
-
-/* Falls du nur 3 Bulbs nutzt, lass das so – es schadet nicht */
-#bulb-1.active, #bulb-2.active, #bulb-3.active {
-  background: #ffcc00;
-  box-shadow: 0 0 40px #ffcc00;
-}
-#bulb-4.active {
-  background: #ff6600;
-  box-shadow: 0 0 40px #ff6600;
-}
-#bulb-5.active {
-  background: #ff0000;
-  box-shadow: 0 0 40px #ff0000;
-}
-
-/* Plant + hidden Annex */
-.corner-plant {
-  position: absolute;
-  bottom: 30px;
-  right: 50px;
-  font-size: 80px;
-  filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-  cursor: pointer;
-  transform-origin: bottom center;
-}
-
-.corner-plant:hover { animation: sway 2s infinite ease-in-out; }
-
-@keyframes sway {
-  0%, 100% { transform: rotate(-3deg); }
-  50% { transform: rotate(3deg); }
-}
-
-.hidden-archive {
-  position: absolute;
-  bottom: 100px;
-  right: 0;
-  background: var(--gold);
-  color: black;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: bold;
-  font-size: 14px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-
-.corner-plant:hover .hidden-archive { opacity: 1; }
-
-/* Exit button */
-.btn-exit {
-  position: absolute;
-  top: 30px;
-  left: 30px;
-  background: white;
-  color: black;
-  border: none;
-  padding: 10px 25px;
-  border-radius: 50px;
-  cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  z-index: 1000;
-}
-
-/* ============================================================
-   EPTEC UI-CONTROL EXTENSIONS
-   Header + Inline Messages + Toast + Legal modal styling
-   ============================================================ */
-
-/* A) System-Header (Contract Office + Clock) */
-.app-header {
-  position: fixed;
-  top: 18px;
+  top: 32px;                 /* 2–3cm nach unten, damit Globe-Rail nicht kollidiert */
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  z-index: 1000;
-  color: #ffffff;
+  z-index: 10;               /* bewusst unter der Globe-Leiste */
   pointer-events: none;
 }
 
-#app-title {
+#app-title{
+  margin: 0;
   font-size: 28px;
   font-weight: 600;
-  margin: 0;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  color: #000;
 }
 
-#app-subtitle {
+#app-subtitle{
+  margin-top: 4px;
   font-size: 14px;
   opacity: 0.85;
-  margin-top: 4px;
+  color: #000;
 }
 
-#system-clock {
+#system-clock{
   margin-top: 6px;
   font-size: 13px;
   opacity: 0.9;
+  color: #000;
 }
 
-/* B) Inline-System-Messages */
-.system-msg{
-  margin-top: 10px;
+/* ============================================================
+   MEADOW STAGE (Layout-only; visuals kommen aus imagine.css/inline)
+   ============================================================ */
+.grassy-meadow{
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* ============================================================
+   ENTRY UI (Login-Box) – stabil, nichts springt
+   ============================================================ */
+.entry-ui{
+  position: relative;
+  width: min(520px, 92vw);
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.entry-input{
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.45);
+  background: rgba(255,255,255,0.92);
+  color: #111;
+  padding: 10px 14px;
+  font-size: 16px;
+  outline: none;
+}
+
+.entry-input:focus{
+  border-color: rgba(0,0,0,0.65);
+}
+
+.entry-btn{
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.55);
+  background: rgba(255,255,255,0.92);
+  color: #111;
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.entry-btn:hover{
+  filter: brightness(1.03);
+}
+
+.entry-btn.secondary{
+  background: rgba(255,255,255,0.75);
+}
+
+.entry-btn.locked{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Kleine Animationsklassen (falls vorhanden) – aber ohne Layout-Shift */
+.grow-in{ transform: none; }
+.plop-in{ transform: none; }
+
+/* ============================================================
+   ADMIN GATE – bleibt ruhig, kein Shift
+   ============================================================ */
+.admin-gate{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+#admin-code{ flex: 1; }
+#admin-submit{ white-space: nowrap; }
+
+/* ============================================================
+   LEGAL FOOTER – unten mittig
+   ============================================================ */
+.legal-footer{
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  z-index: 20;
+  color: rgba(255,255,255,0.92);
   font-size: 14px;
-  line-height: 1.3;
+  user-select: none;
+}
+
+.legal-link{
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.legal-sep{
+  opacity: 0.6;
+}
+
+/* ============================================================
+   MODALS – Fenster im Fenster (Register/Forgot/Legal)
+   ============================================================ */
+.modal{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,0.72);
+  z-index: 999900;
+}
+
+.modal-hidden{ display:none !important; }
+
+.modal-card{
+  position: relative;
+  width: min(560px, 94vw);
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.20);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-title{
+  font-size: 18px;
+  font-weight: 650;
+  color: #111;
+  margin-bottom: 4px;
+}
+
+/* Register/Forgot spezifisch */
+.register-card .entry-input,
+.forgot-card .entry-input{
+  background: rgba(255,255,255,0.98);
+}
+
+/* ============================================================
+   RULE TEXT + SUGGESTIONS (Registrierung)
+   ============================================================ */
+.rule-text{
+  font-size: 13px;
+  color: rgba(0,0,0,0.72);
+  line-height: 1.25;
+}
+
+.suggestions{
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(0,0,0,0.03);
+}
+
+.suggestions-title{
+  font-weight: 650;
+  margin-bottom: 6px;
+  color: #111;
+}
+
+.suggestion{
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.92);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.suggestion:last-child{ margin-bottom: 0; }
+.suggestion:hover{ filter: brightness(1.02); }
+
+/* ============================================================
+   SYSTEM MESSAGES + TOAST
+   - Keine Bewegung im Layout: messages sind absolute overlay
+   - login-message ist komplett deaktiviert (wie gewünscht)
+   ============================================================ */
+#login-message{ display:none !important; }
+
+.system-msg{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, 92%);
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.2);
-  background: rgba(255,255,255,0.85);
+  background: var(--msg-bg);
   color: #111;
+  font-size: 14px;
+  line-height: 1.3;
   display: none;
+  z-index: 20;
 }
 
 .system-msg.show{ display:block; }
@@ -298,7 +292,11 @@ html, body {
 .system-msg.ok{ border-color: rgba(0,160,0,0.35); }
 .system-msg.warn{ border-color: rgba(200,140,0,0.35); }
 
-/* C) Toast (kleines Pop-up rechts) */
+/* Message-Position über den unteren Buttons */
+#register-message{ bottom: 92px; }
+#forgot-message{ bottom: 92px; }
+
+/* Toast */
 .eptec-toast{
   position: fixed;
   right: 16px;
@@ -306,7 +304,7 @@ html, body {
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,.25);
-  background: rgba(255,255,255,.92);
+  background: var(--toast-bg);
   color: #111;
   max-width: 360px;
   z-index: 999999;
@@ -321,15 +319,111 @@ html, body {
 .eptec-toast.warn{ border-color: rgba(200,140,0,.35); }
 .eptec-toast.ok{ border-color: rgba(0,140,0,.35); }
 
-/* D) Legal Modal small polish */
-#legal-screen .modal-card {
-  max-width: 760px;
-  padding: 24px;
+/* ============================================================
+   ROOMS (aus deiner langen Datei übernommen)
+   ============================================================ */
+.room-view{
+  display:none;
+  height:100vh;
+  width:100vw;
+  position: fixed;
+  inset: 0;
+  z-index: 500;
 }
 
-#legal-body {
-  margin-top: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #222;
+/* ROOM 1: Workshop */
+.workshop-ambient{
+  height: 100%;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:center;
+  background: radial-gradient(circle at center, #4a3728 0%, #1a110a 100%);
 }
+
+.wooden-desk{
+  width: 80%;
+  height: 60%;
+  background: var(--oak);
+  border-radius: 20px;
+  border: 8px solid var(--dark-oak);
+  box-shadow: 0 50px 100px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.5);
+  padding: 40px;
+  position: relative;
+}
+
+.engraved-matrix{
+  background: var(--paper);
+  height: 100%;
+  border-radius: 5px;
+  padding: 30px;
+  color: #222;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+  font-family: ui-monospace, "Courier New", monospace;
+  overflow-y: auto;
+}
+
+/* ROOM 2 placeholder */
+#room-2-view{ color: white; }
+
+/* ============================================================
+   Optional: Portal, Ampel, etc. (aus deiner langen Datei)
+   ============================================================ */
+.portal-door{
+  width: 220px;
+  height: 350px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 4px solid var(--gold);
+  border-radius: 110px 110px 20px 20px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 0 50px var(--gold-glow), inset 0 0 20px var(--gold-glow);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.portal-door:hover{
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 0 80px var(--gold), inset 0 0 20px var(--gold-glow);
+}
+
+.ampel-standalone{
+  background: #111;
+  padding: 30px;
+  border-radius: 60px;
+  border: 4px solid #333;
+  box-shadow: 0 0 50px rgba(0,0,0,1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-self: center;
+  align-self: center;
+}
+.ampel-bulb{
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #222;
+  border: 4px solid #000;
+  cursor: pointer;
+  opacity: 0.2;
+  transition: opacity 140ms ease, filter 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+.ampel-bulb.active{
+  opacity: 1;
+  filter: brightness(1.5);
+}
+#bulb-1.active, #bulb-2.active, #bulb-3.active{
+  background: #ffcc00;
+  box-shadow: 0 0 40px #ffcc00;
+}
+#bulb-4.active{
+  background: #ff6600;
+  box-shadow: 0 0 40px #ff6600;
+}
+#bulb-5.active{
+  background: #ff0000;
+  box-shadow: 0 0 40px #ff0000;
+}
+
+/* ============================================================
+   End of file
+   ============================================================ */
