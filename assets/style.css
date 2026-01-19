@@ -31,32 +31,46 @@ html, body{
 }
 
 /* ============================================================
-   LANGUAGE SWITCHER (Globe + vertical drop) – RTL SAFE
-   - Globe stays fixed top-right always
-   - Rail opens DOWNWARDS from globe
+   LANGUAGE SWITCHER (Globe + vertical drop) – HARD RTL SAFE
+   - Globe stays fixed top-right always (even when dir=rtl)
+   - Rail opens DOWNWARDS from globe (vertical)
    - Never shifts in Arabic/RTL
    ============================================================ */
 
-.lang-switcher{
+/* HARD pin the switcher: wins against RTL + any other rules */
+html[dir="rtl"] #language-switcher,
+html[dir="ltr"] #language-switcher,
+#language-switcher{
   position: fixed !important;
   top: 14px !important;
   right: 14px !important;
   left: auto !important;
+  bottom: auto !important;
+
+  transform: none !important;      /* kill any accidental transform from other CSS */
+  margin: 0 !important;
+
+  direction: ltr !important;       /* isolate from RTL */
+  unicode-bidi: isolate !important;
+
   z-index: 999999 !important;
-  direction: ltr !important; /* stops RTL from affecting this widget */
 }
 
-/* rail: vertical dropdown below globe */
-#lang-rail{
+/* Rail: vertical dropdown BELOW the globe (not sideways) */
+html[dir="rtl"] #language-switcher #lang-rail,
+html[dir="ltr"] #language-switcher #lang-rail,
+#language-switcher #lang-rail{
   position: absolute !important;
-  top: 56px !important;      /* below globe (48px button + small gap) */
+  top: 56px !important;            /* below globe */
   right: 0 !important;
+  left: auto !important;
 
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: column !important;     /* 🔑 downwards */
+  align-items: flex-end !important;
   gap: 8px !important;
 
-  transform-origin: top center !important;
+  transform-origin: top right !important;
   transform: scaleY(0) !important;
   opacity: 0 !important;
   pointer-events: none !important;
@@ -64,8 +78,10 @@ html, body{
   transition: transform 220ms ease, opacity 220ms ease !important;
 }
 
-/* open state */
-.lang-open #lang-rail{
+/* Open state */
+html[dir="rtl"] #language-switcher.lang-open #lang-rail,
+html[dir="ltr"] #language-switcher.lang-open #lang-rail,
+#language-switcher.lang-open #lang-rail{
   transform: scaleY(1) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
