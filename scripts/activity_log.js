@@ -6,7 +6,11 @@ const ActivityLog = {
             action: actionType,
             info: details
         };
-        // Speichert den Verlauf der Eskalationsschritte
+
+        // Hier wird das Log lokal protokolliert, später kann es an das Backend gesendet werden
         console.log("Beweis-Log erstellt: ", logEntry);
+
+        // Optional: später Backend-Integration
+        // apiClient.post("/activity", { event: actionType, meta: details });
     }
 };
