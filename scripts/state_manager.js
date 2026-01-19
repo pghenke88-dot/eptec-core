@@ -50,6 +50,16 @@
     return a;
   }
 
+  function getSessionUsername() {
+    try {
+      const s = window.EPTEC_MOCK_BACKEND?.getSession?.();
+      const u = s?.username ? String(s.username).toLowerCase() : "";
+      return u || null;
+    } catch {
+      return null;
+    }
+  }
+
   /* ---------------------------------------------------
      LEGACY FEATURE (kept, backward compatible)
      --------------------------------------------------- */
@@ -95,10 +105,7 @@
       }
     };
 
-    // Persist
     const next = writeFeed(payload);
-
-    // Compute coupled flag visually (no business logic; just UI rule)
     const coupled = !!(next.products?.construction?.active && next.products?.controlling?.active);
 
     $ui()?.set({
@@ -112,12 +119,7 @@
 
   function setReferralCode(code) {
     const next = writeFeed({ referralCode: String(code || "") || null });
-
-    $ui()?.set({
-      codes: {
-        referral: { code: next.referralCode || null }
-      }
-    });
+    $ui()?.set({ codes: { referral: { code: next.referralCode || null } } });
   }
 
   function setPresentStatus({ status, discountPercent, validUntil, code }) {
@@ -158,45 +160,68 @@
   }
 
   /* ---------------------------------------------------
-     Present-Code activation helper (UI-level apply)
-     - Stores: active status, validUntil (30 days), discount preview
-     - Does NOT validate global code correctness (that belongs to backend later)
-     - Does NOT change subscription plans (no business logic)
+     Present-Code activation (MOCK BACKEND ENFORCED)
+     - enforces: valid campaign, not expired, once per user
+     - then updates FEED + UI state
      --------------------------------------------------- */
-  function applyPresentCode(code, opts = {}) {
-    const c = String(code || "").trim();
+  function applyPresentCode(code) {
+    const c = String(code || "").trim().toUpperCase();
     if (!c) return { ok: false, reason: "EMPTY" };
 
-    const now = Date.now();
-    const validUntil = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const username = getSessionUsername();
+    if (!username) return { ok: false, reason: "NO_SESSION" };
 
-    // Mark present active + discount preview (visual)
+    const mb = window.EPTEC_MOCK_BACKEND;
+    if (!mb?.applyPresentCode) {
+      // fallback (should not happen once you replace mock_backend.js)
+      return { ok: false, reason: "NO_BACKEND" };
+    }
+
+    const res = mb.applyPresentCode(username, c);
+
+    if (!res?.ok) {
+      if (res.code === "ALREADY_USED") {
+        setPresentStatus({ status: "used", discountPercent: null, validUntil: null, code: c });
+        return { ok: false, reason: "USED", backend: res };
+      }
+      if (res.code === "EXPIRED") {
+        setPresentStatus({ status: "expired", discountPercent: null, validUntil: res?.campaign?.validUntil || null, code: c });
+        return { ok: false, reason: "EXPIRED", backend: res };
+      }
+      setPresentStatus({ status: "none", discountPercent: null, validUntil: null, code: null });
+      return { ok: false, reason: "INVALID", backend: res };
+    }
+
+    // success
+    const pct = res?.campaign?.discountPercent ?? 50;
+    const until = res?.campaign?.validUntil ?? null;
+
     setPresentStatus({
       status: "active",
-      discountPercent: 50,
-      validUntil,
+      discountPercent: pct,
+      validUntil: until,
       code: c
     });
 
-    // Minimal billing preview (optional)
+    // billing preview: for demo, show discount on next invoice
     const feed = readFeed();
-    const nextInvoiceDate = feed?.billing?.nextInvoiceDate || new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString();
-    setBillingPreview({ nextInvoiceDate, discountPercent: 50 });
+    const nextInvoiceDate =
+      feed?.billing?.nextInvoiceDate ||
+      new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    return { ok: true, validUntil };
+    setBillingPreview({ nextInvoiceDate, discountPercent: pct });
+
+    return { ok: true, campaign: res.campaign };
   }
 
   /* ---------------------------------------------------
-     Hydration from FEED (preferred) and legacy fallback
+     Hydration from FEED + auto-referral fetch when logged in
      --------------------------------------------------- */
   function hydrateFromStorage() {
-    // 1) Preferred unified feed
     const feed = readFeed();
 
-    if (feed.products) {
-      setProducts(feed.products);
-    } else {
-      // ensure UI still has coupled calculated as false
+    if (feed.products) setProducts(feed.products);
+    else {
       $ui()?.set({
         products: {
           construction: { active: false, tier: null },
@@ -224,29 +249,29 @@
       });
     }
 
-    // 2) Legacy storage remains untouched; kept for compatibility
-    // const legacy = loadJson(STORAGE_KEY);
-    // (We don't map legacy lights into dashboard state to avoid logic.)
+    // ✅ Auto: if session exists, ensure referral code exists (unlimited use)
+    const username = getSessionUsername();
+    const mb = window.EPTEC_MOCK_BACKEND;
+    if (username && mb?.getOrCreateReferralCode) {
+      const r = mb.getOrCreateReferralCode(username);
+      if (r?.ok && r.referralCode) setReferralCode(r.referralCode);
+    }
   }
 
   /* ---------------------------------------------------
      PUBLIC API
      --------------------------------------------------- */
   window.EPTEC_STATE_MANAGER = {
-    // legacy
     updateLight,
 
-    // dashboard state
     setProducts,
     setReferralCode,
     setPresentStatus,
     setBillingPreview,
 
-    // helpers
     applyPresentCode,
     hydrateFromStorage,
 
-    // advanced (optional)
     readFeed,
     writeFeed
   };
