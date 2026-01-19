@@ -14,9 +14,8 @@
       "price_basis": "24.90",
       "price_premium": "49.90"
     }
-  }
-}
-{
+  },
+
   "app_name": "",
   "login_username": "",
   "login_password": "",
@@ -68,5 +67,9 @@
   "system_close": "",
   "system_loading": "",
   "system_error": "",
-  "login_error_invalid": ""
+  "login_error_invalid": "",
+
+  "register_privacy_prefix": "Door je te registreren accepteer je ons",
+  "register_privacy_link": "Privacybeleid",
+  "footer_privacy": "Privacy"
 }
