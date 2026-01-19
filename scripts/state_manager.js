@@ -13,6 +13,11 @@
  * - Extra-Present VIP: create (admin), redeem (user), one-time redemption
  * - Demo coupling rules Construction <-> Controlling (filmable, hard enforced)
  *
+ * NEW (Paywall / Doors):
+ * - Per-door access gate (construction / controlling) persisted in FEED
+ * - Gate is derived from products by default (no duplicate business rules)
+ * - Controlling access requires Construction (hard enforced)
+ *
  * Rules:
  * - NO DOM access.
  * - NO real billing/tariff enforcement beyond demo toggles & mock calls.
@@ -101,6 +106,169 @@
   }
 
   // -----------------------------
+  // ACCESS / DOOR GATE (NEW)
+  // -----------------------------
+  const DOORS = {
+    CONSTRUCTION: "construction",
+    CONTROLLING: "controlling"
+  };
+
+  function normalizeDoor(door) {
+    const d = String(door || "").trim().toLowerCase();
+    if (d === "construction") return DOORS.CONSTRUCTION;
+    if (d === "controlling") return DOORS.CONTROLLING;
+    return null;
+  }
+
+  /**
+   * Derive door access from products (single source of truth):
+   * - construction door unlocked iff products.construction.active
+   * - controlling door unlocked iff products.controlling.active AND products.construction.active
+   */
+  function deriveAccessFromProducts(products) {
+    const p = isObj(products) ? products : {};
+    const c = !!p?.construction?.active;
+    const k = !!p?.controlling?.active;
+    return {
+      construction: c,
+      controlling: (k && c)
+    };
+  }
+
+  function setAccess(access) {
+    const a = isObj(access) ? access : {};
+    const next = writeFeed({
+      access: {
+        construction: !!a.construction,
+        controlling: !!a.controlling
+      }
+    });
+
+    // No UI dependency required; we keep it for optional status overlays.
+    // If EPTEC_UI_STATE ignores unknown keys, it's still safe.
+    $ui()?.set?.({
+      access: {
+        construction: !!next.access?.construction,
+        controlling: !!next.access?.controlling
+      }
+    });
+
+    return next.access || { construction: false, controlling: false };
+  }
+
+  function getAccess() {
+    const feed = readFeed();
+    const a = feed.access;
+    if (isObj(a) && ("construction" in a || "controlling" in a)) {
+      return {
+        construction: !!a.construction,
+        controlling: !!a.controlling
+      };
+    }
+    // fallback: derive from products if access not stored yet
+    return deriveAccessFromProducts(feed.products || {});
+  }
+
+  function isDoorUnlocked(door) {
+    const d = normalizeDoor(door);
+    if (!d) return false;
+    const a = getAccess();
+    return !!a[d];
+  }
+
+  function unlockDoor(door) {
+    const d = normalizeDoor(door);
+    if (!d) return { ok: false, reason: "INVALID_DOOR" };
+
+    const feed = readFeed();
+    const p = feed.products || {};
+    const derived = deriveAccessFromProducts(p);
+
+    // To avoid duplicating business rules: unlocking a door implies the underlying product must be active.
+    // If product isn't active yet, we ONLY persist an "intent" and let main/checkout setProducts() properly.
+    // BUT for demo filmability, if you explicitly unlock, we also activate the product baseline.
+
+    if (d === DOORS.CONSTRUCTION) {
+      // Activate construction baseline
+      const nextProducts = {
+        construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
+        controlling:  { active: !!p?.controlling?.active, tier: (p?.controlling?.tier || null) }
+      };
+      setProducts(nextProducts);
+      const acc = deriveAccessFromProducts(readFeed().products || {});
+      setAccess(acc);
+      return { ok: true, door: d, access: acc };
+    }
+
+    if (d === DOORS.CONTROLLING) {
+      // Controlling requires construction
+      const nextProducts = {
+        construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
+        controlling:  { active: true, tier: (p?.controlling?.tier || "BASIS") }
+      };
+      setProducts(nextProducts);
+      const acc = deriveAccessFromProducts(readFeed().products || {});
+      setAccess(acc);
+      return { ok: true, door: d, access: acc };
+    }
+
+    // fallback (shouldn't happen)
+    setAccess(derived);
+    return { ok: true, door: d, access: derived };
+  }
+
+  function lockDoor(door) {
+    const d = normalizeDoor(door);
+    if (!d) return { ok: false, reason: "INVALID_DOOR" };
+
+    const feed = readFeed();
+    const p = feed.products || {};
+
+    if (d === DOORS.CONSTRUCTION) {
+      // Turning construction off implies controlling off (your coupling rule)
+      const nextProducts = {
+        construction: { active: false, tier: null },
+        controlling:  { active: false, tier: null }
+      };
+      setProducts(nextProducts);
+      const acc = deriveAccessFromProducts(readFeed().products || {});
+      setAccess(acc);
+      return { ok: true, door: d, access: acc };
+    }
+
+    if (d === DOORS.CONTROLLING) {
+      const nextProducts = {
+        construction: { active: !!p?.construction?.active, tier: (p?.construction?.tier || null) },
+        controlling:  { active: false, tier: null }
+      };
+      setProducts(nextProducts);
+      const acc = deriveAccessFromProducts(readFeed().products || {});
+      setAccess(acc);
+      return { ok: true, door: d, access: acc };
+    }
+
+    return { ok: true, door: d, access: getAccess() };
+  }
+
+  function canEnterDoor(door) {
+    const d = normalizeDoor(door);
+    if (!d) return { ok: false, reason: "INVALID_DOOR" };
+
+    const feed = readFeed();
+    const access = getAccess();
+    const products = feed.products || {};
+    const derived = deriveAccessFromProducts(products);
+
+    // Keep access consistent with products (self-healing)
+    if (access.construction !== derived.construction || access.controlling !== derived.controlling) {
+      setAccess(derived);
+    }
+
+    if (!derived[d]) return { ok: false, reason: "LOCKED", door: d, access: derived };
+    return { ok: true, door: d, access: derived };
+  }
+
+  // -----------------------------
   // UI STATE SETTERS (persist + render)
   // -----------------------------
   function setProducts(products) {
@@ -108,12 +276,25 @@
     const construction = p.construction || { active: false, tier: null };
     const controlling  = p.controlling  || { active: false, tier: null };
 
-    const next = writeFeed({
-      products: {
-        construction: { active: !!construction.active, tier: construction.tier || null },
-        controlling:  { active: !!controlling.active,  tier: controlling.tier  || null }
-      }
-    });
+    // Apply hard coupling rules (your decided product logic):
+    // - If construction off -> controlling off
+    // - If controlling on -> construction on (basis)
+    const nextProducts = {
+      construction: { active: !!construction.active, tier: construction.tier || null },
+      controlling:  { active: !!controlling.active,  tier: controlling.tier  || null }
+    };
+
+    if (!nextProducts.construction.active) {
+      nextProducts.controlling = { active: false, tier: null };
+    }
+    if (nextProducts.controlling.active && !nextProducts.construction.active) {
+      nextProducts.construction = { active: true, tier: nextProducts.construction.tier || "BASIS" };
+    }
+    if (nextProducts.controlling.active && !nextProducts.construction.tier) {
+      nextProducts.construction.tier = "BASIS";
+    }
+
+    const next = writeFeed({ products: nextProducts });
 
     const coupled = !!(next.products?.construction?.active && next.products?.controlling?.active);
 
@@ -124,6 +305,10 @@
         coupled
       }
     });
+
+    // Keep access in sync (single source of truth = products)
+    const derivedAccess = deriveAccessFromProducts(next.products);
+    setAccess(derivedAccess);
   }
 
   function setReferralCode(code) {
@@ -357,6 +542,8 @@
           coupled: false
         }
       });
+      // Ensure access baseline is consistent
+      setAccess({ construction: false, controlling: false });
     }
 
     // referral
@@ -367,6 +554,13 @@
 
     // billing
     if (feed.billing) setBillingPreview(feed.billing);
+
+    // access (if it exists) - otherwise derived by setProducts()
+    if (feed.access && isObj(feed.access)) {
+      // self-heal: access must follow products
+      const derived = deriveAccessFromProducts(readFeed().products || {});
+      setAccess(derived);
+    }
 
     // after login: ensure referral exists automatically
     ensureReferralForLoggedInUser();
@@ -382,6 +576,15 @@
     // feed access
     readFeed,
     writeFeed,
+
+    // access/doors
+    DOORS,
+    getAccess,
+    setAccess,
+    isDoorUnlocked,
+    canEnterDoor,
+    unlockDoor,
+    lockDoor,
 
     // setters (if you want manual writes)
     setProducts,
