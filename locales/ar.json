@@ -1,22 +1,4 @@
 {
-  "brand": "EPTEC",
-  "system": "Business-Guard",
-  "language": "العربية",
-  "lang": "العربية",
-  "agb_btn": "الشروط والأحكام",
-  "status_msg": "تحقق من حالة النظام",
-  "plans": {
-    "f1": {
-      "price_basis": "19.90",
-      "price_premium": "34.90"
-    },
-    "f2": {
-      "price_basis": "24.90",
-      "price_premium": "49.90"
-    }
-  }
-}
-{
   "app_name": "",
   "login_username": "",
   "login_password": "",
@@ -68,5 +50,9 @@
   "system_close": "",
   "system_loading": "",
   "system_error": "",
-  "login_error_invalid": ""
+  "login_error_invalid": "",
+
+  "register_privacy_prefix": "بالتسجيل فإنك توافق على",
+  "register_privacy_link": "سياسة الخصوصية",
+  "footer_privacy": "الخصوصية"
 }
