@@ -1,9 +1,6 @@
 /**
  * scripts/ui_state.js
  * EPTEC UI-State (pure state)
- * - holds transient UI state ("what is visible right now")
- * - not persistent (no localStorage)
- * - emits change events
  */
 
 (() => {
@@ -12,7 +9,7 @@
   const state = {
     view: "meadow",         // "meadow" | "room1" | "room2"
     modal: null,            // null | "register" | "forgot" | "legal"
-    legalKind: null,        // null | "Impressum" | "AGB" | "Support"
+    legalKind: null,
     loading: false
   };
 
@@ -32,7 +29,6 @@
 
   function onChange(fn) {
     listeners.add(fn);
-    // immediate first call
     try { fn(snapshot()); } catch {}
     return () => listeners.delete(fn);
   }
