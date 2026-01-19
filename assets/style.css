@@ -31,6 +31,65 @@ html, body{
 }
 
 /* ============================================================
+   LANGUAGE SWITCHER (Globe + vertical drop) – RTL SAFE
+   - Globe stays fixed top-right always
+   - Rail opens DOWNWARDS from globe
+   - Never shifts in Arabic/RTL
+   ============================================================ */
+
+.lang-switcher{
+  position: fixed !important;
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
+  z-index: 999999 !important;
+  direction: ltr !important; /* stops RTL from affecting this widget */
+}
+
+/* rail: vertical dropdown below globe */
+#lang-rail{
+  position: absolute !important;
+  top: 56px !important;      /* below globe (48px button + small gap) */
+  right: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+
+  transform-origin: top center !important;
+  transform: scaleY(0) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+
+  transition: transform 220ms ease, opacity 220ms ease !important;
+}
+
+/* open state */
+.lang-open #lang-rail{
+  transform: scaleY(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* keep individual language buttons stable */
+.lang-item{
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.20);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 16px;
+  line-height: 1;
+  color: white;
+}
+
+/* ============================================================
    HEADER (Contract Office) – schwarz, weiter unten, ruhig
    ============================================================ */
 .app-header{
