@@ -2,6 +2,7 @@
  * scripts/main.js
  * EPTEC MAIN – UI controller + Phase-1 backend (mock)
  * FINAL: UI-Control (EPTEC_UI) + Inline Messages + Toast + Mock-Backend
+ * UPDATE: User-Login nutzt jetzt denselben Tunnel wie Admin (ein zentraler Übergang)
  */
 
 (() => {
@@ -107,6 +108,24 @@
   document.addEventListener("pointerdown", unlockOnce, { once: true });
   document.addEventListener("keydown", unlockOnce, { once: true });
   document.addEventListener("touchstart", unlockOnce, { once: true, passive: true });
+
+  // ---------- ONE TRUE TUNNEL TRANSITION (Admin + User) ----------
+  function enterSystemViaTunnel() {
+    const brain = window.EPTEC_BRAIN;
+    if (!brain?.Navigation?.triggerTunnel) {
+      toast("System nicht bereit (Navigation fehlt).", "error", 2600);
+      return;
+    }
+
+    window.SoundEngine?.tunnelFall?.();
+
+    document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
+    const tunnel = document.getElementById("eptec-tunnel");
+    tunnel?.classList.remove("tunnel-hidden");
+    tunnel?.classList.add("tunnel-active");
+
+    setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
+  }
 
   // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
@@ -222,22 +241,21 @@
       hideMsg("login-message");
 
       if (!u || !p) {
-        showMsg("login-message", "Bitte Username und Passwort eingeben.", "error");
-        toast("Login fehlgeschlagen", "error");
+        // NOTE: login-message ist bei dir per CSS deaktiviert – Toast bleibt sichtbar.
+        toast("Login failed: missing credentials", "error", 2600);
         return;
       }
 
       const res = window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p });
       if (!res?.ok) {
-        showMsg("login-message", res?.message || "Login fehlgeschlagen.", "error");
-        toast("Registrieren oder Passwort vergessen", "warn", 2600);
+        toast(res?.message || "Login failed", "error", 2600);
         return;
       }
 
-      showMsg("login-message", "Login erfolgreich (Simulation).", "ok");
-      toast("Login OK", "ok");
-      // Optional: direkt tunnel
-      // window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1");
+      toast("Login OK", "ok", 1800);
+
+      // ✅ WICHTIG: erfolgreicher User-Login löst denselben Tunnel aus wie Admin
+      enterSystemViaTunnel();
     });
 
     // REGISTER open via UI-Control
@@ -263,18 +281,16 @@
       hideMsg("forgot-message");
 
       if (!identity) {
-        showMsg("forgot-message", "Bitte E-Mail oder Username eingeben.", "error");
-        toast("Eingabe fehlt", "error");
+        toast("Missing input", "error", 2200);
         return;
       }
 
       const res = window.EPTEC_MOCK_BACKEND?.requestPasswordReset?.({ identity });
-      showMsg("forgot-message", res?.message || "Reset angefordert.", "warn");
-      toast("Reset angefordert (Simulation)", "warn", 2600);
+      toast(res?.message || "Reset requested (simulation)", "warn", 2600);
       openMailboxOverlay();
     });
 
-    // Admin -> tunnel (wie gehabt)
+    // Admin -> tunnel (now uses the SAME transition)
     const submit = document.getElementById("admin-submit");
     const input = document.getElementById("admin-code");
 
@@ -283,25 +299,19 @@
       if (!code) return;
 
       const brain = window.EPTEC_BRAIN;
-      if (!brain?.Auth?.verifyAdmin || !brain?.Navigation?.triggerTunnel) {
-        toast("System nicht bereit (Brain fehlt).", "error", 2600);
+      if (!brain?.Auth?.verifyAdmin) {
+        toast("System not ready (Auth missing).", "error", 2600);
         return;
       }
 
       const ok = brain.Auth.verifyAdmin(code, 1) || brain.Auth.verifyAdmin(code, 2);
       if (!ok) {
-        toast("Zugriff verweigert", "error", 2600);
+        toast("Access denied", "error", 2200);
         return;
       }
 
-      window.SoundEngine?.tunnelFall?.();
-
-      document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
-      const tunnel = document.getElementById("eptec-tunnel");
-      tunnel?.classList.remove("tunnel-hidden");
-      tunnel?.classList.add("tunnel-active");
-
-      setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
+      // ✅ SAME tunnel as user
+      enterSystemViaTunnel();
     };
 
     submit?.addEventListener("click", attempt);
@@ -349,7 +359,8 @@
         [];
       if (arr.length < 2) return;
 
-      suggTitle.textContent = "Vorschläge:";
+      // keep it neutral; no mixed languages on UI:
+      suggTitle.textContent = "Suggestions:";
       sugg1.textContent = arr[0];
       sugg2.textContent = arr[1];
       suggBox.classList.remove("modal-hidden");
@@ -364,8 +375,9 @@
     }
 
     function renderRules() {
-      if (rulesUser) rulesUser.textContent = "Username: min. 5 Zeichen, min. 1 Großbuchstabe, min. 1 Sonderzeichen.";
-      if (rulesPass) rulesPass.textContent = "Passwort: min. 8 Zeichen, min. 1 Buchstabe, min. 1 Zahl, min. 1 Sonderzeichen.";
+      // keep rules in English to avoid mixed-language confusion; can be i18n later
+      if (rulesUser) rulesUser.textContent = "Username: min 5 chars, 1 uppercase, 1 special character.";
+      if (rulesPass) rulesPass.textContent = "Password: min 8 chars, 1 letter, 1 number, 1 special character.";
     }
 
     function checkUsernameFree(name) {
@@ -400,8 +412,7 @@
       hideMsg("register-message");
 
       if (submit.classList.contains("locked")) {
-        showMsg("register-message", "Regeln noch nicht erfüllt.", "warn");
-        toast("Registrierung noch gesperrt", "warn");
+        toast("Registration locked", "warn", 2400);
         return;
       }
 
@@ -418,13 +429,11 @@
 
       const res = window.EPTEC_MOCK_BACKEND?.register?.(payload);
       if (!res?.ok) {
-        showMsg("register-message", res?.message || "Registrierung fehlgeschlagen.", "error");
-        toast("Registrierung fehlgeschlagen", "error");
+        toast(res?.message || "Registration failed", "error", 2600);
         return;
       }
 
-      showMsg("register-message", res.message || "Registriert. Bitte verifizieren.", "warn");
-      toast("Registrierung erstellt (Simulation)", "ok", 2600);
+      toast("Registration created (simulation)", "ok", 2600);
       openMailboxOverlay();
     });
 
@@ -447,16 +456,16 @@
     if (h.startsWith("#verify:")) {
       const token = h.slice("#verify:".length);
       const res = window.EPTEC_MOCK_BACKEND?.verifyByToken?.(token);
-      toast(res?.message || "Verifikation ausgeführt.", "ok", 2600);
+      toast(res?.message || "Verification done.", "ok", 2600);
       location.hash = "";
       return;
     }
     if (h.startsWith("#reset:")) {
       const token = h.slice("#reset:".length);
-      const newPw = prompt("Neues Passwort setzen:");
+      const newPw = prompt("Set new password:");
       if (!newPw) return;
       const res = window.EPTEC_MOCK_BACKEND?.resetPasswordByToken?.({ token, newPassword: newPw });
-      toast(res?.message || "Reset ausgeführt.", "ok", 2600);
+      toast(res?.message || "Reset done.", "ok", 2600);
       location.hash = "";
       return;
     }
@@ -493,7 +502,7 @@
     title.style.marginBottom = "10px";
 
     const hint = document.createElement("div");
-    hint.textContent = "Klicke auf einen Link in der Mail, um Verifikation/Reset auszulösen.";
+    hint.textContent = "Click a link to trigger verify/reset (simulation).";
     hint.style.fontSize = "14px";
     hint.style.opacity = "0.8";
     hint.style.marginBottom = "12px";
@@ -503,7 +512,7 @@
 
     if (!mails.length) {
       const empty = document.createElement("div");
-      empty.textContent = "(Keine Mails im Postfach)";
+      empty.textContent = "(No mails)";
       list.appendChild(empty);
     } else {
       mails.forEach(m => {
@@ -516,11 +525,11 @@
         const meta = document.createElement("div");
         meta.style.fontSize = "12px";
         meta.style.opacity = "0.7";
-        meta.textContent = `${m.createdAt} · an: ${m.to} · typ: ${m.type}`;
+        meta.textContent = `${m.createdAt} · to: ${m.to} · type: ${m.type}`;
 
         const subj = document.createElement("div");
         subj.style.fontWeight = "700";
-        subj.textContent = m.subject || "(ohne Betreff)";
+        subj.textContent = m.subject || "(no subject)";
 
         const body = document.createElement("pre");
         body.style.whiteSpace = "pre-wrap";
@@ -534,7 +543,7 @@
         if (m.link) {
           const a = document.createElement("a");
           a.href = m.link;
-          a.textContent = `➡ Link öffnen: ${m.link}`;
+          a.textContent = `➡ Open link: ${m.link}`;
           a.style.display = "inline-block";
           a.style.marginTop = "6px";
           a.style.cursor = "pointer";
@@ -546,7 +555,7 @@
     }
 
     const close = document.createElement("button");
-    close.textContent = "Schließen";
+    close.textContent = "Close";
     close.style.marginTop = "10px";
     close.style.padding = "10px 14px";
     close.style.borderRadius = "12px";
