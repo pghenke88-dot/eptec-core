@@ -262,6 +262,17 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 }
 
 /* ============================================================
+   ✅ PRIVACY HINT (Register Modal)
+   ============================================================ */
+.privacy-hint{
+  font-size: 12px;
+  opacity: 0.8;
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.3;
+}
+
+/* ============================================================
    MODALS – Fenster im Fenster (Register/Forgot/Legal)
    ============================================================ */
 .modal{
@@ -342,9 +353,11 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 /* ============================================================
    SYSTEM MESSAGES + TOAST
    - Keine Bewegung im Layout: messages sind absolute overlay
-   - login-message ist komplett deaktiviert (wie gewünscht)
    ============================================================ */
-#login-message{ display:none !important; }
+
+/* ✅ login-message is controllable again (shown via .show) */
+#login-message{ display: none; }
+#login-message.show{ display: block; }
 
 .system-msg{
   position: absolute;
