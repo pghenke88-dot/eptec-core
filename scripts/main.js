@@ -13,8 +13,12 @@
  *
  * ✅ Dashboard bindings added:
  * - referral-copy (copy referral/gift code)
- * - present-activate-btn (activate present code -> delegates to EPTEC_STATE_MANAGER if present,
- *   otherwise writes a simulation into localStorage EPTEC_FEED and triggers DashboardBridge sync)
+ * - present-activate-btn (activate present code -> ALWAYS calls EPTEC_STATE_MANAGER.applyPresentCode(code))
+ *
+ * ✅ State hydration rules enforced:
+ * - On page start (DOMContentLoaded): EPTEC_STATE_MANAGER.hydrateFromStorage()
+ * - After successful Login: EPTEC_STATE_MANAGER.hydrateFromStorage()
+ * - After successful Admin-Enter: EPTEC_STATE_MANAGER.hydrateFromStorage()
  */
 
 (() => {
@@ -98,7 +102,8 @@
       dashboard_copied:"Copied.",
       dashboard_copy_failed:"Copy failed.",
       dashboard_present_empty:"Please enter a code.",
-      dashboard_present_applied:"Present code activated (simulation)."
+      dashboard_present_not_ready:"Present code cannot be applied right now.",
+      dashboard_present_applied:"Present code applied."
     },
 
     de: {
@@ -160,7 +165,8 @@
       dashboard_copied:"Kopiert.",
       dashboard_copy_failed:"Kopieren fehlgeschlagen.",
       dashboard_present_empty:"Bitte Code eingeben.",
-      dashboard_present_applied:"Present-Code aktiviert (Simulation)."
+      dashboard_present_not_ready:"Present-Code kann gerade nicht angewendet werden.",
+      dashboard_present_applied:"Present-Code angewendet."
     },
 
     fr: {
@@ -222,7 +228,8 @@
       dashboard_copied:"Copié.",
       dashboard_copy_failed:"Échec de copie.",
       dashboard_present_empty:"Veuillez saisir un code.",
-      dashboard_present_applied:"Code activé (simulation)."
+      dashboard_present_not_ready:"Impossible d’appliquer le code pour le moment.",
+      dashboard_present_applied:"Code appliqué."
     },
 
     es: {
@@ -284,7 +291,8 @@
       dashboard_copied:"Copiado.",
       dashboard_copy_failed:"Error al copiar.",
       dashboard_present_empty:"Introduce un código.",
-      dashboard_present_applied:"Código activado (simulación)."
+      dashboard_present_not_ready:"No se puede aplicar el código ahora.",
+      dashboard_present_applied:"Código aplicado."
     },
 
     it: {
@@ -346,7 +354,8 @@
       dashboard_copied:"Copiato.",
       dashboard_copy_failed:"Copia non riuscita.",
       dashboard_present_empty:"Inserisci un codice.",
-      dashboard_present_applied:"Codice attivato (simulazione)."
+      dashboard_present_not_ready:"Impossibile applicare il codice ora.",
+      dashboard_present_applied:"Codice applicato."
     },
 
     pt: {
@@ -408,7 +417,8 @@
       dashboard_copied:"Copiado.",
       dashboard_copy_failed:"Falha ao copiar.",
       dashboard_present_empty:"Digite um código.",
-      dashboard_present_applied:"Código ativado (simulação)."
+      dashboard_present_not_ready:"Não é possível aplicar o código agora.",
+      dashboard_present_applied:"Código aplicado."
     },
 
     nl: {
@@ -470,7 +480,8 @@
       dashboard_copied:"Gekopieerd.",
       dashboard_copy_failed:"Kopiëren mislukt.",
       dashboard_present_empty:"Voer een code in.",
-      dashboard_present_applied:"Code geactiveerd (simulatie)."
+      dashboard_present_not_ready:"De code kan nu niet worden toegepast.",
+      dashboard_present_applied:"Code toegepast."
     },
 
     ru: {
@@ -532,7 +543,8 @@
       dashboard_copied:"Скопировано.",
       dashboard_copy_failed:"Ошибка копирования.",
       dashboard_present_empty:"Введите код.",
-      dashboard_present_applied:"Код активирован (симуляция)."
+      dashboard_present_not_ready:"Сейчас нельзя применить код.",
+      dashboard_present_applied:"Код применён."
     },
 
     uk: {
@@ -594,7 +606,8 @@
       dashboard_copied:"Скопійовано.",
       dashboard_copy_failed:"Помилка копіювання.",
       dashboard_present_empty:"Введіть код.",
-      dashboard_present_applied:"Код активовано (симуляція)."
+      dashboard_present_not_ready:"Зараз неможливо застосувати код.",
+      dashboard_present_applied:"Код застосовано."
     },
 
     zh: {
@@ -656,7 +669,8 @@
       dashboard_copied:"已复制。",
       dashboard_copy_failed:"复制失败。",
       dashboard_present_empty:"请输入代码。",
-      dashboard_present_applied:"已激活（模拟）。"
+      dashboard_present_not_ready:"当前无法应用该代码。",
+      dashboard_present_applied:"已应用代码。"
     },
 
     ja: {
@@ -718,7 +732,8 @@
       dashboard_copied:"コピーしました。",
       dashboard_copy_failed:"コピー失敗。",
       dashboard_present_empty:"コードを入力してください。",
-      dashboard_present_applied:"有効化（シミュレーション）。"
+      dashboard_present_not_ready:"現在コードを適用できません。",
+      dashboard_present_applied:"コードを適用しました。"
     },
 
     ar: {
@@ -780,7 +795,8 @@
       dashboard_copied:"تم النسخ.",
       dashboard_copy_failed:"فشل النسخ.",
       dashboard_present_empty:"أدخل الرمز.",
-      dashboard_present_applied:"تم التفعيل (محاكاة)."
+      dashboard_present_not_ready:"لا يمكن تطبيق الرمز الآن.",
+      dashboard_present_applied:"تم تطبيق الرمز."
     }
   };
 
@@ -832,6 +848,10 @@
   // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
     window.EPTEC_UI?.init?.();
+
+    // ✅ RULE: hydrate once on page start (stable after reload)
+    try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch (e) { console.warn("[EPTEC] hydrateFromStorage (boot) failed:", e); }
+
     setLanguage("en"); // default always EN
     bindFlagCannon();
     bindUI();
@@ -989,6 +1009,9 @@
         return;
       }
 
+      // ✅ RULE: hydrate once after successful login (state/referral stable)
+      try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch (e) { console.warn("[EPTEC] hydrateFromStorage (login) failed:", e); }
+
       enterSystemViaTunnel();
     });
 
@@ -1039,6 +1062,9 @@
         toast(t("access_denied", "Access denied."), "error", 2200);
         return;
       }
+
+      // ✅ RULE: hydrate once after successful admin enter (state/referral stable)
+      try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch (e) { console.warn("[EPTEC] hydrateFromStorage (admin) failed:", e); }
 
       enterSystemViaTunnel();
     };
@@ -1098,7 +1124,7 @@
       toast(ok ? t("dashboard_copied", "Copied.") : t("dashboard_copy_failed", "Copy failed."), ok ? "ok" : "warn", 2200);
     });
 
-    // Activate present code
+    // ✅ Present code: NO simulation. Always EPTEC_STATE_MANAGER.applyPresentCode(code)
     document.getElementById("present-activate-btn")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
       trackClick("click_present_activate");
@@ -1110,39 +1136,27 @@
         return;
       }
 
-      // Delegate to StateManager if available
       const sm = window.EPTEC_STATE_MANAGER;
-      const delegated =
-        !!sm && (typeof sm.applyPresentCode === "function" || typeof sm.setPresentStatus === "function");
-
-      if (delegated) {
-        try {
-          // Prefer an explicit method
-          if (typeof sm.applyPresentCode === "function") sm.applyPresentCode(code, { lang: currentLang });
-          else if (typeof sm.setPresentStatus === "function") {
-            // fallback: "simulate status" only (still via state manager)
-            sm.setPresentStatus({
-              status: "active",
-              discountPercent: 50,
-              validUntil: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-              code
-            });
-          }
-
-          // Let dashboard reflect immediately
-          window.EPTEC_BRAIN?.DashboardBridge?.syncToUI?.();
-          toast(t("dashboard_present_applied", "Present code activated (simulation)."), "ok", 2400);
-          return;
-        } catch (e) {
-          console.error("[EPTEC] present delegation failed:", e);
-          // fall through to simulation
-        }
+      if (!sm || typeof sm.applyPresentCode !== "function") {
+        toast(t("dashboard_present_not_ready", "Present code cannot be applied right now."), "error", 2600);
+        return;
       }
 
-      // Fallback simulation: write minimal EPTEC_FEED
-      simulatePresentFeed(code);
-      window.EPTEC_BRAIN?.DashboardBridge?.syncToUI?.();
-      toast(t("dashboard_present_applied", "Present code activated (simulation)."), "ok", 2400);
+      try {
+        const result = sm.applyPresentCode(code, { lang: currentLang });
+
+        // If StateManager returns a structured object, respect it.
+        const ok = (result && typeof result === "object" && "ok" in result) ? !!result.ok : true;
+        const msg =
+          (result && typeof result === "object" && (result.message || result.msg)) ||
+          t("dashboard_present_applied", "Present code applied.");
+
+        window.EPTEC_BRAIN?.DashboardBridge?.syncToUI?.();
+        toast(msg, ok ? "ok" : "error", 2400);
+      } catch (e) {
+        console.error("[EPTEC] applyPresentCode failed:", e);
+        toast(t("dashboard_present_not_ready", "Present code cannot be applied right now."), "error", 2600);
+      }
     });
   }
 
@@ -1169,30 +1183,6 @@
       return !!ok;
     } catch {
       return false;
-    }
-  }
-
-  function simulatePresentFeed(code) {
-    try {
-      const key = "EPTEC_FEED";
-      const raw = localStorage.getItem(key);
-      const cur = raw ? JSON.parse(raw) : {};
-      const validUntil = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-
-      cur.present = {
-        status: "active",
-        discountPercent: 50,
-        validUntil,
-        code
-      };
-
-      cur.billing = cur.billing || {};
-      cur.billing.discountPercent = 50;
-      cur.billing.nextInvoiceDate = cur.billing.nextInvoiceDate || new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
-
-      localStorage.setItem(key, JSON.stringify(cur));
-    } catch (e) {
-      console.error("[EPTEC] simulatePresentFeed failed:", e);
     }
   }
 
@@ -1464,4 +1454,3 @@
     if (el) el.setAttribute("placeholder", String(v ?? ""));
   }
 })();
-
