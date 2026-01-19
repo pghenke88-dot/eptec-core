@@ -1,8 +1,11 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – UI controller + Phase-1 backend (mock)
- * FINAL: UI-Control (EPTEC_UI) + Inline Messages + Toast + Mock-Backend
- * UPDATE: User-Login nutzt jetzt denselben Tunnel wie Admin (ein zentraler Übergang)
+ * EPTEC MAIN – FINAL
+ * - UI-Control (EPTEC_UI) + Mock-Backend
+ * - Default language English, user can switch
+ * - Admin + User success => SAME tunnel (sound + visuals + navigation)
+ * - Tunnel sound is synthetic (SoundEngine.tunnelWhoosh), NO mp3
+ * - Ambient stops when tunnel starts
  */
 
 (() => {
@@ -14,77 +17,293 @@
 
   // ---------- BUILT-IN I18N ----------
   const I18N = {
-    en: { _dir:"ltr", login_username:"Username", login_password:"Password", login_btn:"Login", register_btn:"Register", forgot_btn:"Forgot password",
-      admin_code:"Admin code", admin_submit:"Enter (Admin)", legal_imprint:"Imprint", legal_terms:"Terms", legal_support:"Support",
-      register_title:"Registration", register_first_name:"First name", register_last_name:"Last name", register_birthdate:"Date of birth",
-      register_email:"Email address", register_submit:"Complete verification", register_submit_locked:"Complete verification (locked)",
-      system_close:"Close", forgot_title:"Reset password", forgot_hint:"Enter email or username", forgot_submit:"Request link"
+    en: {
+      _dir: "ltr",
+      login_username: "Username",
+      login_password: "Password",
+      login_btn: "Login",
+      register_btn: "Register",
+      forgot_btn: "Forgot password",
+      admin_code: "Admin code",
+      admin_submit: "Enter (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Terms",
+      legal_support: "Support",
+      register_title: "Registration",
+      register_first_name: "First name",
+      register_last_name: "Last name",
+      register_birthdate: "Date of birth",
+      register_email: "Email address",
+      register_submit: "Complete verification",
+      register_submit_locked: "Complete verification (locked)",
+      system_close: "Close",
+      forgot_title: "Reset password",
+      forgot_hint: "Enter email or username",
+      forgot_submit: "Request link"
     },
-    de: { _dir:"ltr", login_username:"Benutzername", login_password:"Passwort", login_btn:"Login", register_btn:"Registrieren", forgot_btn:"Passwort vergessen",
-      admin_code:"Admin-Code", admin_submit:"Enter (Admin)", legal_imprint:"Impressum", legal_terms:"AGB", legal_support:"Support",
-      register_title:"Registrierung", register_first_name:"Vorname", register_last_name:"Nachname", register_birthdate:"Geburtsdatum",
-      register_email:"E-Mail-Adresse", register_submit:"Verifizierung abschließen", register_submit_locked:"Verifizierung abschließen (gesperrt)",
-      system_close:"Schließen", forgot_title:"Passwort zurücksetzen", forgot_hint:"E-Mail oder Benutzername", forgot_submit:"Link anfordern"
+    de: {
+      _dir: "ltr",
+      login_username: "Benutzername",
+      login_password: "Passwort",
+      login_btn: "Login",
+      register_btn: "Registrieren",
+      forgot_btn: "Passwort vergessen",
+      admin_code: "Admin-Code",
+      admin_submit: "Enter (Admin)",
+      legal_imprint: "Impressum",
+      legal_terms: "AGB",
+      legal_support: "Support",
+      register_title: "Registrierung",
+      register_first_name: "Vorname",
+      register_last_name: "Nachname",
+      register_birthdate: "Geburtsdatum",
+      register_email: "E-Mail-Adresse",
+      register_submit: "Verifizierung abschließen",
+      register_submit_locked: "Verifizierung abschließen (gesperrt)",
+      system_close: "Schließen",
+      forgot_title: "Passwort zurücksetzen",
+      forgot_hint: "E-Mail oder Benutzername",
+      forgot_submit: "Link anfordern"
     },
-    fr: { _dir:"ltr", login_username:"Nom d’utilisateur", login_password:"Mot de passe", login_btn:"Connexion", register_btn:"S’inscrire", forgot_btn:"Mot de passe oublié",
-      admin_code:"Code admin", admin_submit:"Entrer (Admin)", legal_imprint:"Mentions légales", legal_terms:"Conditions", legal_support:"Support",
-      register_title:"Inscription", register_first_name:"Prénom", register_last_name:"Nom", register_birthdate:"Date de naissance",
-      register_email:"Adresse e-mail", register_submit:"Finaliser la vérification", register_submit_locked:"Finaliser (bloqué)",
-      system_close:"Fermer", forgot_title:"Réinitialiser le mot de passe", forgot_hint:"E-mail ou nom d’utilisateur", forgot_submit:"Demander le lien"
+    fr: {
+      _dir: "ltr",
+      login_username: "Nom d’utilisateur",
+      login_password: "Mot de passe",
+      login_btn: "Connexion",
+      register_btn: "S’inscrire",
+      forgot_btn: "Mot de passe oublié",
+      admin_code: "Code admin",
+      admin_submit: "Entrer (Admin)",
+      legal_imprint: "Mentions légales",
+      legal_terms: "Conditions",
+      legal_support: "Support",
+      register_title: "Inscription",
+      register_first_name: "Prénom",
+      register_last_name: "Nom",
+      register_birthdate: "Date de naissance",
+      register_email: "Adresse e-mail",
+      register_submit: "Finaliser la vérification",
+      register_submit_locked: "Finaliser (bloqué)",
+      system_close: "Fermer",
+      forgot_title: "Réinitialiser le mot de passe",
+      forgot_hint: "E-mail ou nom d’utilisateur",
+      forgot_submit: "Demander le lien"
     },
-    es: { _dir:"ltr", login_username:"Usuario", login_password:"Contraseña", login_btn:"Iniciar sesión", register_btn:"Registrarse", forgot_btn:"Olvidé mi contraseña",
-      admin_code:"Código admin", admin_submit:"Entrar (Admin)", legal_imprint:"Aviso legal", legal_terms:"Términos", legal_support:"Soporte",
-      register_title:"Registro", register_first_name:"Nombre", register_last_name:"Apellido", register_birthdate:"Fecha de nacimiento",
-      register_email:"Correo electrónico", register_submit:"Completar verificación", register_submit_locked:"Completar (bloqueado)",
-      system_close:"Cerrar", forgot_title:"Restablecer contraseña", forgot_hint:"Correo o usuario", forgot_submit:"Solicitar enlace"
+    es: {
+      _dir: "ltr",
+      login_username: "Usuario",
+      login_password: "Contraseña",
+      login_btn: "Iniciar sesión",
+      register_btn: "Registrarse",
+      forgot_btn: "Olvidé mi contraseña",
+      admin_code: "Código admin",
+      admin_submit: "Entrar (Admin)",
+      legal_imprint: "Aviso legal",
+      legal_terms: "Términos",
+      legal_support: "Soporte",
+      register_title: "Registro",
+      register_first_name: "Nombre",
+      register_last_name: "Apellido",
+      register_birthdate: "Fecha de nacimiento",
+      register_email: "Correo electrónico",
+      register_submit: "Completar verificación",
+      register_submit_locked: "Completar (bloqueado)",
+      system_close: "Cerrar",
+      forgot_title: "Restablecer contraseña",
+      forgot_hint: "Correo o usuario",
+      forgot_submit: "Solicitar enlace"
     },
-    it: { _dir:"ltr", login_username:"Nome utente", login_password:"Password", login_btn:"Accedi", register_btn:"Registrati", forgot_btn:"Password dimenticata",
-      admin_code:"Codice admin", admin_submit:"Entra (Admin)", legal_imprint:"Imprint", legal_terms:"Termini", legal_support:"Supporto",
-      register_title:"Registrazione", register_first_name:"Nome", register_last_name:"Cognome", register_birthdate:"Data di nascita",
-      register_email:"E-mail", register_submit:"Completa verifica", register_submit_locked:"Completa (bloccato)",
-      system_close:"Chiudi", forgot_title:"Reimposta password", forgot_hint:"E-mail o utente", forgot_submit:"Richiedi link"
+    it: {
+      _dir: "ltr",
+      login_username: "Nome utente",
+      login_password: "Password",
+      login_btn: "Accedi",
+      register_btn: "Registrati",
+      forgot_btn: "Password dimenticata",
+      admin_code: "Codice admin",
+      admin_submit: "Entra (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Termini",
+      legal_support: "Supporto",
+      register_title: "Registrazione",
+      register_first_name: "Nome",
+      register_last_name: "Cognome",
+      register_birthdate: "Data di nascita",
+      register_email: "E-mail",
+      register_submit: "Completa verifica",
+      register_submit_locked: "Completa (bloccato)",
+      system_close: "Chiudi",
+      forgot_title: "Reimposta password",
+      forgot_hint: "E-mail o utente",
+      forgot_submit: "Richiedi link"
     },
-    pt: { _dir:"ltr", login_username:"Usuário", login_password:"Senha", login_btn:"Entrar", register_btn:"Registrar", forgot_btn:"Esqueci a senha",
-      admin_code:"Código admin", admin_submit:"Entrar (Admin)", legal_imprint:"Imprint", legal_terms:"Termos", legal_support:"Suporte",
-      register_title:"Registro", register_first_name:"Nome", register_last_name:"Sobrenome", register_birthdate:"Data de nascimento",
-      register_email:"E-mail", register_submit:"Concluir verificação", register_submit_locked:"Concluir (bloqueado)",
-      system_close:"Fechar", forgot_title:"Redefinir senha", forgot_hint:"E-mail ou usuário", forgot_submit:"Solicitar link"
+    pt: {
+      _dir: "ltr",
+      login_username: "Usuário",
+      login_password: "Senha",
+      login_btn: "Entrar",
+      register_btn: "Registrar",
+      forgot_btn: "Esqueci a senha",
+      admin_code: "Código admin",
+      admin_submit: "Entrar (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Termos",
+      legal_support: "Suporte",
+      register_title: "Registro",
+      register_first_name: "Nome",
+      register_last_name: "Sobrenome",
+      register_birthdate: "Data de nascimento",
+      register_email: "E-mail",
+      register_submit: "Concluir verificação",
+      register_submit_locked: "Concluir (bloqueado)",
+      system_close: "Fechar",
+      forgot_title: "Redefinir senha",
+      forgot_hint: "E-mail ou usuário",
+      forgot_submit: "Solicitar link"
     },
-    nl: { _dir:"ltr", login_username:"Gebruikersnaam", login_password:"Wachtwoord", login_btn:"Inloggen", register_btn:"Registreren", forgot_btn:"Wachtwoord vergeten",
-      admin_code:"Admincode", admin_submit:"Enter (Admin)", legal_imprint:"Imprint", legal_terms:"Voorwaarden", legal_support:"Support",
-      register_title:"Registratie", register_first_name:"Voornaam", register_last_name:"Achternaam", register_birthdate:"Geboortedatum",
-      register_email:"E-mail", register_submit:"Verificatie afronden", register_submit_locked:"Afronden (vergrendeld)",
-      system_close:"Sluiten", forgot_title:"Wachtwoord resetten", forgot_hint:"E-mail of gebruikersnaam", forgot_submit:"Link aanvragen"
+    nl: {
+      _dir: "ltr",
+      login_username: "Gebruikersnaam",
+      login_password: "Wachtwoord",
+      login_btn: "Inloggen",
+      register_btn: "Registreren",
+      forgot_btn: "Wachtwoord vergeten",
+      admin_code: "Admincode",
+      admin_submit: "Enter (Admin)",
+      legal_imprint: "Imprint",
+      legal_terms: "Voorwaarden",
+      legal_support: "Support",
+      register_title: "Registratie",
+      register_first_name: "Voornaam",
+      register_last_name: "Achternaam",
+      register_birthdate: "Geboortedatum",
+      register_email: "E-mail",
+      register_submit: "Verificatie afronden",
+      register_submit_locked: "Afronden (vergrendeld)",
+      system_close: "Sluiten",
+      forgot_title: "Wachtwoord resetten",
+      forgot_hint: "E-mail of gebruikersnaam",
+      forgot_submit: "Link aanvragen"
     },
-    ru: { _dir:"ltr", login_username:"Имя пользователя", login_password:"Пароль", login_btn:"Войти", register_btn:"Регистрация", forgot_btn:"Забыли пароль",
-      admin_code:"Админ-код", admin_submit:"Вход (Админ)", legal_imprint:"Реквизиты", legal_terms:"Условия", legal_support:"Поддержка",
-      register_title:"Регистрация", register_first_name:"Имя", register_last_name:"Фамилия", register_birthdate:"Дата рождения",
-      register_email:"E-mail", register_submit:"Завершить проверку", register_submit_locked:"Завершить (заблок.)",
-      system_close:"Закрыть", forgot_title:"Сброс пароля", forgot_hint:"E-mail или пользователь", forgot_submit:"Запросить ссылку"
+    ru: {
+      _dir: "ltr",
+      login_username: "Имя пользователя",
+      login_password: "Пароль",
+      login_btn: "Войти",
+      register_btn: "Регистрация",
+      forgot_btn: "Забыли пароль",
+      admin_code: "Админ-код",
+      admin_submit: "Вход (Админ)",
+      legal_imprint: "Реквизиты",
+      legal_terms: "Условия",
+      legal_support: "Поддержка",
+      register_title: "Регистрация",
+      register_first_name: "Имя",
+      register_last_name: "Фамилия",
+      register_birthdate: "Дата рождения",
+      register_email: "E-mail",
+      register_submit: "Завершить проверку",
+      register_submit_locked: "Завершить (заблок.)",
+      system_close: "Закрыть",
+      forgot_title: "Сброс пароля",
+      forgot_hint: "E-mail или пользователь",
+      forgot_submit: "Запросить ссылку"
     },
-    uk: { _dir:"ltr", login_username:"Ім’я користувача", login_password:"Пароль", login_btn:"Увійти", register_btn:"Реєстрація", forgot_btn:"Забули пароль",
-      admin_code:"Код адміна", admin_submit:"Вхід (Адмін)", legal_imprint:"Реквізити", legal_terms:"Умови", legal_support:"Підтримка",
-      register_title:"Реєстрація", register_first_name:"Ім’я", register_last_name:"Прізвище", register_birthdate:"Дата народження",
-      register_email:"E-mail", register_submit:"Завершити перевірку", register_submit_locked:"Завершити (заблок.)",
-      system_close:"Закрити", forgot_title:"Скидання пароля", forgot_hint:"E-mail або користувач", forgot_submit:"Запросити посилання"
+    uk: {
+      _dir: "ltr",
+      login_username: "Ім’я користувача",
+      login_password: "Пароль",
+      login_btn: "Увійти",
+      register_btn: "Реєстрація",
+      forgot_btn: "Забули пароль",
+      admin_code: "Код адміна",
+      admin_submit: "Вхід (Адмін)",
+      legal_imprint: "Реквізити",
+      legal_terms: "Умови",
+      legal_support: "Підтримка",
+      register_title: "Реєстрація",
+      register_first_name: "Ім’я",
+      register_last_name: "Прізвище",
+      register_birthdate: "Дата народження",
+      register_email: "E-mail",
+      register_submit: "Завершити перевірку",
+      register_submit_locked: "Завершити (заблок.)",
+      system_close: "Закрити",
+      forgot_title: "Скидання пароля",
+      forgot_hint: "E-mail або користувач",
+      forgot_submit: "Запросити посилання"
     },
-    zh: { _dir:"ltr", login_username:"用户名", login_password:"密码", login_btn:"登录", register_btn:"注册", forgot_btn:"忘记密码",
-      admin_code:"管理员代码", admin_submit:"进入(管理员)", legal_imprint:"声明", legal_terms:"条款", legal_support:"支持",
-      register_title:"注册", register_first_name:"名", register_last_name:"姓", register_birthdate:"出生日期",
-      register_email:"邮箱", register_submit:"完成验证", register_submit_locked:"完成验证(锁定)",
-      system_close:"关闭", forgot_title:"重置密码", forgot_hint:"邮箱或用户名", forgot_submit:"请求链接"
+    zh: {
+      _dir: "ltr",
+      login_username: "用户名",
+      login_password: "密码",
+      login_btn: "登录",
+      register_btn: "注册",
+      forgot_btn: "忘记密码",
+      admin_code: "管理员代码",
+      admin_submit: "进入(管理员)",
+      legal_imprint: "声明",
+      legal_terms: "条款",
+      legal_support: "支持",
+      register_title: "注册",
+      register_first_name: "名",
+      register_last_name: "姓",
+      register_birthdate: "出生日期",
+      register_email: "邮箱",
+      register_submit: "完成验证",
+      register_submit_locked: "完成验证(锁定)",
+      system_close: "关闭",
+      forgot_title: "重置密码",
+      forgot_hint: "邮箱或用户名",
+      forgot_submit: "请求链接"
     },
-    ja: { _dir:"ltr", login_username:"ユーザー名", login_password:"パスワード", login_btn:"ログイン", register_btn:"登録", forgot_btn:"パスワードを忘れた",
-      admin_code:"管理コード", admin_submit:"入室(管理)", legal_imprint:"表示", legal_terms:"規約", legal_support:"サポート",
-      register_title:"登録", register_first_name:"名", register_last_name:"姓", register_birthdate:"生年月日",
-      register_email:"メール", register_submit:"認証を完了", register_submit_locked:"認証(ロック)",
-      system_close:"閉じる", forgot_title:"パスワード再設定", forgot_hint:"メール/ユーザー名", forgot_submit:"リンクを要求"
+    ja: {
+      _dir: "ltr",
+      login_username: "ユーザー名",
+      login_password: "パスワード",
+      login_btn: "ログイン",
+      register_btn: "登録",
+      forgot_btn: "パスワードを忘れた",
+      admin_code: "管理コード",
+      admin_submit: "入室(管理)",
+      legal_imprint: "表示",
+      legal_terms: "規約",
+      legal_support: "サポート",
+      register_title: "登録",
+      register_first_name: "名",
+      register_last_name: "姓",
+      register_birthdate: "生年月日",
+      register_email: "メール",
+      register_submit: "認証を完了",
+      register_submit_locked: "認証(ロック)",
+      system_close: "閉じる",
+      forgot_title: "パスワード再設定",
+      forgot_hint: "メール/ユーザー名",
+      forgot_submit: "リンクを要求"
     },
-    ar: { _dir:"rtl", login_username:"اسم المستخدم", login_password:"كلمة المرور", login_btn:"تسجيل الدخول", register_btn:"تسجيل", forgot_btn:"نسيت كلمة المرور",
-      admin_code:"رمز المسؤول", admin_submit:"دخول (مسؤول)", legal_imprint:"البيانات", legal_terms:"الشروط", legal_support:"الدعم",
-      register_title:"التسجيل", register_first_name:"الاسم الأول", register_last_name:"اسم العائلة", register_birthdate:"تاريخ الميلاد",
-      register_email:"البريد الإلكتروني", register_submit:"إكمال التحقق", register_submit_locked:"إكمال (مقفل)",
-      system_close:"إغلاق", forgot_title:"إعادة تعيين كلمة المرور", forgot_hint:"البريد أو اسم المستخدم", forgot_submit:"طلب رابط"
+    ar: {
+      _dir: "rtl",
+      login_username: "اسم المستخدم",
+      login_password: "كلمة المرور",
+      login_btn: "تسجيل الدخول",
+      register_btn: "تسجيل",
+      forgot_btn: "نسيت كلمة المرور",
+      admin_code: "رمز المسؤول",
+      admin_submit: "دخول (مسؤول)",
+      legal_imprint: "البيانات",
+      legal_terms: "الشروط",
+      legal_support: "الدعم",
+      register_title: "التسجيل",
+      register_first_name: "الاسم الأول",
+      register_last_name: "اسم العائلة",
+      register_birthdate: "تاريخ الميلاد",
+      register_email: "البريد الإلكتروني",
+      register_submit: "إكمال التحقق",
+      register_submit_locked: "إكمال (مقفل)",
+      system_close: "إغلاق",
+      forgot_title: "إعادة تعيين كلمة المرور",
+      forgot_hint: "البريد أو اسم المستخدم",
+      forgot_submit: "طلب رابط"
     }
   };
 
@@ -109,32 +328,17 @@
   document.addEventListener("keydown", unlockOnce, { once: true });
   document.addEventListener("touchstart", unlockOnce, { once: true, passive: true });
 
-  // ---------- ONE TRUE TUNNEL TRANSITION (Admin + User) ----------
-  function enterSystemViaTunnel() {
-    const brain = window.EPTEC_BRAIN;
-    if (!brain?.Navigation?.triggerTunnel) {
-      toast("System nicht bereit (Navigation fehlt).", "error", 2600);
-      return;
-    }
-
-    window.SoundEngine?.tunnelFall?.();
-
-    document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
-    const tunnel = document.getElementById("eptec-tunnel");
-    tunnel?.classList.remove("tunnel-hidden");
-    tunnel?.classList.add("tunnel-active");
-
-    setTimeout(() => brain.Navigation.triggerTunnel("R1"), 600);
-  }
-
   // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
-    window.EPTEC_UI?.init?.();     // UI-Control starten (Modals rendern)
+    window.EPTEC_UI?.init?.();      // UI-Control starten
+    // Default is English at first load:
+    setLanguage("en");
+
     bindFlagCannon();
     bindUI();
     applyTranslations();
-    startClock();                 // läuft jede Sekunde
-    bindHashLinks();              // verify/reset simulation
+    startClock();
+    bindHashLinks();
     console.log("EPTEC MAIN: boot OK");
   });
 
@@ -214,7 +418,7 @@
     setText("forgot-close", t("system_close", "Close"));
   }
 
-  // ---------- UI HELPERS (Inline Messages + Toast) ----------
+  // ---------- UI HELPERS ----------
   function showMsg(id, text, type = "warn") {
     window.EPTEC_UI?.showMsg?.(id, text, type);
   }
@@ -225,13 +429,31 @@
     window.EPTEC_UI?.toast?.(msg, type, ms);
   }
 
+  // ---------- SINGLE ENTRY TUNNEL (Admin + User) ----------
+  function enterSystemViaTunnel() {
+    // stop meadow ambience + play synthetic tunnel sound
+    window.SoundEngine?.stopAmbient?.();
+    window.SoundEngine?.tunnelWhoosh?.({ duration: 1.05, peak: 0.9 });
+
+    // visuals
+    document.getElementById("eptec-white-flash")?.classList.add("white-flash-active");
+    const tunnel = document.getElementById("eptec-tunnel");
+    tunnel?.classList.remove("tunnel-hidden");
+    tunnel?.classList.add("tunnel-active");
+
+    // navigation (current target: Room 1; later your "two doors room")
+    setTimeout(() => {
+      window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1");
+    }, 600);
+  }
+
   // ---------- UI BINDINGS ----------
   function bindUI() {
     document.querySelectorAll("input").forEach((inp) => {
       inp.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
     });
 
-    // LOGIN (immer Feedback)
+    // USER LOGIN
     document.getElementById("btn-login")?.addEventListener("click", () => {
       window.SoundEngine?.uiConfirm?.();
 
@@ -240,11 +462,8 @@
 
       hideMsg("login-message");
 
-      if (!u || !p) {
-        // NOTE: login-message ist bei dir per CSS deaktiviert – Toast bleibt sichtbar.
-        toast("Login failed: missing credentials", "error", 2600);
-        return;
-      }
+      // No redundant sentence: if empty -> do nothing (silent)
+      if (!u || !p) return;
 
       const res = window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p });
       if (!res?.ok) {
@@ -252,9 +471,7 @@
         return;
       }
 
-      toast("Login OK", "ok", 1800);
-
-      // ✅ WICHTIG: erfolgreicher User-Login löst denselben Tunnel aus wie Admin
+      // SUCCESS => same tunnel as admin
       enterSystemViaTunnel();
     });
 
@@ -280,17 +497,14 @@
       const identity = String(document.getElementById("forgot-identity")?.value || "").trim();
       hideMsg("forgot-message");
 
-      if (!identity) {
-        toast("Missing input", "error", 2200);
-        return;
-      }
+      if (!identity) return;
 
       const res = window.EPTEC_MOCK_BACKEND?.requestPasswordReset?.({ identity });
       toast(res?.message || "Reset requested (simulation)", "warn", 2600);
       openMailboxOverlay();
     });
 
-    // Admin -> tunnel (now uses the SAME transition)
+    // ADMIN -> SAME tunnel
     const submit = document.getElementById("admin-submit");
     const input = document.getElementById("admin-code");
 
@@ -310,7 +524,6 @@
         return;
       }
 
-      // ✅ SAME tunnel as user
       enterSystemViaTunnel();
     };
 
@@ -359,7 +572,7 @@
         [];
       if (arr.length < 2) return;
 
-      // keep it neutral; no mixed languages on UI:
+      // keep neutral label (can be i18n later)
       suggTitle.textContent = "Suggestions:";
       sugg1.textContent = arr[0];
       sugg2.textContent = arr[1];
@@ -375,7 +588,7 @@
     }
 
     function renderRules() {
-      // keep rules in English to avoid mixed-language confusion; can be i18n later
+      // keep English to avoid mixed-language; can be localized later
       if (rulesUser) rulesUser.textContent = "Username: min 5 chars, 1 uppercase, 1 special character.";
       if (rulesPass) rulesPass.textContent = "Password: min 8 chars, 1 letter, 1 number, 1 special character.";
     }
@@ -567,6 +780,7 @@
     card.appendChild(list);
     card.appendChild(close);
     box.appendChild(card);
+    document.body.appendChild(box);
     document.body.appendChild(box);
   }
 
