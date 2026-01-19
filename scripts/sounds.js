@@ -1,10 +1,10 @@
 /**
  * scripts/sounds.js
- * EPTEC SOUND ENGINE – FINAL
- * - Ambient (Wind/Birds/Water)
- * - UI Sounds
- * - Tunnel Sound (stops ambient hard)
- * - MP3 only (browser-safe)
+ * EPTEC SOUND ENGINE – FINAL (HARD CUT)
+ * - Ambient (Wind/Birds/Water) MP3
+ * - UI Sounds MP3
+ * - Tunnel MP3 (tunnelfall.mp3)
+ * - Beim Tunnel: HARD STOP ALL AUDIO + Tunnel startet sofort
  */
 
 (() => {
@@ -21,7 +21,7 @@
     uiConfirm:  "ui_confirm.mp3",
     flagClick:  "flag_click.mp3",
 
-    tunnelFall: "tunnelfall.mp3"   // 🔥 Tunnel
+    tunnelFall: "tunnelfall.mp3"   // 🔥 Tunnel (alles klein)
   };
 
   let unlocked = false;
@@ -33,6 +33,9 @@
   // caches
   const audioCache = new Map();
   const existsCache = new Map();
+
+  // HARD registry: everything we ever created in this engine
+  const allNodes = new Set();
 
   /* ------------------------------------------------------------
      Utils
@@ -73,6 +76,24 @@
     const a = new Audio(url);
     a.preload = "auto";
     audioCache.set(name, a);
+
+    // register
+    allNodes.add(a);
+    return a;
+  }
+
+  // create a FRESH audio instance (used for tunnel to guarantee start)
+  async function createFreshAudio(name) {
+    const file = FILES[name];
+    if (!file) return null;
+
+    const url = BASE + file;
+    if (!(await exists(url))) return null;
+
+    const a = new Audio(url);
+    a.preload = "auto";
+
+    allNodes.add(a);
     return a;
   }
 
@@ -100,8 +121,12 @@
       const a = await loadAudio(name);
       if (!a) return null;
 
+      // ensure deterministic start
+      a.pause();
+      a.currentTime = 0;
       a.loop = true;
       a.volume = clamp(volume);
+
       await a.play();
       return a;
     } catch {
@@ -114,6 +139,18 @@
   }
 
   /* ------------------------------------------------------------
+     HARD STOP (kills everything)
+  ------------------------------------------------------------ */
+
+  function hardStopAll() {
+    for (const a of allNodes) {
+      try { a.pause(); } catch {}
+      try { a.currentTime = 0; } catch {}
+      try { a.loop = false; } catch {}
+    }
+  }
+
+  /* ------------------------------------------------------------
      Ambient control
   ------------------------------------------------------------ */
 
@@ -122,6 +159,7 @@
       try {
         a.pause();
         a.currentTime = 0;
+        a.loop = false;
       } catch {}
     }
     ambientNodes = [];
@@ -144,18 +182,18 @@
   async function playTunnel() {
     if (!unlocked) return;
 
-    // 🔇 ABSOLUTER CUT
+    // 🔇 ABSOLUTER CUT: stop absolutely everything, not just ambientNodes
+    hardStopAll();
     stopAmbient();
 
+    // also stop previous tunnel node reference
     if (tunnelNode) {
-      try {
-        tunnelNode.pause();
-        tunnelNode.currentTime = 0;
-      } catch {}
+      try { tunnelNode.pause(); tunnelNode.currentTime = 0; } catch {}
       tunnelNode = null;
     }
 
-    const a = await loadAudio("tunnelFall");
+    // ✅ always use fresh instance so it always starts cleanly
+    const a = await createFreshAudio("tunnelFall");
     if (!a) return;
 
     tunnelNode = a;
@@ -184,17 +222,15 @@
   ------------------------------------------------------------ */
 
   window.SoundEngine = {
-    // lifecycle
     unlockAudio,
     startAmbient,
     stopAmbient,
 
-    // ui
     uiFocus:   () => playOneShot("uiFocus", 0.45),
     uiConfirm: () => playOneShot("uiConfirm", 0.55),
     flagClick: () => playOneShot("flagClick", 0.45),
 
-    // tunnel
+    // tunnel: HARD CUT + immediate tunnel mp3
     tunnelFall: playTunnel
   };
 })();
