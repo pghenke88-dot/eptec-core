@@ -5,7 +5,7 @@
  * Responsibility:
  * - Persist visual state in localStorage (EPTEC_FEED)
  * - Translate data into EPTEC_UI_STATE
- * - Use EPTEC_MOCK_BACKEND to enforce Present rules + auto-referral
+ * - Use EPTEC_MOCK_BACKEND to enforce Present rules + auto-referral code
  *
  * NO DOM access here.
  * NO tariff/AGB business logic here.
@@ -140,7 +140,13 @@
     });
   }
 
-  // ✅ Present activation (enforced by mock backend)
+  /**
+   * Present code activation (enforced by mock backend):
+   * - invalid -> none
+   * - expired -> expired
+   * - already used -> used
+   * - ok -> active + billing preview
+   */
   function applyPresentCode(code) {
     const c = String(code || "").trim().toUpperCase();
     if (!c) return { ok: false, reason: "EMPTY" };
@@ -159,7 +165,12 @@
         return { ok: false, reason: "USED", backend: res };
       }
       if (res.code === "EXPIRED") {
-        setPresentStatus({ status: "expired", discountPercent: null, validUntil: res?.campaign?.validUntil || null, code: c });
+        setPresentStatus({
+          status: "expired",
+          discountPercent: null,
+          validUntil: res?.campaign?.validUntil || null,
+          code: c
+        });
         return { ok: false, reason: "EXPIRED", backend: res };
       }
       setPresentStatus({ status: "none", discountPercent: null, validUntil: null, code: null });
@@ -181,7 +192,9 @@
     return { ok: true, campaign: res.campaign };
   }
 
-  // hydrate + auto referral
+  /**
+   * Hydrate UI from feed + auto referral code for logged-in user.
+   */
   function hydrateFromStorage() {
     const feed = readFeed();
 
@@ -214,7 +227,7 @@
       });
     }
 
-    // ✅ ensure referral exists when logged in
+    // ✅ ensure referral exists (unlimited) when logged in
     const username = getSessionUsername();
     const mb = window.EPTEC_MOCK_BACKEND;
     if (username && mb?.getOrCreateReferralCode) {
