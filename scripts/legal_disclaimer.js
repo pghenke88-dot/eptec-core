@@ -1,3 +1,5 @@
+// EPTEC Haftungsausschluss-Logik
+
 function showLegalDisclaimer() {
     const disclaimerText = "HINWEIS: EPTEC stellt Expertise und Infrastruktur bereit. " +
                            "Dies ist keine Rechtsberatung. Mit Klick auf 'Fortfahren' " +
@@ -56,6 +58,48 @@ function openLegal(type) {
     const supported = ["imprint", "privacy", "terms", "cookies"];
     if (!supported.includes(type)) return;
 
-    // Öffne das entsprechende Dokument
-    showLegalPlaceholder(type);  // Hier kannst du das Dokument je nach Typ anzeigen
+    showLegalPlaceholder(type);  // Hier rufen wir die Funktion auf, die den Platzhalter anzeigt
+}
+
+// Funktion zur Anzeige der rechtlichen Dokumente
+function showLegalPlaceholder(type) {
+    let content = "";
+    switch (type) {
+        case "imprint":
+            content = "Hier stehen die Impressumsdetails.";
+            break;
+        case "privacy":
+            content = "Hier sind die Datenschutzbestimmungen.";
+            break;
+        case "terms":
+            content = "Hier sind die Allgemeinen Geschäftsbedingungen (AGB).";
+            break;
+        case "cookies":
+            content = "Hier sind die Cookie-Richtlinien.";
+            break;
+        default:
+            content = "Dokument nicht gefunden.";
+            break;
+    }
+
+    const placeholderDiv = document.createElement("div");
+    placeholderDiv.style.padding = "20px";
+    placeholderDiv.style.background = "#f5f5f5";
+    placeholderDiv.style.borderRadius = "8px";
+    placeholderDiv.innerHTML = `
+        <h2>Rechtliche Informationen</h2>
+        <p>${content}</p>
+        <button onclick="closeLegal()">Schließen</button>
+    `;
+
+    // Anzeigen der Platzhalter-Inhalte
+    document.body.appendChild(placeholderDiv);
+}
+
+// Funktion zum Schließen der rechtlichen Anzeige
+function closeLegal() {
+    const legalPlaceholder = document.querySelector("div[style*='padding: 20px']");
+    if (legalPlaceholder) {
+        legalPlaceholder.remove();
+    }
 }
