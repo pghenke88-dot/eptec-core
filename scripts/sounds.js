@@ -1,10 +1,8 @@
 /**
  * scripts/sounds.js
  * EPTEC SOUND ENGINE – FINAL (HARD CUT)
- * - Ambient (Wind/Birds/Water) MP3
- * - UI Sounds MP3
- * - Tunnel MP3 (tunnelfall.mp3)
- * - Beim Tunnel: HARD STOP ALL AUDIO + Tunnel startet sofort
+ * + User Preference: Click Sound ON/OFF (persistent)
+ * + Activity log on preference change (optional hook)
  */
 
 (() => {
@@ -21,7 +19,7 @@
     uiConfirm:  "ui_confirm.mp3",
     flagClick:  "flag_click.mp3",
 
-    tunnelFall: "tunnelfall.mp3"   // 🔥 Tunnel (alles klein)
+    tunnelFall: "tunnelfall.mp3"
   };
 
   let unlocked = false;
@@ -34,13 +32,45 @@
   const audioCache = new Map();
   const existsCache = new Map();
 
-  // HARD registry: everything we ever created in this engine
+  // HARD registry: everything we ever created
   const allNodes = new Set();
 
-  /* ------------------------------------------------------------
-     Utils
-  ------------------------------------------------------------ */
+  // ------------------------------------------------------------
+  // USER PREFERENCE (CLICK SOUND)
+  // ------------------------------------------------------------
+  const SOUND_PREF_KEY = "eptec_pref_clicksound";
 
+  function activity(eventName, meta) {
+    try { window.EPTEC_ACTIVITY?.log?.(eventName, meta || {}); } catch {}
+  }
+
+  function isClickSoundEnabled() {
+    try {
+      const v = localStorage.getItem(SOUND_PREF_KEY);
+      if (v === null) return true;      // default: ON
+      return v === "1";
+    } catch {
+      return true;
+    }
+  }
+
+  function setClickSoundEnabled(on) {
+    try {
+      localStorage.setItem(SOUND_PREF_KEY, on ? "1" : "0");
+    } catch {}
+    activity("pref_clicksound_set", { enabled: !!on });
+  }
+
+  function getClickSoundEnabled() {
+    return isClickSoundEnabled();
+  }
+
+  // de-dupe / throttle
+  let lastUIClickAt = 0;
+
+  // ------------------------------------------------------------
+  // Utils
+  // ------------------------------------------------------------
   async function exists(url) {
     if (existsCache.has(url)) return existsCache.get(url);
     try {
@@ -76,13 +106,10 @@
     const a = new Audio(url);
     a.preload = "auto";
     audioCache.set(name, a);
-
-    // register
     allNodes.add(a);
     return a;
   }
 
-  // create a FRESH audio instance (used for tunnel to guarantee start)
   async function createFreshAudio(name) {
     const file = FILES[name];
     if (!file) return null;
@@ -92,21 +119,22 @@
 
     const a = new Audio(url);
     a.preload = "auto";
-
     allNodes.add(a);
     return a;
   }
 
-  /* ------------------------------------------------------------
-     Core playback
-  ------------------------------------------------------------ */
+  function clamp(v) {
+    return Math.max(0, Math.min(1, Number(v) || 0));
+  }
 
+  // ------------------------------------------------------------
+  // Core playback
+  // ------------------------------------------------------------
   async function playOneShot(name, volume = 0.6) {
     if (!unlocked) return;
     try {
       const a = await loadAudio(name);
       if (!a) return;
-
       a.pause();
       a.currentTime = 0;
       a.loop = false;
@@ -120,13 +148,10 @@
     try {
       const a = await loadAudio(name);
       if (!a) return null;
-
-      // ensure deterministic start
       a.pause();
       a.currentTime = 0;
       a.loop = true;
       a.volume = clamp(volume);
-
       await a.play();
       return a;
     } catch {
@@ -134,14 +159,9 @@
     }
   }
 
-  function clamp(v) {
-    return Math.max(0, Math.min(1, Number(v) || 0));
-  }
-
-  /* ------------------------------------------------------------
-     HARD STOP (kills everything)
-  ------------------------------------------------------------ */
-
+  // ------------------------------------------------------------
+  // HARD STOP
+  // ------------------------------------------------------------
   function hardStopAll() {
     for (const a of allNodes) {
       try { a.pause(); } catch {}
@@ -150,10 +170,9 @@
     }
   }
 
-  /* ------------------------------------------------------------
-     Ambient control
-  ------------------------------------------------------------ */
-
+  // ------------------------------------------------------------
+  // Ambient
+  // ------------------------------------------------------------
   function stopAmbient() {
     for (const a of ambientNodes) {
       try {
@@ -167,32 +186,26 @@
 
   async function startAmbient() {
     stopAmbient();
-
     const wind  = await playLoop("wind",  0.18);
     const birds = await playLoop("birds", 0.14);
     const water = await playLoop("water", 0.08);
-
     ambientNodes = [wind, birds, water].filter(Boolean);
   }
 
-  /* ------------------------------------------------------------
-     Tunnel (THE IMPORTANT PART)
-  ------------------------------------------------------------ */
-
+  // ------------------------------------------------------------
+  // Tunnel (absolute cut)
+  // ------------------------------------------------------------
   async function playTunnel() {
     if (!unlocked) return;
 
-    // 🔇 ABSOLUTER CUT: stop absolutely everything, not just ambientNodes
     hardStopAll();
     stopAmbient();
 
-    // also stop previous tunnel node reference
     if (tunnelNode) {
       try { tunnelNode.pause(); tunnelNode.currentTime = 0; } catch {}
       tunnelNode = null;
     }
 
-    // ✅ always use fresh instance so it always starts cleanly
     const a = await createFreshAudio("tunnelFall");
     if (!a) return;
 
@@ -200,37 +213,66 @@
     a.loop = false;
     a.volume = 0.95;
 
-    try {
-      await a.play();
-    } catch {}
+    try { await a.play(); } catch {}
   }
 
-  /* ------------------------------------------------------------
-     Unlock (required by browsers)
-  ------------------------------------------------------------ */
+  // ------------------------------------------------------------
+  // Global click sound (respects user pref)
+  // ------------------------------------------------------------
+  function uiConfirmThrottled() {
+    if (!isClickSoundEnabled()) return;
+    const now = Date.now();
+    if (now - lastUIClickAt < 120) return;
+    lastUIClickAt = now;
+    playOneShot("uiConfirm", 0.55);
+  }
 
+  function bindGlobalClickSound() {
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+
+      const clickable =
+        t.closest("button") ||
+        t.closest(".legal-link") ||
+        t.closest(".lang-item") ||
+        t.closest("#lang-toggle") ||
+        t.closest("a");
+
+      if (clickable) uiConfirmThrottled();
+    }, true);
+  }
+
+  // ------------------------------------------------------------
+  // Unlock (browser policy)
+  // ------------------------------------------------------------
   function unlockAudio() {
     if (unlocked) return;
     unlocked = true;
-
-    // tiny silent poke
-    playOneShot("uiConfirm", 0.001);
+    playOneShot("uiConfirm", 0.001); // silent poke
   }
 
-  /* ------------------------------------------------------------
-     Public API
-  ------------------------------------------------------------ */
+  bindGlobalClickSound();
 
+  // ------------------------------------------------------------
+  // Public API
+  // ------------------------------------------------------------
   window.SoundEngine = {
     unlockAudio,
     startAmbient,
     stopAmbient,
 
     uiFocus:   () => playOneShot("uiFocus", 0.45),
-    uiConfirm: () => playOneShot("uiConfirm", 0.55),
+
+    // respects preference
+    uiConfirm: () => uiConfirmThrottled(),
+
     flagClick: () => playOneShot("flagClick", 0.45),
 
-    // tunnel: HARD CUT + immediate tunnel mp3
-    tunnelFall: playTunnel
+    tunnelFall: playTunnel,
+
+    // user preference API
+    setClickSoundEnabled,
+    getClickSoundEnabled
   };
 })();
