@@ -126,6 +126,20 @@ const EPTEC_BRAIN = (() => {
   }
 
   /* -----------------------------
+   * ✅ 2.1) ACTIVITY (CLICK/UX LOG HOOK)
+   * - "wir hören sowieso jeden Klick"
+   * - can be used by UI without coupling into Compliance internals
+   * ----------------------------- */
+  const Activity = {
+    log(eventName, meta = null) {
+      Safe.try(() => {
+        const name = String(eventName || "EVENT");
+        Compliance.log("UI", name, meta);
+      }, "Activity.log");
+    }
+  };
+
+  /* -----------------------------
    * 3) RESOURCE STORE (docs/.md, locales/.json, assets/.html)
    * ----------------------------- */
   const Store = (() => {
@@ -641,6 +655,7 @@ const EPTEC_BRAIN = (() => {
     get Assets() { return Assets; },
     reloadAssets,
     Compliance,
+    Activity, // ✅ exported click/event logger
     Audio,
     Auth,
     Navigation,
@@ -654,3 +669,8 @@ const EPTEC_BRAIN = (() => {
 })();
 
 window.EPTEC_BRAIN = EPTEC_BRAIN;
+
+// ✅ Global hook for UI (optional, but perfect for "we hear every click")
+window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
+  log: (eventName, meta) => window.EPTEC_BRAIN?.Activity?.log?.(eventName, meta)
+};
