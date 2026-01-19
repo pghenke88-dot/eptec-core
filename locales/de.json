@@ -74,9 +74,8 @@
       "title": "Rechtliche Legitimierung & Änderungsbedarf",
       "structure": ["checkpoint_id", "conflict_description", "law_reference"]
     }
-  }
-}
-{
+  },
+
   "app_name": "",
   "login_username": "",
   "login_password": "",
@@ -128,5 +127,9 @@
   "system_close": "",
   "system_loading": "",
   "system_error": "",
-  "login_error_invalid": ""
+  "login_error_invalid": "",
+
+  "register_privacy_prefix": "Mit der Registrierung akzeptierst du unsere",
+  "register_privacy_link": "Datenschutzbestimmungen",
+  "footer_privacy": "Datenschutz"
 }
