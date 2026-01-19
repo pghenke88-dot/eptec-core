@@ -11,11 +11,9 @@
   <link rel="stylesheet" href="assets/hidden.css">
 
   <style>
-    /* Desktop safety */
     #meadow-view { display: flex !important; }
     .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
 
-    /* ---- WIESE: pure CSS ---- */
     #meadow-view.grassy-meadow{
       position: fixed;
       inset: 0;
@@ -56,13 +54,11 @@
       pointer-events:none;
     }
 
-    /* ---- Make UI readable ---- */
     .entry-btn { min-height: 44px; padding: 10px 16px; font-size: 16px; border-radius: 12px; }
     .entry-input { min-height: 44px; padding: 10px 14px; font-size: 16px; border-radius: 12px; }
     .legal-footer { display:flex; justify-content:center; align-items:center; gap:10px; padding: 10px 12px; }
     .legal-link { cursor:pointer; text-decoration: underline; }
 
-    /* ---- FLAG CANNON ---- */
     .lang-switcher{
       position: fixed;
       top: 14px;
@@ -124,15 +120,12 @@
 </head>
 
 <body>
-
-  <!-- SYSTEM HEADER -->
   <header class="app-header">
     <h1 id="app-title">Contract Office</h1>
     <div id="app-subtitle">by Johannes Büngener</div>
     <div id="system-clock"></div>
   </header>
 
-  <!-- LANGUAGE SWITCHER -->
   <div id="language-switcher" class="lang-switcher" aria-label="Language">
     <div id="lang-rail" aria-hidden="true">
       <button class="lang-item" type="button" data-lang="en">EN</button>
@@ -151,10 +144,8 @@
     <button id="lang-toggle" type="button">🌐</button>
   </div>
 
-  <!-- MEADOW / LOGIN -->
   <section id="meadow-view" class="grassy-meadow">
     <div id="entry-ui" class="entry-ui">
-
       <input id="login-username" class="entry-input" autocomplete="username">
       <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
 
@@ -183,7 +174,6 @@
     </div>
   </section>
 
-  <!-- REGISTER -->
   <section id="register-screen" class="modal modal-hidden">
     <div class="modal-card register-card">
       <div id="register-title" class="modal-title"></div>
@@ -201,7 +191,6 @@
     </div>
   </section>
 
-  <!-- FORGOT -->
   <section id="forgot-screen" class="modal modal-hidden">
     <div class="modal-card forgot-card">
       <div id="forgot-title" class="modal-title"></div>
@@ -212,7 +201,6 @@
     </div>
   </section>
 
-  <!-- LEGAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <div class="modal-card">
       <div id="legal-title" class="modal-title"></div>
@@ -221,60 +209,111 @@
     </div>
   </section>
 
-  <!-- ROOM 1 -->
   <section id="room-1-view" style="display:none;">
     <div class="engraved-matrix"></div>
   </section>
 
-  <!-- ROOM 2 DASHBOARD -->
+  <!-- ✅ ROOM 2 DASHBOARD: extended to cover ALL chat code flows -->
   <section id="room-2-view" style="display:none;">
     <div style="padding:40px;color:white;max-width:900px;margin:0 auto;">
-
       <h2>Dashboard</h2>
 
       <div id="coupling-banner" class="system-msg" style="display:none;"></div>
 
-      <div>
+      <div style="margin-top:10px;">
         <strong>Construction:</strong>
-        <span id="construction-status">—</span>
-        /
-        <span id="construction-tier">—</span>
+        <span id="construction-status">—</span> / <span id="construction-tier">—</span>
       </div>
 
       <div>
         <strong>Controlling:</strong>
-        <span id="controlling-status">—</span>
-        /
-        <span id="controlling-tier">—</span>
+        <span id="controlling-status">—</span> / <span id="controlling-tier">—</span>
       </div>
 
-      <div id="referral-code-block" style="display:none;margin-top:20px;">
-        <div id="referral-code-value">—</div>
-        <button id="referral-copy" class="entry-btn">Kopieren</button>
+      <!-- Demo controls for coupling (filmable) -->
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button id="demo-construction-on" class="entry-btn" type="button">Construction BASIS AN</button>
+        <button id="demo-controlling-on" class="entry-btn" type="button">Controlling BASIS AN</button>
+        <button id="demo-construction-off" class="entry-btn" type="button">Construction AUS</button>
       </div>
 
-      <div style="margin-top:20px;">
-        <input id="present-code-input" class="entry-input">
-        <button id="present-activate-btn" class="entry-btn">Aktivieren</button>
-        <div id="present-status" class="system-msg"></div>
+      <hr style="margin:20px 0;opacity:.25;">
+
+      <!-- Referral code (user-generated, unlimited) -->
+      <div id="referral-code-block" style="display:none;margin-top:10px;">
+        <div style="opacity:.85;">Dein Geschenkkode (unbegrenzt, für Neukunden)</div>
+        <div id="referral-code-value" style="margin-top:6px;">—</div>
+        <button id="referral-copy" class="entry-btn" type="button" style="margin-top:8px;">Kopieren</button>
       </div>
 
-      <div style="margin-top:20px;">
+      <!-- Referral redeem (new customer demo) -->
+      <div style="margin-top:18px;">
+        <div style="opacity:.85;">Geschenkkode einlösen (Neukunde / Demo-Paywall)</div>
+        <input id="referral-redeem-input" class="entry-input" placeholder="REF-..." style="margin-top:6px;">
+        <button id="referral-redeem-btn" class="entry-btn" type="button" style="margin-top:8px;">Einlösen</button>
+        <div id="referral-redeem-status" class="system-msg" style="margin-top:10px;"></div>
+      </div>
+
+      <hr style="margin:20px 0;opacity:.25;">
+
+      <!-- Present code (global, 30 days, once per user) -->
+      <div style="margin-top:10px;">
+        <div style="opacity:.85;">Present-Code (global)</div>
+        <input id="present-code-input" class="entry-input" placeholder="XMAS2026" style="margin-top:6px;">
+        <button id="present-activate-btn" class="entry-btn" type="button" style="margin-top:8px;">Aktivieren</button>
+        <div id="present-status" class="system-msg" style="margin-top:10px;"></div>
+      </div>
+
+      <div style="margin-top:14px;">
         <span>Nächste Abrechnung:</span>
         <strong id="next-invoice-date">—</strong>
         <span id="next-invoice-discount"></span>
       </div>
 
+      <hr style="margin:20px 0;opacity:.25;">
+
+      <!-- VIP (Extra-Present) redeem -->
+      <div style="margin-top:10px;">
+        <div style="opacity:.85;">VIP / Extra-Present Code einlösen</div>
+        <input id="vip-redeem-input" class="entry-input" placeholder="VIP-..." style="margin-top:6px;">
+        <button id="vip-redeem-btn" class="entry-btn" type="button" style="margin-top:8px;">VIP aktivieren</button>
+        <div id="vip-redeem-status" class="system-msg" style="margin-top:10px;"></div>
+      </div>
+
+      <hr style="margin:20px 0;opacity:.25;">
+
+      <!-- Admin panel (filmable) -->
+      <div style="margin-top:10px;">
+        <div style="opacity:.85;">Admin Panel (Demo)</div>
+
+        <div style="margin-top:10px;">
+          <div style="opacity:.75;">Present Campaign erstellen</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <input id="admin-present-code" class="entry-input" placeholder="XMAS2026">
+            <input id="admin-present-percent" class="entry-input" placeholder="50" style="max-width:120px;">
+            <button id="admin-present-create" class="entry-btn" type="button">Erstellen</button>
+          </div>
+          <div id="admin-present-status" class="system-msg" style="margin-top:10px;"></div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div style="opacity:.75;">VIP Code generieren</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <input id="admin-vip-months" class="entry-input" placeholder="free_months (z.B. 3)" style="max-width:220px;">
+            <button id="admin-vip-create" class="entry-btn" type="button">VIP Code erstellen</button>
+          </div>
+          <div id="admin-vip-status" class="system-msg" style="margin-top:10px;"></div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- EFFECTS -->
   <div id="eptec-white-flash" class="white-flash-hidden"></div>
   <div id="eptec-tunnel" class="tunnel-hidden">
     <div class="tunnel-wall"></div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="scripts/sounds.js" defer></script>
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
@@ -283,6 +322,5 @@
   <script src="scripts/state_manager.js" defer></script>
   <script src="scripts/logic.js" defer></script>
   <script src="scripts/main.js" defer></script>
-
 </body>
 </html>
