@@ -127,8 +127,6 @@ const EPTEC_BRAIN = (() => {
 
   /* -----------------------------
    * ✅ 2.1) ACTIVITY (CLICK/UX LOG HOOK)
-   * - "wir hören sowieso jeden Klick"
-   * - can be used by UI without coupling into Compliance internals
    * ----------------------------- */
   const Activity = {
     log(eventName, meta = null) {
@@ -138,6 +136,77 @@ const EPTEC_BRAIN = (() => {
       }, "Activity.log");
     }
   };
+
+  /* -----------------------------
+   * ✅ 2.2) DASHBOARD BRIDGE (UI_STATE FEED)
+   * - Translates local storage feed -> EPTEC_STATE_MANAGER -> EPTEC_UI_STATE
+   * - No business logic. Only hydration + visual sync.
+   * ----------------------------- */
+  const DashboardBridge = (() => {
+    const APPSTATE_KEY = "eptec_app_states"; // your StateManager storage
+    const FEED_KEY = Config.STORAGE_KEY_FEED; // "EPTEC_FEED" optional
+
+    function readJson(key) {
+      return Safe.try(() => {
+        if (!("localStorage" in window)) return null;
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return Safe.isObj(parsed) ? parsed : null;
+      }, "DashboardBridge.readJson") || null;
+    }
+
+    /**
+     * Expected feed (optional, you can fill later):
+     * {
+     *   products: { construction:{active,tier}, controlling:{active,tier} },
+     *   referralCode: "REF-....",
+     *   present: { status, discountPercent, validUntil },
+     *   billing: { nextInvoiceDate, discountPercent }
+     * }
+     */
+    function syncToUI() {
+      Safe.try(() => {
+        const sm = window.EPTEC_STATE_MANAGER;
+        if (!sm) return;
+
+        // 1) hydrate whatever StateManager already stores
+        sm.hydrateFromStorage?.();
+
+        // 2) optional: read unified feed
+        const feed = readJson(FEED_KEY);
+        if (feed) {
+          if (feed.products) sm.setProducts?.(feed.products);
+          if (feed.referralCode) sm.setReferralCode?.(feed.referralCode);
+          if (feed.present) sm.setPresentStatus?.(feed.present);
+          if (feed.billing) sm.setBillingPreview?.({
+            nextInvoiceDate: feed.billing.nextInvoiceDate,
+            discountPercent: feed.billing.discountPercent
+          });
+        }
+
+        // 3) optional: map legacy app_states lights (kept for compatibility)
+        // We do not interpret "color" into billing rules. That would be business logic.
+        const legacy = readJson(APPSTATE_KEY);
+        if (legacy && Safe.isObj(legacy) && feed == null) {
+          // If you later want: derive some visual hints from existing states
+          // But we intentionally do nothing here to keep it pure.
+        }
+      }, "DashboardBridge.syncToUI");
+    }
+
+    // Optional helper: write a minimal feed (useful until backend is connected)
+    function writeFeed(patch) {
+      Safe.try(() => {
+        if (!("localStorage" in window)) return;
+        const cur = readJson(FEED_KEY) || {};
+        const next = deepMerge({ ...cur }, Safe.isObj(patch) ? patch : {});
+        localStorage.setItem(FEED_KEY, JSON.stringify(next));
+      }, "DashboardBridge.writeFeed");
+    }
+
+    return { syncToUI, writeFeed };
+  })();
 
   /* -----------------------------
    * 3) RESOURCE STORE (docs/.md, locales/.json, assets/.html)
@@ -285,12 +354,9 @@ const EPTEC_BRAIN = (() => {
     }
 
     // AUTO-RESOLVE (your "TISCH" case)
-    // 1) locales key
     if (ctx.locale && token in ctx.locale) return String(ctx.locale[token] ?? "");
-    // 2) docs/<token>.md
     const d = await Store.getDoc(token);
     if (d && !d.startsWith("DOC MISSING:") && !d.startsWith("DOC LOAD ERROR:")) return d;
-    // 3) assets/<token>.html
     const a = await Store.getAssetHtml(token);
     if (a) return a;
 
@@ -432,9 +498,6 @@ const EPTEC_BRAIN = (() => {
       }, "Workshop.render");
     },
 
-    // PartName can be:
-    //  - a label from structure
-    //  - a docId (recommended) -> tries docs/<docId>.md first
     async openDoc(partName) {
       const name = String(partName || "").trim();
       if (!name) return;
@@ -442,10 +505,8 @@ const EPTEC_BRAIN = (() => {
       const container = Safe.qs(".engraved-matrix");
       if (!container) return;
 
-      // 1) Prefer docs/<name>.md (so you just "feed" docs files)
       const rawDoc = await Store.getDoc(name);
 
-      // 2) Fallback: use old inline template if doc missing
       let base = rawDoc;
       if (rawDoc.startsWith("DOC MISSING:") || rawDoc.startsWith("DOC LOAD ERROR:")) {
         const tpl = Assets?.languages?.de?.nf1_template || "";
@@ -459,11 +520,8 @@ const EPTEC_BRAIN = (() => {
       const locale = await Store.getLocale(Config.DEFAULT_LANG);
       const ctx = { user: Config.ACTIVE_USER, locale };
 
-      // 3) Resolve tokens like {{TISCH}} / {{i18n:KEY}} / {{doc:agb}}
       const rendered = await renderTemplate(base, ctx);
 
-      // 4) Render safely as preformatted text by default (0% XSS headaches)
-      // If you intentionally want HTML in docs, set meta.render.mode="html" for that doc action.
       container.innerHTML = `
         <div id="printable-area" class="doc-view"
              style="background:white;color:black;padding:40px;font-family:monospace;white-space:pre-wrap;">
@@ -543,7 +601,7 @@ const EPTEC_BRAIN = (() => {
     "docs.open": async (ctx) => Workshop.openDoc(ctx?.docId || ""),
     "nav.tunnel.R1": () => Navigation.triggerTunnel("R1"),
     "nav.tunnel.R2": () => Navigation.triggerTunnel("R2"),
-    "system.reload": () => { reloadAssets(); Assembler.sync(); },
+    "system.reload": () => { reloadAssets(); Assembler.sync(); DashboardBridge.syncToUI(); },
     "system.dumpLogs": () => console.log(Compliance.exportLogs())
   };
 
@@ -565,14 +623,12 @@ const EPTEC_BRAIN = (() => {
         const id = element.getAttribute("data-logic-id");
         const meta = Assets?.objectMeta?.[id] || {};
 
-        // Backward-compat: meta.action + meta.sound
         if (meta.action === "download") runAction("workshop.exportPDF", { id, meta });
         if (meta.action === "upload") {
           if (Config.ACTIVE_USER?.tariff === "premium") runAction("workshop.upload", { id, meta });
           else alert("PREMIUM ERFORDERLICH");
         }
 
-        // New: meta.on.click.do (preferred)
         const action = meta?.on?.click?.do;
         if (action) {
           if (allowed(meta)) runAction(action, meta?.on?.click || { id, meta });
@@ -604,7 +660,6 @@ const EPTEC_BRAIN = (() => {
             continue;
           }
 
-          // Render
           if (meta.source === "canva") {
             slot.innerHTML = meta.embedCode || "";
           } else {
@@ -612,7 +667,6 @@ const EPTEC_BRAIN = (() => {
             slot.innerHTML = `<div class="semantic-content">${Safe.escHtml(meta.label || id)}</div>`;
           }
 
-          // Bind
           slot.onclick = () => Interaction.trigger(slot);
         }
 
@@ -626,11 +680,31 @@ const EPTEC_BRAIN = (() => {
    * ----------------------------- */
   function bindHotkeys() {
     window.addEventListener("keydown", (e) => {
-      // Ctrl+Alt+E -> reload assets + resync
       if (e.ctrlKey && e.altKey && (e.key === "e" || e.key === "E")) runAction("system.reload");
-      // Ctrl+Alt+L -> dump logs
       if (e.ctrlKey && e.altKey && (e.key === "l" || e.key === "L")) runAction("system.dumpLogs");
     });
+  }
+
+  /* -----------------------------
+   * ✅ 12.1) GLOBAL CLICK LISTENER (optional UX telemetry)
+   * - Logs clicks via EPTEC_ACTIVITY
+   * - Optional click sound if you add <audio id="snd-click" ...>
+   * - Never breaks anything
+   * ----------------------------- */
+  function bindGlobalClickTelemetry() {
+    Safe.try(() => {
+      document.addEventListener("click", (e) => {
+        const t = e?.target;
+        const tag = t?.tagName ? String(t.tagName).toLowerCase() : "";
+        const id = t?.id ? String(t.id) : "";
+        const cls = t?.className ? String(t.className) : "";
+
+        Activity.log("CLICK", { tag, id, cls });
+
+        // optional click sound (only if you add it)
+        // Audio.play("snd-click", 0.15);
+      }, true);
+    }, "bindGlobalClickTelemetry");
   }
 
   /* -----------------------------
@@ -639,6 +713,11 @@ const EPTEC_BRAIN = (() => {
   function init() {
     Safe.try(() => {
       bindHotkeys();
+      bindGlobalClickTelemetry();
+
+      // First sync UI from storage/feed (so dashboard can show states instantly)
+      DashboardBridge.syncToUI();
+
       Assembler.sync();
       Compliance.log("SYSTEM", "INIT_DONE", { session: Config.SESSION_START });
       console.log("EPTEC MASTER LOGIC 2026: ZeroCrash DataFeed aktiv.");
@@ -655,7 +734,7 @@ const EPTEC_BRAIN = (() => {
     get Assets() { return Assets; },
     reloadAssets,
     Compliance,
-    Activity, // ✅ exported click/event logger
+    Activity,
     Audio,
     Auth,
     Navigation,
@@ -664,7 +743,10 @@ const EPTEC_BRAIN = (() => {
     Assembler,
     Store,
     renderTemplate,
-    runAction
+    runAction,
+
+    // NEW: dashboard feed helpers (purely optional)
+    DashboardBridge
   };
 })();
 
