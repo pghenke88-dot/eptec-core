@@ -125,7 +125,7 @@
 
 <body>
 
-  <!-- A) SYSTEM HEADER: Title + Clock -->
+  <!-- SYSTEM HEADER: Title + Clock -->
   <header class="app-header">
     <h1 id="app-title">Contract Office</h1>
     <div id="app-subtitle">by Johannes Büngener</div>
@@ -166,7 +166,7 @@
         <button id="btn-forgot" class="entry-btn"></button>
       </div>
 
-      <!-- B) Login message -->
+      <!-- Login message (kept but hidden by CSS; no redundant sentence) -->
       <div id="login-message" class="system-msg"></div>
 
       <div id="admin-gate" class="admin-gate plop-in">
@@ -205,7 +205,6 @@
         <div id="reg-suggestion-2" class="suggestion"></div>
       </div>
 
-      <!-- C) Register message -->
       <div id="register-message" class="system-msg"></div>
 
       <button id="reg-submit" class="entry-btn locked"></button>
@@ -218,16 +217,13 @@
     <div class="modal-card forgot-card">
       <div id="forgot-title" class="modal-title"></div>
       <input id="forgot-identity" class="entry-input" placeholder="">
-
-      <!-- D) Forgot message -->
       <div id="forgot-message" class="system-msg"></div>
-
       <button id="forgot-submit" class="entry-btn"></button>
       <button id="forgot-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- E) Legal Modal -->
+  <!-- LEGAL MODAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <div class="modal-card">
       <div id="legal-title" class="modal-title"></div>
@@ -254,15 +250,12 @@
     <div class="tunnel-wall"></div>
   </div>
 
-  <!-- SCRIPTS (Phase-1 Mock + UI-State/UI-Control) -->
+  <!-- SCRIPTS -->
   <script src="scripts/sounds.js" defer></script>
-
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
-
   <script src="scripts/registration_engine.js" defer></script>
   <script src="scripts/mock_backend.js" defer></script>
-
   <script src="scripts/logic.js" defer></script>
   <script src="scripts/main.js" defer></script>
 
