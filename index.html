@@ -125,114 +125,94 @@
 
 <body>
 
-  <!-- SYSTEM HEADER: Title + Clock -->
+  <!-- SYSTEM HEADER -->
   <header class="app-header">
     <h1 id="app-title">Contract Office</h1>
     <div id="app-subtitle">by Johannes Büngener</div>
     <div id="system-clock"></div>
   </header>
 
-  <!-- LANGUAGE SWITCHER OUTSIDE MEADOW -->
+  <!-- LANGUAGE SWITCHER -->
   <div id="language-switcher" class="lang-switcher" aria-label="Language">
     <div id="lang-rail" aria-hidden="true">
-      <button class="lang-item" type="button" data-lang="en" title="English">EN</button>
-      <button class="lang-item" type="button" data-lang="de" title="Deutsch">DE</button>
-      <button class="lang-item" type="button" data-lang="es" title="Español">ES</button>
-      <button class="lang-item" type="button" data-lang="fr" title="Français">FR</button>
-      <button class="lang-item" type="button" data-lang="it" title="Italiano">IT</button>
-      <button class="lang-item" type="button" data-lang="pt" title="Português">PT</button>
-      <button class="lang-item" type="button" data-lang="nl" title="Nederlands">NL</button>
-      <button class="lang-item" type="button" data-lang="ru" title="Русский">RU</button>
-      <button class="lang-item" type="button" data-lang="uk" title="Українська">UA</button>
-      <button class="lang-item" type="button" data-lang="ar" title="العربية">AR</button>
-      <button class="lang-item" type="button" data-lang="zh" title="中文">ZH</button>
-      <button class="lang-item" type="button" data-lang="ja" title="日本語">JA</button>
+      <button class="lang-item" type="button" data-lang="en">EN</button>
+      <button class="lang-item" type="button" data-lang="de">DE</button>
+      <button class="lang-item" type="button" data-lang="es">ES</button>
+      <button class="lang-item" type="button" data-lang="fr">FR</button>
+      <button class="lang-item" type="button" data-lang="it">IT</button>
+      <button class="lang-item" type="button" data-lang="pt">PT</button>
+      <button class="lang-item" type="button" data-lang="nl">NL</button>
+      <button class="lang-item" type="button" data-lang="ru">RU</button>
+      <button class="lang-item" type="button" data-lang="uk">UA</button>
+      <button class="lang-item" type="button" data-lang="ar">AR</button>
+      <button class="lang-item" type="button" data-lang="zh">ZH</button>
+      <button class="lang-item" type="button" data-lang="ja">JA</button>
     </div>
-    <button id="lang-toggle" type="button" aria-expanded="false" title="Language">🌐</button>
+    <button id="lang-toggle" type="button">🌐</button>
   </div>
 
-  <!-- ENTRY SCENE / MEADOW -->
+  <!-- MEADOW / LOGIN -->
   <section id="meadow-view" class="grassy-meadow">
-
-    <!-- LOGIN UI -->
     <div id="entry-ui" class="entry-ui">
 
-      <input id="login-username" class="entry-input grow-in" placeholder="" autocomplete="username">
-      <input id="login-password" class="entry-input grow-in" type="password" placeholder="" autocomplete="current-password">
+      <input id="login-username" class="entry-input" autocomplete="username">
+      <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
 
-      <div class="entry-actions plop-in">
+      <div class="entry-actions">
         <button id="btn-login" class="entry-btn"></button>
         <button id="btn-register" class="entry-btn"></button>
         <button id="btn-forgot" class="entry-btn"></button>
       </div>
 
-      <!-- Login message (kept but hidden by CSS; no redundant sentence) -->
       <div id="login-message" class="system-msg"></div>
 
-      <div id="admin-gate" class="admin-gate plop-in">
-        <input id="admin-code" class="entry-input" placeholder="" autocomplete="off">
+      <div id="admin-gate" class="admin-gate">
+        <input id="admin-code" class="entry-input" autocomplete="off">
         <button id="admin-submit" class="entry-btn"></button>
       </div>
-
     </div>
 
-    <!-- LEGAL FOOTER -->
     <div id="legal-footer" class="legal-footer">
       <span id="link-imprint" class="legal-link"></span>
-      <span class="legal-sep">|</span>
+      <span>|</span>
       <span id="link-terms" class="legal-link"></span>
-      <span class="legal-sep">|</span>
+      <span>|</span>
       <span id="link-support" class="legal-link"></span>
-      <span class="legal-sep">|</span>
+      <span>|</span>
       <span id="link-privacy-footer" class="legal-link"></span>
     </div>
-
   </section>
 
-  <!-- REGISTER MODAL -->
+  <!-- REGISTER -->
   <section id="register-screen" class="modal modal-hidden">
     <div class="modal-card register-card">
       <div id="register-title" class="modal-title"></div>
-      <input id="reg-first-name" class="entry-input" placeholder="">
-      <input id="reg-last-name" class="entry-input" placeholder="">
-      <input id="reg-birthdate" class="entry-input" placeholder="">
-      <input id="reg-email" class="entry-input" placeholder="">
-      <input id="reg-username" class="entry-input" placeholder="">
-      <input id="reg-password" class="entry-input" type="password" placeholder="">
+      <input id="reg-first-name" class="entry-input">
+      <input id="reg-last-name" class="entry-input">
+      <input id="reg-birthdate" class="entry-input">
+      <input id="reg-email" class="entry-input">
+      <input id="reg-username" class="entry-input">
+      <input id="reg-password" class="entry-input" type="password">
       <div id="reg-rules-username" class="rule-text"></div>
       <div id="reg-rules-password" class="rule-text"></div>
-      <div id="reg-suggestions" class="suggestions modal-hidden">
-        <div id="reg-suggestion-title" class="suggestions-title"></div>
-        <div id="reg-suggestion-1" class="suggestion"></div>
-        <div id="reg-suggestion-2" class="suggestion"></div>
-      </div>
-
       <div id="register-message" class="system-msg"></div>
-
       <button id="reg-submit" class="entry-btn locked"></button>
-
-      <!-- ✅ PRIVACY HINT (Register Modal) -->
-      <div class="privacy-hint">
-        <span id="privacy-hint-text"></span>
-        <span id="link-privacy" class="legal-link"></span>
-      </div>
-
       <button id="reg-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- FORGOT PASSWORD MODAL -->
+  <!-- FORGOT -->
   <section id="forgot-screen" class="modal modal-hidden">
     <div class="modal-card forgot-card">
       <div id="forgot-title" class="modal-title"></div>
-      <input id="forgot-identity" class="entry-input" placeholder="">
+      <input id="forgot-identity" class="entry-input">
       <div id="forgot-message" class="system-msg"></div>
       <button id="forgot-submit" class="entry-btn"></button>
       <button id="forgot-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- LEGAL MODAL -->
+  <!-- LEGAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <div class="modal-card">
       <div id="legal-title" class="modal-title"></div>
@@ -246,16 +226,51 @@
     <div class="engraved-matrix"></div>
   </section>
 
-  <!-- ROOM 2 -->
+  <!-- ROOM 2 DASHBOARD -->
   <section id="room-2-view" style="display:none;">
-    <div style="padding:40px;color:white;">ROOM 2 – placeholder</div>
+    <div style="padding:40px;color:white;max-width:900px;margin:0 auto;">
+
+      <h2>Dashboard</h2>
+
+      <div id="coupling-banner" class="system-msg" style="display:none;"></div>
+
+      <div>
+        <strong>Construction:</strong>
+        <span id="construction-status">—</span>
+        /
+        <span id="construction-tier">—</span>
+      </div>
+
+      <div>
+        <strong>Controlling:</strong>
+        <span id="controlling-status">—</span>
+        /
+        <span id="controlling-tier">—</span>
+      </div>
+
+      <div id="referral-code-block" style="display:none;margin-top:20px;">
+        <div id="referral-code-value">—</div>
+        <button id="referral-copy" class="entry-btn">Kopieren</button>
+      </div>
+
+      <div style="margin-top:20px;">
+        <input id="present-code-input" class="entry-input">
+        <button id="present-activate-btn" class="entry-btn">Aktivieren</button>
+        <div id="present-status" class="system-msg"></div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <span>Nächste Abrechnung:</span>
+        <strong id="next-invoice-date">—</strong>
+        <span id="next-invoice-discount"></span>
+      </div>
+
+    </div>
   </section>
 
-  <!-- WHITE FLASH -->
-  <div id="eptec-white-flash" class="white-flash-hidden" aria-hidden="true"></div>
-
-  <!-- TUNNEL FALL -->
-  <div id="eptec-tunnel" class="tunnel-hidden" aria-hidden="true">
+  <!-- EFFECTS -->
+  <div id="eptec-white-flash" class="white-flash-hidden"></div>
+  <div id="eptec-tunnel" class="tunnel-hidden">
     <div class="tunnel-wall"></div>
   </div>
 
@@ -265,6 +280,7 @@
   <script src="scripts/ui_controller.js" defer></script>
   <script src="scripts/registration_engine.js" defer></script>
   <script src="scripts/mock_backend.js" defer></script>
+  <script src="scripts/state_manager.js" defer></script>
   <script src="scripts/logic.js" defer></script>
   <script src="scripts/main.js" defer></script>
 
