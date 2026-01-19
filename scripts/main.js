@@ -10,6 +10,11 @@
  * - Rules/Suggestions localized (no hardcoded EN)
  * - DOB placeholder uses RegistrationEngine.dobFormatHint(lang) if available
  * - Preferences (clicksound) NOT handled here (SoundEngine is source of truth)
+ *
+ * ✅ Dashboard bindings added:
+ * - referral-copy (copy referral/gift code)
+ * - present-activate-btn (activate present code -> delegates to EPTEC_STATE_MANAGER if present,
+ *   otherwise writes a simulation into localStorage EPTEC_FEED and triggers DashboardBridge sync)
  */
 
 (() => {
@@ -84,7 +89,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulation)",
       mailbox_hint:"Click a link to trigger verify/reset (simulation).",
       mailbox_empty:"(No mails)",
-      mailbox_open_link_prefix:"➡ Open link:"
+      mailbox_open_link_prefix:"➡ Open link:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Copy",
+      dashboard_present_placeholder:"Enter present code",
+      dashboard_present_activate:"Activate",
+      dashboard_copied:"Copied.",
+      dashboard_copy_failed:"Copy failed.",
+      dashboard_present_empty:"Please enter a code.",
+      dashboard_present_applied:"Present code activated (simulation)."
     },
 
     de: {
@@ -137,7 +151,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulation)",
       mailbox_hint:"Klicke einen Link, um Verify/Reset auszulösen (Simulation).",
       mailbox_empty:"(Keine Mails)",
-      mailbox_open_link_prefix:"➡ Link öffnen:"
+      mailbox_open_link_prefix:"➡ Link öffnen:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Kopieren",
+      dashboard_present_placeholder:"Present-Code eingeben",
+      dashboard_present_activate:"Aktivieren",
+      dashboard_copied:"Kopiert.",
+      dashboard_copy_failed:"Kopieren fehlgeschlagen.",
+      dashboard_present_empty:"Bitte Code eingeben.",
+      dashboard_present_applied:"Present-Code aktiviert (Simulation)."
     },
 
     fr: {
@@ -190,7 +213,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulation)",
       mailbox_hint:"Cliquez sur un lien pour déclencher verify/reset (simulation).",
       mailbox_empty:"(Aucun e-mail)",
-      mailbox_open_link_prefix:"➡ Ouvrir le lien :"
+      mailbox_open_link_prefix:"➡ Ouvrir le lien :",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Copier",
+      dashboard_present_placeholder:"Saisir le code cadeau",
+      dashboard_present_activate:"Activer",
+      dashboard_copied:"Copié.",
+      dashboard_copy_failed:"Échec de copie.",
+      dashboard_present_empty:"Veuillez saisir un code.",
+      dashboard_present_applied:"Code activé (simulation)."
     },
 
     es: {
@@ -243,7 +275,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulación)",
       mailbox_hint:"Haz clic en un enlace para activar verify/reset (simulación).",
       mailbox_empty:"(Sin correos)",
-      mailbox_open_link_prefix:"➡ Abrir enlace:"
+      mailbox_open_link_prefix:"➡ Abrir enlace:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Copiar",
+      dashboard_present_placeholder:"Introduce el código",
+      dashboard_present_activate:"Activar",
+      dashboard_copied:"Copiado.",
+      dashboard_copy_failed:"Error al copiar.",
+      dashboard_present_empty:"Introduce un código.",
+      dashboard_present_applied:"Código activado (simulación)."
     },
 
     it: {
@@ -296,7 +337,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulazione)",
       mailbox_hint:"Clicca un link per attivare verify/reset (simulazione).",
       mailbox_empty:"(Nessuna mail)",
-      mailbox_open_link_prefix:"➡ Apri link:"
+      mailbox_open_link_prefix:"➡ Apri link:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Copia",
+      dashboard_present_placeholder:"Inserisci codice",
+      dashboard_present_activate:"Attiva",
+      dashboard_copied:"Copiato.",
+      dashboard_copy_failed:"Copia non riuscita.",
+      dashboard_present_empty:"Inserisci un codice.",
+      dashboard_present_applied:"Codice attivato (simulazione)."
     },
 
     pt: {
@@ -349,7 +399,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulação)",
       mailbox_hint:"Clique em um link para disparar verify/reset (simulação).",
       mailbox_empty:"(Sem e-mails)",
-      mailbox_open_link_prefix:"➡ Abrir link:"
+      mailbox_open_link_prefix:"➡ Abrir link:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Copiar",
+      dashboard_present_placeholder:"Digite o código",
+      dashboard_present_activate:"Ativar",
+      dashboard_copied:"Copiado.",
+      dashboard_copy_failed:"Falha ao copiar.",
+      dashboard_present_empty:"Digite um código.",
+      dashboard_present_applied:"Código ativado (simulação)."
     },
 
     nl: {
@@ -402,7 +461,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Simulatie)",
       mailbox_hint:"Klik op een link om verify/reset te starten (simulatie).",
       mailbox_empty:"(Geen mails)",
-      mailbox_open_link_prefix:"➡ Link openen:"
+      mailbox_open_link_prefix:"➡ Link openen:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Kopiëren",
+      dashboard_present_placeholder:"Code invoeren",
+      dashboard_present_activate:"Activeren",
+      dashboard_copied:"Gekopieerd.",
+      dashboard_copy_failed:"Kopiëren mislukt.",
+      dashboard_present_empty:"Voer een code in.",
+      dashboard_present_applied:"Code geactiveerd (simulatie)."
     },
 
     ru: {
@@ -455,7 +523,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Симуляция)",
       mailbox_hint:"Нажмите ссылку для verify/reset (симуляция).",
       mailbox_empty:"(Нет писем)",
-      mailbox_open_link_prefix:"➡ Открыть ссылку:"
+      mailbox_open_link_prefix:"➡ Открыть ссылку:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Копировать",
+      dashboard_present_placeholder:"Введите код",
+      dashboard_present_activate:"Активировать",
+      dashboard_copied:"Скопировано.",
+      dashboard_copy_failed:"Ошибка копирования.",
+      dashboard_present_empty:"Введите код.",
+      dashboard_present_applied:"Код активирован (симуляция)."
     },
 
     uk: {
@@ -508,7 +585,16 @@
       mailbox_title:"📨 EPTEC Mailbox (Симуляція)",
       mailbox_hint:"Натисніть посилання для verify/reset (симуляція).",
       mailbox_empty:"(Немає листів)",
-      mailbox_open_link_prefix:"➡ Відкрити посилання:"
+      mailbox_open_link_prefix:"➡ Відкрити посилання:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"Копіювати",
+      dashboard_present_placeholder:"Введіть код",
+      dashboard_present_activate:"Активувати",
+      dashboard_copied:"Скопійовано.",
+      dashboard_copy_failed:"Помилка копіювання.",
+      dashboard_present_empty:"Введіть код.",
+      dashboard_present_applied:"Код активовано (симуляція)."
     },
 
     zh: {
@@ -561,7 +647,16 @@
       mailbox_title:"📨 EPTEC 邮箱（模拟）",
       mailbox_hint:"点击链接触发 verify/reset（模拟）。",
       mailbox_empty:"（无邮件）",
-      mailbox_open_link_prefix:"➡ 打开链接："
+      mailbox_open_link_prefix:"➡ 打开链接：",
+
+      // ✅ dashboard strings
+      dashboard_copy:"复制",
+      dashboard_present_placeholder:"输入代码",
+      dashboard_present_activate:"激活",
+      dashboard_copied:"已复制。",
+      dashboard_copy_failed:"复制失败。",
+      dashboard_present_empty:"请输入代码。",
+      dashboard_present_applied:"已激活（模拟）。"
     },
 
     ja: {
@@ -614,7 +709,16 @@
       mailbox_title:"📨 EPTEC Mailbox（シミュレーション）",
       mailbox_hint:"リンクをクリックして verify/reset（シミュレーション）。",
       mailbox_empty:"（メールなし）",
-      mailbox_open_link_prefix:"➡ リンクを開く："
+      mailbox_open_link_prefix:"➡ リンクを開く：",
+
+      // ✅ dashboard strings
+      dashboard_copy:"コピー",
+      dashboard_present_placeholder:"コードを入力",
+      dashboard_present_activate:"有効化",
+      dashboard_copied:"コピーしました。",
+      dashboard_copy_failed:"コピー失敗。",
+      dashboard_present_empty:"コードを入力してください。",
+      dashboard_present_applied:"有効化（シミュレーション）。"
     },
 
     ar: {
@@ -667,7 +771,16 @@
       mailbox_title:"📨 صندوق بريد EPTEC (محاكاة)",
       mailbox_hint:"انقر على رابط لتفعيل verify/reset (محاكاة).",
       mailbox_empty:"(لا توجد رسائل)",
-      mailbox_open_link_prefix:"➡ فتح الرابط:"
+      mailbox_open_link_prefix:"➡ فتح الرابط:",
+
+      // ✅ dashboard strings
+      dashboard_copy:"نسخ",
+      dashboard_present_placeholder:"أدخل الرمز",
+      dashboard_present_activate:"تفعيل",
+      dashboard_copied:"تم النسخ.",
+      dashboard_copy_failed:"فشل النسخ.",
+      dashboard_present_empty:"أدخل الرمز.",
+      dashboard_present_applied:"تم التفعيل (محاكاة)."
     }
   };
 
@@ -722,6 +835,7 @@
     setLanguage("en"); // default always EN
     bindFlagCannon();
     bindUI();
+    bindDashboard(); // ✅ dashboard buttons
     applyTranslations();
     startClock();
     bindHashLinks();
@@ -814,6 +928,11 @@
 
     setText("privacy-hint-text", t("privacy_hint", "Data processing:"));
     setText("link-privacy", t("legal_privacy", "Privacy Policy"));
+
+    // ✅ dashboard translations (only if elements exist)
+    setText("referral-copy", t("dashboard_copy", "Copy"));
+    setPlaceholder("present-code-input", t("dashboard_present_placeholder", "Enter present code"));
+    setText("present-activate-btn", t("dashboard_present_activate", "Activate"));
 
     syncLegalTitle();
   }
@@ -959,6 +1078,122 @@
     });
 
     bindRegistrationFlow();
+  }
+
+  // ---------- ✅ DASHBOARD BINDINGS ----------
+  function bindDashboard() {
+    // Copy referral code
+    document.getElementById("referral-copy")?.addEventListener("click", async () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_referral_copy");
+
+      const el = document.getElementById("referral-code-value");
+      const code = String(el?.textContent || "").trim();
+      if (!code || code === "—") {
+        toast(t("dashboard_copy_failed", "Copy failed."), "warn", 2200);
+        return;
+      }
+
+      const ok = await copyToClipboard(code);
+      toast(ok ? t("dashboard_copied", "Copied.") : t("dashboard_copy_failed", "Copy failed."), ok ? "ok" : "warn", 2200);
+    });
+
+    // Activate present code
+    document.getElementById("present-activate-btn")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      trackClick("click_present_activate");
+
+      const inp = document.getElementById("present-code-input");
+      const code = String(inp?.value || "").trim();
+      if (!code) {
+        toast(t("dashboard_present_empty", "Please enter a code."), "warn", 2400);
+        return;
+      }
+
+      // Delegate to StateManager if available
+      const sm = window.EPTEC_STATE_MANAGER;
+      const delegated =
+        !!sm && (typeof sm.applyPresentCode === "function" || typeof sm.setPresentStatus === "function");
+
+      if (delegated) {
+        try {
+          // Prefer an explicit method
+          if (typeof sm.applyPresentCode === "function") sm.applyPresentCode(code, { lang: currentLang });
+          else if (typeof sm.setPresentStatus === "function") {
+            // fallback: "simulate status" only (still via state manager)
+            sm.setPresentStatus({
+              status: "active",
+              discountPercent: 50,
+              validUntil: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+              code
+            });
+          }
+
+          // Let dashboard reflect immediately
+          window.EPTEC_BRAIN?.DashboardBridge?.syncToUI?.();
+          toast(t("dashboard_present_applied", "Present code activated (simulation)."), "ok", 2400);
+          return;
+        } catch (e) {
+          console.error("[EPTEC] present delegation failed:", e);
+          // fall through to simulation
+        }
+      }
+
+      // Fallback simulation: write minimal EPTEC_FEED
+      simulatePresentFeed(code);
+      window.EPTEC_BRAIN?.DashboardBridge?.syncToUI?.();
+      toast(t("dashboard_present_applied", "Present code activated (simulation)."), "ok", 2400);
+    });
+  }
+
+  async function copyToClipboard(text) {
+    const s = String(text || "");
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(s);
+        return true;
+      }
+    } catch {}
+    // fallback
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = s;
+      ta.setAttribute("readonly", "true");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return !!ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function simulatePresentFeed(code) {
+    try {
+      const key = "EPTEC_FEED";
+      const raw = localStorage.getItem(key);
+      const cur = raw ? JSON.parse(raw) : {};
+      const validUntil = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+
+      cur.present = {
+        status: "active",
+        discountPercent: 50,
+        validUntil,
+        code
+      };
+
+      cur.billing = cur.billing || {};
+      cur.billing.discountPercent = 50;
+      cur.billing.nextInvoiceDate = cur.billing.nextInvoiceDate || new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
+
+      localStorage.setItem(key, JSON.stringify(cur));
+    } catch (e) {
+      console.error("[EPTEC] simulatePresentFeed failed:", e);
+    }
   }
 
   function bindRegistrationFlow() {
