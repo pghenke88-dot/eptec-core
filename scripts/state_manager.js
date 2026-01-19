@@ -1,11 +1,11 @@
 /**
  * scripts/state_manager.js
- * EPTEC Dashboard State Manager
+ * EPTEC Dashboard State Manager (MockBackend-first)
  *
  * Responsibility:
- * - Collect persisted app info (localStorage / mock / backend later)
- * - Translate it into EPTEC_UI_STATE (visual state only)
- * - Persist visual state in localStorage so UI survives reloads
+ * - Persist visual state in localStorage (EPTEC_FEED)
+ * - Translate data into EPTEC_UI_STATE
+ * - Use EPTEC_MOCK_BACKEND to enforce Present rules + auto-referral
  *
  * NO DOM access here.
  * NO tariff/AGB business logic here.
@@ -14,10 +14,7 @@
 (() => {
   "use strict";
 
-  // legacy key (kept)
   const STORAGE_KEY = "eptec_app_states";
-
-  // unified dashboard feed (recommended)
   const FEED_KEY = "EPTEC_FEED";
 
   const $ui = () => window.EPTEC_UI_STATE;
@@ -60,9 +57,7 @@
     }
   }
 
-  /* ---------------------------------------------------
-     LEGACY FEATURE (kept, backward compatible)
-     --------------------------------------------------- */
+  // legacy
   function updateLight(contractId, color) {
     const states = loadJson(STORAGE_KEY);
     states[contractId] = {
@@ -73,12 +68,8 @@
     saveJson(STORAGE_KEY, states);
   }
 
-  /* ---------------------------------------------------
-     FEED persistence helpers
-     --------------------------------------------------- */
-  function readFeed() {
-    return loadJson(FEED_KEY);
-  }
+  // feed
+  function readFeed() { return loadJson(FEED_KEY); }
 
   function writeFeed(patch) {
     const cur = readFeed();
@@ -87,25 +78,15 @@
     return next;
   }
 
-  /* ---------------------------------------------------
-     Dashboard-visible state setters (also persist to FEED)
-     --------------------------------------------------- */
-
+  // setters
   function setProducts({ construction, controlling }) {
-    const payload = {
+    const next = writeFeed({
       products: {
-        construction: {
-          active: !!construction?.active,
-          tier: construction?.tier || null
-        },
-        controlling: {
-          active: !!controlling?.active,
-          tier: controlling?.tier || null
-        }
+        construction: { active: !!construction?.active, tier: construction?.tier || null },
+        controlling:  { active: !!controlling?.active,  tier: controlling?.tier || null }
       }
-    };
+    });
 
-    const next = writeFeed(payload);
     const coupled = !!(next.products?.construction?.active && next.products?.controlling?.active);
 
     $ui()?.set({
@@ -159,11 +140,7 @@
     });
   }
 
-  /* ---------------------------------------------------
-     Present-Code activation (MOCK BACKEND ENFORCED)
-     - enforces: valid campaign, not expired, once per user
-     - then updates FEED + UI state
-     --------------------------------------------------- */
+  // ✅ Present activation (enforced by mock backend)
   function applyPresentCode(code) {
     const c = String(code || "").trim().toUpperCase();
     if (!c) return { ok: false, reason: "EMPTY" };
@@ -172,10 +149,7 @@
     if (!username) return { ok: false, reason: "NO_SESSION" };
 
     const mb = window.EPTEC_MOCK_BACKEND;
-    if (!mb?.applyPresentCode) {
-      // fallback (should not happen once you replace mock_backend.js)
-      return { ok: false, reason: "NO_BACKEND" };
-    }
+    if (!mb?.applyPresentCode) return { ok: false, reason: "NO_BACKEND" };
 
     const res = mb.applyPresentCode(username, c);
 
@@ -192,18 +166,11 @@
       return { ok: false, reason: "INVALID", backend: res };
     }
 
-    // success
     const pct = res?.campaign?.discountPercent ?? 50;
     const until = res?.campaign?.validUntil ?? null;
 
-    setPresentStatus({
-      status: "active",
-      discountPercent: pct,
-      validUntil: until,
-      code: c
-    });
+    setPresentStatus({ status: "active", discountPercent: pct, validUntil: until, code: c });
 
-    // billing preview: for demo, show discount on next invoice
     const feed = readFeed();
     const nextInvoiceDate =
       feed?.billing?.nextInvoiceDate ||
@@ -214,9 +181,7 @@
     return { ok: true, campaign: res.campaign };
   }
 
-  /* ---------------------------------------------------
-     Hydration from FEED + auto-referral fetch when logged in
-     --------------------------------------------------- */
+  // hydrate + auto referral
   function hydrateFromStorage() {
     const feed = readFeed();
 
@@ -249,7 +214,7 @@
       });
     }
 
-    // ✅ Auto: if session exists, ensure referral code exists (unlimited use)
+    // ✅ ensure referral exists when logged in
     const username = getSessionUsername();
     const mb = window.EPTEC_MOCK_BACKEND;
     if (username && mb?.getOrCreateReferralCode) {
@@ -258,9 +223,6 @@
     }
   }
 
-  /* ---------------------------------------------------
-     PUBLIC API
-     --------------------------------------------------- */
   window.EPTEC_STATE_MANAGER = {
     updateLight,
 
