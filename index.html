@@ -116,6 +116,87 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .lang-item:hover{ transform: translateY(-2px); background: rgba(0,0,0,.32); }
+
+    /* -----------------------------
+       PAYWALL OVERLAY (minimal CSS)
+       ----------------------------- */
+    #paywall-screen{
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .paywall-hidden{ display:none !important; }
+    .paywall-card{
+      width: min(760px, 94vw);
+      max-height: 84vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .paywall-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .paywall-title{
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .paywall-close{
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 12px;
+      padding: 8px 10px;
+      cursor: pointer;
+      min-height: 40px;
+      min-width: 44px;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .paywall-message{
+      opacity: .85;
+      margin-bottom: 14px;
+    }
+    .paywall-section{
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+    .paywall-section-title{
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .paywall-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .paywall-btn{
+      border: 1px solid #111;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    .paywall-input{
+      flex: 1 1 260px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 44px;
+    }
   </style>
 </head>
 
@@ -209,8 +290,21 @@
     </div>
   </section>
 
+  <!-- ==============================
+       ROOM 1: DOORS (Construction / Controlling)
+       ============================== -->
   <section id="room-1-view" style="display:none;">
     <div class="engraved-matrix"></div>
+
+    <!-- Doors UI (click opens paywall if locked; otherwise enters room) -->
+    <div style="padding:40px;max-width:900px;margin:0 auto;color:white;">
+      <h2 style="margin:0 0 12px;">Choose a door</h2>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button id="door-construction" class="entry-btn" type="button">Door: Construction</button>
+        <button id="door-controlling" class="entry-btn" type="button">Door: Contract Controlling</button>
+      </div>
+      <div id="doors-status" class="system-msg" style="margin-top:14px;"></div>
+    </div>
   </section>
 
   <!-- ✅ ROOM 2 DASHBOARD: extended to cover ALL chat code flows -->
@@ -246,14 +340,6 @@
         <button id="referral-copy" class="entry-btn" type="button" style="margin-top:8px;">Kopieren</button>
       </div>
 
-      <!-- Referral redeem (new customer demo) -->
-      <div style="margin-top:18px;">
-        <div style="opacity:.85;">Geschenkkode einlösen (Neukunde / Demo-Paywall)</div>
-        <input id="referral-redeem-input" class="entry-input" placeholder="REF-..." style="margin-top:6px;">
-        <button id="referral-redeem-btn" class="entry-btn" type="button" style="margin-top:8px;">Einlösen</button>
-        <div id="referral-redeem-status" class="system-msg" style="margin-top:10px;"></div>
-      </div>
-
       <hr style="margin:20px 0;opacity:.25;">
 
       <!-- Present code (global, 30 days, once per user) -->
@@ -268,16 +354,6 @@
         <span>Nächste Abrechnung:</span>
         <strong id="next-invoice-date">—</strong>
         <span id="next-invoice-discount"></span>
-      </div>
-
-      <hr style="margin:20px 0;opacity:.25;">
-
-      <!-- VIP (Extra-Present) redeem -->
-      <div style="margin-top:10px;">
-        <div style="opacity:.85;">VIP / Extra-Present Code einlösen</div>
-        <input id="vip-redeem-input" class="entry-input" placeholder="VIP-..." style="margin-top:6px;">
-        <button id="vip-redeem-btn" class="entry-btn" type="button" style="margin-top:8px;">VIP aktivieren</button>
-        <div id="vip-redeem-status" class="system-msg" style="margin-top:10px;"></div>
       </div>
 
       <hr style="margin:20px 0;opacity:.25;">
@@ -312,6 +388,47 @@
   <div id="eptec-white-flash" class="white-flash-hidden"></div>
   <div id="eptec-tunnel" class="tunnel-hidden">
     <div class="tunnel-wall"></div>
+  </div>
+
+  <!-- ==============================
+       PAYWALL SCREEN (after door click)
+       Fixed IDs as requested
+       ============================== -->
+  <div id="paywall-screen" class="paywall-hidden" aria-hidden="true">
+    <div class="paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywall-title">
+      <div class="paywall-head">
+        <div id="paywall-title" class="paywall-title">Unlock Access</div>
+        <button id="paywall-close" class="paywall-close" type="button">✕</button>
+      </div>
+
+      <div id="paywall-message" class="paywall-message">
+        Choose plan and redeem optional codes to unlock this door.
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">Room selection</div>
+        <div class="paywall-row">
+          <button id="paywall-construction-btn" type="button" class="paywall-btn">Construction</button>
+          <button id="paywall-controlling-btn" type="button" class="paywall-btn">Contract Controlling</button>
+        </div>
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">Referral code (new customer)</div>
+        <div class="paywall-row">
+          <input id="paywall-referral-input" class="paywall-input" type="text" autocomplete="off" placeholder="Enter referral code" />
+          <button id="paywall-referral-apply" type="button" class="paywall-btn">Apply</button>
+        </div>
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">VIP code</div>
+        <div class="paywall-row">
+          <input id="paywall-vip-input" class="paywall-input" type="text" autocomplete="off" placeholder="Enter VIP code" />
+          <button id="paywall-vip-apply" type="button" class="paywall-btn">Apply</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="scripts/sounds.js" defer></script>
