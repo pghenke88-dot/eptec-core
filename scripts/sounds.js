@@ -19,6 +19,83 @@
   const cache = new Map();        // name -> Audio|null
   const existsCache = new Map();  // url -> boolean
 
+  // ---------- WebAudio "whoosh" (no mp3 needed) ----------
+  let audioCtx = null;
+
+  function getCtx() {
+    try {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audioCtx = new Ctx();
+      }
+      // Some browsers start suspended until user gesture; unlockAudio tries to resume
+      return audioCtx;
+    } catch {
+      return null;
+    }
+  }
+
+  // White-noise generator (buffer-based) so it works everywhere
+  function makeNoiseBuffer(ctx, seconds = 1.0) {
+    const sr = ctx.sampleRate || 44100;
+    const len = Math.max(1, Math.floor(sr * seconds));
+    const buffer = ctx.createBuffer(1, len, sr);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1);
+    return buffer;
+  }
+
+  // Sog/Woosh: noise + bandpass + gain envelope
+  function tunnelWhoosh(opts = {}) {
+    try {
+      if (!unlocked) return;
+      const ctx = getCtx();
+      if (!ctx) return;
+
+      const dur = Math.max(0.15, Math.min(2.5, Number(opts.duration) || 0.9));
+      const peak = Math.max(0, Math.min(1, Number(opts.peak) || 0.7));
+
+      const now = ctx.currentTime;
+
+      // noise source
+      const src = ctx.createBufferSource();
+      src.buffer = makeNoiseBuffer(ctx, dur);
+      src.loop = false;
+
+      // filter to feel like "wind tunnel"
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(250, now);
+      bp.frequency.linearRampToValueAtTime(1200, now + dur * 0.85);
+      bp.Q.setValueAtTime(0.9, now);
+
+      // amplitude envelope
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), now + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      // connect
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(ctx.destination);
+
+      src.start(now);
+      src.stop(now + dur + 0.02);
+
+      // cleanup (avoid leaking nodes)
+      src.onended = () => {
+        try { src.disconnect(); } catch {}
+        try { bp.disconnect(); } catch {}
+        try { g.disconnect(); } catch {}
+      };
+    } catch {
+      // never crash UI
+    }
+  }
+
+  // ---------- MP3 existence probing ----------
   async function exists(url) {
     if (existsCache.has(url)) return existsCache.get(url);
     try {
@@ -95,8 +172,15 @@
     ambientNodes = [wind, birds, water].filter(Boolean);
   }
 
-  function unlockAudio() {
+  async function unlockAudio() {
     unlocked = true;
+
+    // WebAudio context resume on user gesture (important!)
+    try {
+      const ctx = getCtx();
+      if (ctx && ctx.state === "suspended") await ctx.resume();
+    } catch {}
+
     // kleiner "poke" nach User-Geste (wenn uiConfirm fehlt, egal)
     playOneShot("uiConfirm", 0.001);
   }
@@ -106,9 +190,15 @@
     startAmbient,
     stopAmbient,
 
+    // UI clicks
     uiFocus:   () => playOneShot("uiFocus", 0.45),
     uiConfirm: () => playOneShot("uiConfirm", 0.55),
     flagClick: () => playOneShot("flagClick", 0.45),
-    tunnelFall: () => playOneShot("tunnelFall", 0.9)
+
+    // tunnel sfx (mp3)
+    tunnelFall: () => playOneShot("tunnelFall", 0.9),
+
+    // tunnel suction (no mp3)
+    tunnelWhoosh: (opts) => tunnelWhoosh(opts)
   };
 })();
