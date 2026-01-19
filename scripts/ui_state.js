@@ -20,6 +20,9 @@
   }
 
   function set(patch = {}) {
+    // ✅ tiny normalization: avoid undefined legalKind
+    if ("legalKind" in patch && patch.legalKind === undefined) patch.legalKind = null;
+
     Object.assign(state, patch);
     const snap = snapshot();
     for (const fn of listeners) {
