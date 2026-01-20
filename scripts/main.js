@@ -1998,4 +1998,111 @@ window.addEventListener('load', () => {
     console.log("[EPTEC] Language switcher hard-guard active");
   });
 })();
+/* =========================================================
+   EPTEC LANGUAGE SWITCHER PROXY (append-only)
+   Purpose:
+   - Works even if overlays block real clicks
+   - Does NOT require calling setLanguage() (not global)
+   - Instead triggers the existing listeners by dispatching clicks
+   ========================================================= */
+(() => {
+  "use strict";
+
+  function rectHasPoint(r, x, y) {
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
+  function dispatchRealClick(el) {
+    if (!el) return false;
+    try {
+      el.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+      return true;
+    } catch {
+      try {
+        el.click();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function topLangButtonAtPoint(x, y) {
+    const els = document.elementsFromPoint(x, y) || [];
+    for (const el of els) {
+      if (!el) continue;
+      // match your rail buttons
+      if (el.classList && el.classList.contains("lang-item") && el.getAttribute("data-lang")) return el;
+      // if click hits inside the button (e.g. text node)
+      const btn = el.closest ? el.closest(".lang-item[data-lang]") : null;
+      if (btn) return btn;
+    }
+    return null;
+  }
+
+  function ensureClickable() {
+    const sw = document.getElementById("language-switcher");
+    const toggle = document.getElementById("lang-toggle");
+    const rail = document.getElementById("lang-rail");
+    if (!sw || !toggle || !rail) return null;
+
+    sw.style.zIndex = "2147483647";
+    sw.style.pointerEvents = "auto";
+    toggle.style.pointerEvents = "auto";
+    rail.style.pointerEvents = "auto";
+    return { sw, toggle, rail };
+  }
+
+  function proxyDown(e) {
+    const ctx = ensureClickable();
+    if (!ctx) return;
+
+    const { sw, toggle, rail } = ctx;
+
+    const x = e.clientX;
+    const y = e.clientY;
+
+    // 1) If the user taps where the globe is -> fire the REAL toggle click
+    const rToggle = toggle.getBoundingClientRect();
+    if (rectHasPoint(rToggle, x, y)) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      dispatchRealClick(toggle);
+      return;
+    }
+
+    // 2) If open + tap on a language button -> fire its REAL click
+    if (sw.classList.contains("lang-open")) {
+      const rRail = rail.getBoundingClientRect();
+
+      // tap inside rail area
+      if (rectHasPoint(rRail, x, y)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const btn = topLangButtonAtPoint(x, y);
+        if (btn) dispatchRealClick(btn);
+        return;
+      }
+
+      // tap outside closes (let existing doc handlers do it, or do it ourselves)
+      // we do it ourselves to avoid race conditions:
+      sw.classList.remove("lang-open");
+    }
+  }
+
+  // Capture phase beats overlays + other handlers
+  document.addEventListener("pointerdown", proxyDown, true);
+
+  // Also support mouse clicks on desktop browsers that don't emit pointerdown reliably
+  document.addEventListener("mousedown", (e) => proxyDown(e), true);
+
+  console.log("[EPTEC] Language switcher proxy active");
+})();
 
