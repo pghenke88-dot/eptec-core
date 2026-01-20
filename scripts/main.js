@@ -1497,4 +1497,3 @@ window.addEventListener('load', () => {
         toast(t("dashboard_present_not_ready", "Present code cannot be applied right now."), "error", 2600);
       }
     });
-  }
