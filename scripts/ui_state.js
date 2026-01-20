@@ -254,3 +254,43 @@
   ui.setDemo = ui.setDemo || ((on) => ui.set({ modes: { ...(ui.state?.modes || {}), demo: !!on } }));
 
 })();
+// Erweiterung von State: Neue Funktion für Modusänderungen und Produktstatus
+(() => {
+  "use strict";
+
+  // Funktion zum Setzen des Modus (z.B. demo, admin, vip)
+  function setMode(mode, value) {
+    const validModes = ['demo', 'admin', 'vip'];
+    if (validModes.includes(mode)) {
+      EPTEC_UI_STATE.set({ modes: { ...EPTEC_UI_STATE.state.modes, [mode]: value } });
+    }
+  }
+
+  // Funktion zum Aktualisieren des Produktstatus
+  function updateProductStatus(products) {
+    EPTEC_UI_STATE.set({
+      products: {
+        construction: { active: products.construction?.active, tier: products.construction?.tier },
+        controlling: { active: products.controlling?.active, tier: products.controlling?.tier },
+        coupled: products.coupled || false
+      }
+    });
+  }
+
+  // Event-Listener für Produkt- oder Modusänderungen, z.B. nach erfolgreichem Login
+  EPTEC_UI_STATE.onChange((newState) => {
+    if (newState.modes.demo) {
+      // Beispiel: Demo-Modus aktiviert -> UI ändern
+      console.log("Demo-Modus aktiviert");
+    }
+    if (newState.products.construction.active) {
+      // Beispiel: Construction aktiv -> UI ändern
+      console.log("Construction ist aktiv");
+    }
+  });
+
+  // Füge die Funktionen dem globalen Objekt hinzu
+  window.EPTEC_UI_STATE.setMode = setMode;
+  window.EPTEC_UI_STATE.updateProductStatus = updateProductStatus;
+
+})();
