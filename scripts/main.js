@@ -1918,4 +1918,84 @@ window.addEventListener('load', () => {
     if (bind() || tries > 40) clearInterval(t); // ~2s max
   }, 50);
 })();
+/* =========================================================
+   EPTEC LANGUAGE SWITCHER HARD-GUARD (append-only)
+   Fixes blocked globe / language toggle clicks
+   ========================================================= */
+(() => {
+  "use strict";
+
+  function ready(fn) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", fn);
+    } else {
+      fn();
+    }
+  }
+
+  ready(() => {
+    const switcher = document.getElementById("language-switcher");
+    const toggle   = document.getElementById("lang-toggle");
+    const rail     = document.getElementById("lang-rail");
+
+    if (!switcher || !toggle || !rail) {
+      console.warn("[EPTEC][LANG] switcher elements missing");
+      return;
+    }
+
+    /* --- HARD GUARANTEE: pointer-events & z-index --- */
+    switcher.style.pointerEvents = "auto";
+    toggle.style.pointerEvents   = "auto";
+    rail.style.pointerEvents     = "auto";
+
+    switcher.style.zIndex = "9999999";
+    toggle.style.zIndex   = "9999999";
+    rail.style.zIndex     = "9999999";
+
+    /* --- FORCE CLICK HANDLER (capture + stopPropagation) --- */
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      switcher.classList.toggle("lang-open");
+
+      // optional telemetry
+      try {
+        window.EPTEC_ACTIVITY?.log?.("LANG_GLOBE_CLICK", {
+          open: switcher.classList.contains("lang-open")
+        });
+      } catch {}
+    }, true); // ⬅ capture mode (beats global blockers)
+
+    /* --- Language selection always works --- */
+    rail.querySelectorAll("[data-lang]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const lang = btn.getAttribute("data-lang");
+        if (!lang) return;
+
+        try {
+          window.setLanguage?.(lang);
+        } catch {
+          console.error("[EPTEC][LANG] setLanguage missing");
+        }
+
+        switcher.classList.remove("lang-open");
+      }, true);
+    });
+
+    /* --- ESC always closes --- */
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        switcher.classList.remove("lang-open");
+      }
+    }, true);
+
+    console.log("[EPTEC] Language switcher hard-guard active");
+  });
+})();
 
