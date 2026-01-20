@@ -1,18 +1,12 @@
 /**
  * scripts/ui_controller.js
  * EPTEC UI-Control (renders DOM from UI-State)
- * Mini-updates for stable legal routing:
- * - legalKind is now a stable key: imprint | terms | support | privacy
- * - UI title is NOT set to the raw key anymore (main.js syncLegalTitle() sets localized title)
- * - Placeholder text stays consistent + includes "Stand: <date>"
- * - No backend required
  *
- * Dashboard rendering (non-breaking, matches current index.html):
- * - coupling-banner (single element, no coupling-banner-text required)
- * - present-status
- * - referral-code-block + referral-code-value
- * - construction/controlling status + tier
- * - next-invoice-date + next-invoice-discount (no block wrapper required)
+ * - Renders DOM strictly from EPTEC_UI_STATE
+ * - Owns modal open/close
+ * - Owns footer/Legal click bindings (UI behavior)
+ * - NO inline Audio globals (no "Audio.play" free variable)
+ * - Sound triggers (optional) only via window.SoundEngine or EPTEC_BRAIN
  */
 
 (() => {
@@ -85,7 +79,6 @@
 
   // ---------- dashboard renderer ----------
   function renderDashboard(s) {
-    // Rooms
     const c = s?.products?.construction;
     const k = s?.products?.controlling;
 
@@ -99,7 +92,6 @@
       setText("controlling-tier", k.tier || "—");
     }
 
-    // Coupling banner (your index has only coupling-banner)
     const coupled = !!(s?.products?.coupled);
     const banner = $("coupling-banner");
     if (banner) {
@@ -114,7 +106,6 @@
       }
     }
 
-    // Referral code
     const ref = s?.codes?.referral;
     if (ref && typeof ref.code === "string" && ref.code.trim()) {
       setText("referral-code-value", ref.code.trim());
@@ -123,7 +114,6 @@
       setDisplay("referral-code-block", "none");
     }
 
-    // Present status
     const pres = s?.codes?.present;
     if (pres) {
       const status = String(pres.status || "none");
@@ -144,7 +134,6 @@
       }
     }
 
-    // Billing preview (your index uses next-invoice-date and next-invoice-discount without a wrapper)
     const billing = s?.billing;
     if (billing) {
       if (billing.nextInvoiceDate) setText("next-invoice-date", billing.nextInvoiceDate);
@@ -161,15 +150,15 @@
     hide($("forgot-screen"));
     hide($("legal-screen"));
 
-    if (s.modal === "register") show($("register-screen"));
-    if (s.modal === "forgot") show($("forgot-screen"));
-    if (s.modal === "legal") show($("legal-screen"));
+    if (s?.modal === "register") show($("register-screen"));
+    if (s?.modal === "forgot") show($("forgot-screen"));
+    if (s?.modal === "legal") show($("legal-screen"));
 
-    if (s.modal === "legal") {
+    if (s?.modal === "legal") {
       const title = $("legal-title");
       const body = $("legal-body");
 
-      // Do not show raw key as title. main.js sets localized title.
+      // Title is localized by main.js (or later by locales/doc system)
       if (title) title.textContent = "";
       if (body) body.textContent = legalPlaceholderText();
     }
@@ -177,24 +166,43 @@
     const meadow = $("meadow-view");
     const r1 = $("room-1-view");
     const r2 = $("room-2-view");
-    if (meadow) meadow.style.display = (s.view === "meadow") ? "flex" : "none";
-    if (r1) r1.style.display = (s.view === "room1") ? "block" : "none";
-    if (r2) r2.style.display = (s.view === "room2") ? "block" : "none";
+    if (meadow) meadow.style.display = (s?.view === "meadow") ? "flex" : "none";
+    if (r1) r1.style.display = (s?.view === "room1") ? "block" : "none";
+    if (r2) r2.style.display = (s?.view === "room2") ? "block" : "none";
 
-    // Dashboard visuals (never break UI)
     try { renderDashboard(s); } catch {}
   }
 
-  function init() {
-    window.EPTEC_UI_STATE?.onChange(render);
-
+  // ---------- UI bindings (only UI responsibilities) ----------
+  function bindModalClosers() {
     $("reg-close")?.addEventListener("click", () => window.EPTEC_UI_STATE?.set({ modal: null }));
     $("forgot-close")?.addEventListener("click", () => window.EPTEC_UI_STATE?.set({ modal: null }));
     $("legal-close")?.addEventListener("click", () => window.EPTEC_UI_STATE?.set({ modal: null }));
   }
 
+  function bindFooterLegalClicks() {
+    // These IDs are in index (or in injected footer asset)
+    $("link-imprint")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("imprint"));
+    $("link-terms")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("terms"));
+    $("link-support")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("support"));
+    $("link-privacy-footer")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("privacy"));
+  }
+
+  function init() {
+    // UI state drives rendering
+    window.EPTEC_UI_STATE?.onChange?.(render);
+
+    // One initial render for safety
+    try { render(window.EPTEC_UI_STATE?.state || { view: "meadow", modal: null }); } catch {}
+
+    bindModalClosers();
+    bindFooterLegalClicks();
+  }
+
+  // ---------- Public API ----------
   window.EPTEC_UI = {
     init,
+
     openRegister: () => window.EPTEC_UI_STATE?.set({ modal: "register", legalKind: null }),
     openForgot: () => window.EPTEC_UI_STATE?.set({ modal: "forgot", legalKind: null }),
 
@@ -207,13 +215,5 @@
     hideMsg,
     toast
   };
-})();
-// Windgeräusch beim ersten Klick
-let firstClick = true;
 
-document.addEventListener("click", () => {
-    if (firstClick) {
-        Audio.play("snd-wind", 0.4);  // Windgeräusch mit Lautstärke 0.4
-        firstClick = false;  // Danach wird sichergestellt, dass das Geräusch nur einmal abgespielt wird
-    }
-});
+})();
