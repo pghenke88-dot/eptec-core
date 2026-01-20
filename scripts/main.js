@@ -833,4 +833,37 @@
     if (el) el.setAttribute("placeholder", String(v ?? ""));
   }
 })();
+// Beispiel für den Initialisierungsprozess
+function initMain() {
+  // Initialisierung von Logik und Feed
+  const initialFeed = getCurrentFeed(); // Hole aktuelle Feed-Daten aus Logik
+  DashboardBridge.writeFeed(initialFeed);
+
+  // UI mit dem ersten Status des Zugriffs synchronisieren
+  const access = initialFeed.access || { construction: false, controlling: false };
+  $ui()?.set?.({ access });
+
+  // Logge Initialisierungsdaten für Compliance
+  Compliance.log("SYSTEM", "Main initialized", { feed: initialFeed });
+}
+
+// Überprüfe Administratorberechtigungen bei Bedarf
+document.querySelector('#admin-auth-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const inputCode = e.target.elements['admin-code'].value;
+  const level = e.target.elements['auth-level'].value;
+  const isAdmin = Auth.verifyAdmin(inputCode, level); // Admin-Überprüfung aus Logic
+  if (isAdmin) {
+    alert('Administratorzugriff gewährt!');
+  } else {
+    alert('Zugang verweigert!');
+  }
+});
+
+// Beispiel für das Laden und Starten von Systemprozessen bei Seitenaufruf
+window.addEventListener('load', () => {
+  initMain(); // Init-Funktion aus Main aufrufen
+  Compliance.log("SYSTEM", "App Loaded", { sessionID: Config.ACTIVE_USER.sessionID });
+  console.log('EPTEC SYSTEM: Main logic successfully loaded');
+});
 
