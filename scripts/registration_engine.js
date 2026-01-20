@@ -1,181 +1,151 @@
-/**
- * scripts/registration_engine.js
- * EPTEC Registration Engine – COMPLETE (single source)
- *
- * Rules exactly as described:
- * - Username: min 5 chars, min 1 uppercase, min 1 special character
- * - Password: min 8 chars, min 1 letter, min 1 number, min 1 special character
- *
- * UX principle:
- * - Only provide explicit hints for non-self-explanatory fields:
- *   -> DOB format hint per language (neutral, display-only)
- *
- * Notes:
- * - Pure validation + suggestion helpers (no DOM, no backend)
- * - No throw policy (never crashes app)
- */
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import session from "express-session";
+import csrf from "csurf";
+import crypto from "crypto";
 
-(() => {
-  "use strict";
+const app = express();
 
-  /* -----------------------------
-   * 0) SAFE HELPERS (NO-THROW)
-   * ----------------------------- */
-  function safeStr(v) { return String(v ?? ""); }
-  function safeTrim(v) { return safeStr(v).trim(); }
+// ✅ deine GitHub Pages Origin (genau so!)
+const FRONTEND_ORIGIN = "https://pghenke88-dot.github.io";
 
-  function normalizeLang(lang) {
-    const l = safeStr(lang || "en").toLowerCase().trim();
-    if (l === "jp") return "ja";
-    if (l === "ua") return "uk";
-    // allow "en-US" -> "en", "de-DE" -> "de"
-    return l.split("-")[0] || "en";
+// Behind hosting proxies (Render/Railway/Fly/etc.)
+app.set("trust proxy", 1);
+
+app.use(express.json());
+app.use(cookieParser());
+
+// ✅ CORS: NICHT "*" bei credentials
+app.use(cors({
+  origin: FRONTEND_ORIGIN,
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "X-CSRF-Token"]
+}));
+
+// Preflight
+app.options("*", cors({
+  origin: FRONTEND_ORIGIN,
+  credentials: true
+}));
+
+// ✅ Session Cookie: HttpOnly, Secure, SameSite=None (Cross-Site)
+app.use(session({
+  name: "eptec_session",
+  secret: process.env.SESSION_SECRET || "CHANGE_ME_IN_ENV",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true,        // 🔥 MUST be true for SameSite=None
+    sameSite: "none",    // 🔥 cross-site (GitHub Pages -> API domain)
+    maxAge: 1000 * 60 * 60 * 24 * 7
   }
+}));
 
-  /* -----------------------------
-   * 1) RULES
-   * ----------------------------- */
-  const Rules = Object.freeze({
-    username: Object.freeze({
-      min: 5,
-      upper: /[A-Z]/,
-      special: /[^a-zA-Z0-9]/ // any non-alnum
-    }),
-    password: Object.freeze({
-      min: 8,
-      letter: /[A-Za-z]/,
-      number: /[0-9]/,
-      special: /[^a-zA-Z0-9]/
-    })
+/**
+ * ✅ CSRF Setup
+ * We use csurf with session-based tokens.
+ * Frontend must fetch /auth/csrf once and then send header X-CSRF-Token on POSTs.
+ */
+const csrfProtection = csrf();
+
+// Issue a CSRF token (frontend fetches this first)
+app.get("/auth/csrf", csrfProtection, (req, res) => {
+  res.json({ ok: true, data: { csrfToken: req.csrfToken() } });
+});
+
+// ------------------------------------------------------------
+// Minimal in-memory store (replace with DB later)
+// ------------------------------------------------------------
+const USERS = new Map(); // usernameLower -> { username, email, passHash }
+function hashPassword(pw) {
+  // minimal placeholder; use bcrypt/argon2 in production
+  return crypto.createHash("sha256").update(String(pw)).digest("hex");
+}
+
+// ------------------------------------------------------------
+// Auth endpoints (match your api_client.js)
+// ------------------------------------------------------------
+
+// Register (CSRF protected)
+app.post("/auth/register", csrfProtection, (req, res) => {
+  const { username, password, email } = req.body || {};
+  if (!username || !password || !email) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
+
+  const key = String(username).toLowerCase().trim();
+  if (USERS.has(key)) return res.status(409).json({ ok: false, message: "USERNAME_TAKEN" });
+
+  USERS.set(key, {
+    username: String(username).trim(),
+    email: String(email).trim(),
+    passHash: hashPassword(password)
   });
 
-  /* -----------------------------
-   * 2) USERNAME VALIDATION
-   * ----------------------------- */
-  function validateUsername(value) {
-    try {
-      const s = safeStr(value);
-      return (
-        s.length >= Rules.username.min &&
-        Rules.username.upper.test(s) &&
-        Rules.username.special.test(s)
-      );
-    } catch {
-      return false;
-    }
+  // Later: send verification email here
+  res.json({ ok: true, message: "REGISTER_OK" });
+});
+
+// Login (CSRF protected)
+app.post("/auth/login", csrfProtection, (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
+
+  const key = String(username).toLowerCase().trim();
+  const user = USERS.get(key);
+  if (!user) return res.status(401).json({ ok: false, message: "LOGIN_INVALID" });
+
+  if (user.passHash !== hashPassword(password)) {
+    return res.status(401).json({ ok: false, message: "LOGIN_INVALID" });
   }
 
-  // Optional: return "why" code without forcing UI to display anything
-  function usernameErrorCode(value) {
-    try {
-      const s = safeStr(value);
-      if (s.length < Rules.username.min) return "min";
-      if (!Rules.username.upper.test(s)) return "upper";
-      if (!Rules.username.special.test(s)) return "special";
-      return "";
-    } catch {
-      return "unknown";
-    }
-  }
+  // ✅ session established
+  req.session.userId = key;
 
-  /* -----------------------------
-   * 3) PASSWORD VALIDATION
-   * ----------------------------- */
-  function validatePassword(value) {
-    try {
-      const s = safeStr(value);
-      return (
-        s.length >= Rules.password.min &&
-        Rules.password.letter.test(s) &&
-        Rules.password.number.test(s) &&
-        Rules.password.special.test(s)
-      );
-    } catch {
-      return false;
-    }
-  }
+  res.json({ ok: true, message: "LOGIN_OK" });
+});
 
-  function passwordErrorCode(value) {
-    try {
-      const s = safeStr(value);
-      if (s.length < Rules.password.min) return "min";
-      if (!Rules.password.letter.test(s)) return "letter";
-      if (!Rules.password.number.test(s)) return "number";
-      if (!Rules.password.special.test(s)) return "special";
-      return "";
-    } catch {
-      return "unknown";
-    }
-  }
+// Session check (optional but useful)
+app.get("/auth/session", (req, res) => {
+  res.json({ ok: true, data: { loggedIn: !!req.session.userId } });
+});
 
-  /* -----------------------------
-   * 4) USERNAME SUGGESTIONS
-   * ----------------------------- */
-  function usernameSuggestions(base) {
-    try {
-      const b = safeTrim(base).replace(/\s+/g, "");
-      const safeBase = b || "User";
-      const n = () => Math.floor(Math.random() * 900 + 100); // 100..999
-      return [`${safeBase}${n()}`, `${safeBase}_${n()}`];
-    } catch {
-      return ["User123", "User_456"];
-    }
-  }
+// Logout
+app.post("/auth/logout", csrfProtection, (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie("eptec_session", { httpOnly: true, secure: true, sameSite: "none" });
+    res.json({ ok: true, message: "LOGOUT_OK" });
+  });
+});
 
-  /* -----------------------------
-   * 5) DOB FORMAT HINT (display-only)
-   * ----------------------------- */
-  function dobFormatHint(lang) {
-    // Neutral hint only; not used for validation unless UI opts in.
-    try {
-      const l = normalizeLang(lang);
+// Forgot password (CSRF protected; later: email)
+app.post("/auth/forgot", csrfProtection, (req, res) => {
+  const { identity } = req.body || {};
+  if (!identity) return res.status(400).json({ ok: false, message: "MISSING_IDENTITY" });
 
-      const map = {
-        de: "DD.MM.YYYY",
-        fr: "DD/MM/YYYY",
-        es: "DD/MM/YYYY",
-        it: "DD/MM/YYYY",
-        pt: "DD/MM/YYYY",
-        ar: "DD/MM/YYYY",
-        nl: "DD-MM-YYYY",
-        ru: "DD.MM.YYYY",
-        uk: "DD.MM.YYYY",
-        en: "MM/DD/YYYY",
-        ja: "YYYY-MM-DD",
-        zh: "YYYY-MM-DD"
-      };
+  // Later: generate token, email it
+  res.json({ ok: true, message: "FORGOT_OK" });
+});
 
-      return map[l] || map.en;
-    } catch {
-      return "MM/DD/YYYY";
-    }
-  }
+// Reset password (CSRF protected; later: token validation)
+app.post("/auth/reset", csrfProtection, (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (!token || !newPassword) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
 
-  /* -----------------------------
-   * 6) OPTIONAL DOB VALIDATION (PERMISSIVE BY DEFAULT)
-   * ----------------------------- */
-  function validateBirthdate(_birthdateStr, _lang) {
-    // Append-only friendly: keep permissive so it never blocks registration unexpectedly.
-    // If you later want strict parsing, you can update this function.
-    return true;
-  }
+  // Later: validate token -> find user -> update password hash
+  res.json({ ok: true, message: "RESET_OK" });
+});
 
-  /* -----------------------------
-   * 7) PUBLIC API
-   * ----------------------------- */
-  window.RegistrationEngine = {
-    // core
-    validateUsername,
-    validatePassword,
-    usernameSuggestions,
-    dobFormatHint,
+// Verify (CSRF protected; later: token validation)
+app.post("/auth/verify", csrfProtection, (req, res) => {
+  const { token } = req.body || {};
+  if (!token) return res.status(400).json({ ok: false, message: "MISSING_TOKEN" });
 
-    // optional helpers (non-breaking)
-    usernameErrorCode,
-    passwordErrorCode,
-    validateBirthdate,
+  // Later: validate token -> mark verified
+  res.json({ ok: true, message: "VERIFY_OK" });
+});
 
-    // metadata (useful for debugging / UI)
-    Rules
-  };
-})();
+app.listen(process.env.PORT || 3000, () => {
+  console.log("EPTEC API listening");
+});
