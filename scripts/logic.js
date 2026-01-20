@@ -751,6 +751,247 @@ const EPTEC_BRAIN = (() => {
 })();
 
 window.EPTEC_BRAIN = EPTEC_BRAIN;
+// 1. Zugang zu Türen und Produkte
+// Berechnung des Zugangs zu den Türen basierend auf den Produkten
+function deriveAccessFromProducts(products) {
+  const p = isObj(products) ? products : {};
+  const c = !!p?.construction?.active;
+  const k = !!p?.controlling?.active;
+  return {
+    construction: c,
+    controlling: (k && c)
+  };
+}
+
+// Setzt den Zugang zu den Türen und synchronisiert die UI
+function setAccess(access) {
+  const a = isObj(access) ? access : {};
+  const next = writeFeed({
+    access: {
+      construction: !!a.construction,
+      controlling: !!a.controlling
+    }
+  });
+
+  // Aktualisierung der Benutzeroberfläche
+  $ui()?.set?.({
+    access: {
+      construction: !!next.access?.construction,
+      controlling: !!next.access?.controlling
+    }
+  });
+
+  return next.access || { construction: false, controlling: false };
+}
+
+// Funktion zum Entsperren der Türen basierend auf den Produkten
+function unlockDoor(door) {
+  const d = normalizeDoor(door);
+  if (!d) return { ok: false, reason: "INVALID_DOOR" };
+
+  const feed = readFeed();
+  const p = feed.products || {};
+  const derived = deriveAccessFromProducts(p);
+
+  if (d === DOORS.CONSTRUCTION) {
+    const nextProducts = {
+      construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
+      controlling:  { active: !!p?.controlling?.active, tier: (p?.controlling?.tier || null) }
+    };
+    setProducts(nextProducts);
+    const acc = deriveAccessFromProducts(readFeed().products || {});
+    setAccess(acc);
+    return { ok: true, door: d, access: acc };
+  }
+
+  if (d === DOORS.CONTROLLING) {
+    const nextProducts = {
+      construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
+      controlling:  { active: true, tier: (p?.controlling?.tier || "BASIS") }
+    };
+    setProducts(nextProducts);
+    const acc = deriveAccessFromProducts(readFeed().products || {});
+    setAccess(acc);
+    return { ok: true, door: d, access: acc };
+  }
+
+  setAccess(derived);
+  return { ok: true, door: d, access: derived };
+}
+
+// Überprüft, ob die Tür entsperrt ist
+function isDoorUnlocked(door) {
+  const d = normalizeDoor(door);
+  if (!d) return false;
+  const a = getAccess();
+  return !!a[d];
+}
+
+// 2. Present-Codes (global) und VIP-Codes (extra)
+
+// Erstellen eines globalen Present-Codes (Rabatt)
+function createPresentCampaign(code, discountPercent = 50, daysValid = 30) {
+  const db = loadDB();
+  const c = Safe.clean(code).toUpperCase();
+  if (!c) return { ok: false, code: "EMPTY" };
+
+  const createdAt = Safe.nowISO();
+  const validUntil = new Date(Safe.nowMs() + daysValid * 24 * 60 * 60 * 1000).toISOString();
+
+  db.codes.present[c] = {
+    code: c,
+    discountPercent: Number(discountPercent) || 50,
+    createdAt,
+    validUntil
+  };
+  saveDB(db);
+  return { ok: true, present: db.codes.present[c] };
+}
+
+// Anwenden eines Present-Codes (global) für den Benutzer
+function applyPresentCode(username, code) {
+  const db = loadDB();
+  const u = findByUsername(db, username);
+  if (!u) return { ok: false, code: "NO_USER" };
+
+  const c = Safe.clean(code).toUpperCase();
+  const campaign = db.codes.present[c];
+  if (!campaign) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
+
+  if (campaign.validUntil && new Date() > new Date(campaign.validUntil)) {
+    return { ok: false, code: "EXPIRED", message: "Code abgelaufen.", campaign };
+  }
+
+  u.usedPresentCodes = u.usedPresentCodes || {};
+  if (u.usedPresentCodes[c]) {
+    return { ok: false, code: "ALREADY_USED", message: "Code bereits verwendet.", campaign };
+  }
+
+  u.usedPresentCodes[c] = Safe.nowISO();
+  u.updatedAt = Safe.nowISO();
+  db.users[u.username] = u;
+  saveDB(db);
+
+  return { ok: true, code: "APPLIED", campaign };
+}
+
+// VIP-Codes (extra) erstellen
+function createExtraPresentCode({ freeMonths = 0, freeForever = false } = {}) {
+  const db = loadDB();
+  const code = ("VIP-" + Safe.randToken(6)).toUpperCase();
+
+  db.codes.extra[code] = {
+    code,
+    freeMonths: Number(freeMonths) || 0,
+    freeForever: !!freeForever,
+    maxRedemptions: 1,
+    redeemedBy: null,
+    redeemedAt: null,
+    createdAt: Safe.nowISO()
+  };
+
+  saveDB(db);
+  return { ok: true, extra: db.codes.extra[code] };
+}
+
+// Anwenden eines VIP-Codes für den Benutzer
+function redeemExtraPresentCode(username, code) {
+  const db = loadDB();
+  const u = findByUsername(db, username);
+  if (!u) return { ok: false, code: "NO_USER" };
+
+  const c = Safe.clean(code).toUpperCase();
+  const x = db.codes.extra[c];
+  if (!x) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
+
+  if (x.redeemedBy) return { ok: false, code: "ALREADY_REDEEMED", message: "Code bereits eingelöst." };
+
+  x.redeemedBy = u.username;
+  x.redeemedAt = Safe.nowISO();
+
+  u.vip = u.vip || { freeForever: false, freeMonths: 0 };
+  u.vip.freeForever = u.vip.freeForever || !!x.freeForever;
+  u.vip.freeMonths = Number(u.vip.freeMonths || 0) + Number(x.freeMonths || 0);
+
+  u.updatedAt = Safe.nowISO();
+  db.users[u.username] = u;
+  db.codes.extra[c] = x;
+  saveDB(db);
+
+  return { ok: true, code: "VIP_APPLIED", extra: x, vip: u.vip };
+}
+
+// 3. Referral-Codes (Benutzerreferenzierung)
+
+// Referral-Code für den Benutzer erstellen (wenn dieser noch keinen hat)
+function getOrCreateReferralCode(username) {
+  const db = loadDB();
+  const u = findByUsername(db, username);
+  if (!u) return { ok: false, code: "NO_USER" };
+
+  if (u.referralCode) return { ok: true, referralCode: u.referralCode };
+
+  const ref = ("REF-" + Safe.randToken(6)).toUpperCase();
+  u.referralCode = ref;
+  u.updatedAt = Safe.nowISO();
+  db.users[u.username] = u;
+  saveDB(db);
+
+  return { ok: true, referralCode: ref };
+}
+
+// Anwenden eines Referral-Codes (für Neukunden)
+function redeemReferralCode(newUsername, referralCode) {
+  const db = loadDB();
+  const newU = findByUsername(db, newUsername);
+  if (!newU) return { ok: false, code: "NO_USER" };
+
+  if (newU.billing?.signupFeeWaived) {
+    return { ok: false, code: "NOT_NEW", message: "Nur für Neukunden." };
+  }
+
+  const ref = Safe.clean(referralCode).toUpperCase();
+  if (!ref.startsWith("REF-")) return { ok: false, code: "INVALID_REF" };
+
+  const owner = Object.values(db.users).find(u => (u.referralCode || "").toUpperCase() === ref);
+
+  if (owner && owner.username === newU.username) {
+    return { ok: false, code: "SELF_REFERRAL", message: "Nicht für Eigenwerbung." };
+  }
+
+  newU.billing = newU.billing || {};
+  newU.billing.signupFeeWaived = true;
+  newU.updatedAt = Safe.nowISO();
+  db.users[newU.username] = newU;
+  saveDB(db);
+
+  return { ok: true, code: "REF_APPLIED", message: "Einmalzahlung erlassen (Demo).", owner: owner ? owner.username : null };
+}
+
+// 4. Übersetzungslogik (Mehrsprachigkeit)
+
+// Umstellung der Sprache basierend auf der Auswahl
+function setLanguage(lang) {
+  currentLang = normalizeLang(lang);
+  document.documentElement.setAttribute("dir", dict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
+  applyTranslations();
+  updateClockOnce();
+  syncLegalTitle();
+}
+
+// Übersetzungen anwenden (z.B. für Login, Registrierung)
+function applyTranslations() {
+  setPlaceholder("login-username", t("login_username", "Username"));
+  setPlaceholder("login-password", t("login_password", "Password"));
+  setText("btn-login", t("login_btn", "Login"));
+  setText("btn-register", t("register_btn", "Register"));
+  setText("btn-forgot", t("forgot_btn", "Forgot password"));
+
+  setText("link-imprint", t("legal_imprint", "Imprint"));
+  setText("link-terms", t("legal_terms", "Terms"));
+  setText("link-support", t("legal_support", "Support"));
+  setText("link-privacy-footer", t("legal_privacy", "Privacy Policy"));
+}
 
 // ✅ Global hook for UI (optional, but perfect for "we hear every click")
 window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
