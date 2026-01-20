@@ -2349,38 +2349,3 @@ window.addEventListener('load', () => {
     if (apply() || tries > 40) clearInterval(t);
   }, 50);
 })();
-/* =========================================================
-   EPTEC LANGUAGE SWITCHER – HARD OVERRIDE (append-only)
-   Fixes permanently:
-   - blocked globe
-   - instant close
-   - overlay / tunnel / document click interference
-   - multiple competing listeners
-   ========================================================= */
-(() => {
-  "use strict";
-
-  function forceLangSwitcher() {
-    const sw = document.getElementById("language-switcher");
-    const toggle = document.getElementById("lang-toggle");
-    const rail = document.getElementById("lang-rail");
-
-    if (!sw || !toggle || !rail) return false;
-
-    // --- FORCE VISIBILITY & INTERACTION ---
-    sw.style.zIndex = "2147483647";
-    sw.style.pointerEvents = "auto";
-    toggle.style.pointerEvents = "auto";
-    rail.style.pointerEvents = "auto";
-
-    // --- HARD CSS OVERRIDE ---
-    if (!document.getElementById("eptec-lang-force-style")) {
-      const style = document.createElement("style");
-      style.id = "eptec-lang-force-style";
-      style.textContent = `
-        #language-switcher { pointer-events:auto !important; z-index:2147483647 !important; }
-        #language-switcher * { pointer-events:auto !important; }
-        .lang-open #lang-rail { opacity:1 !important; transform:translateX(0) scaleX(1) !important; }
-      `;
-      document.head.appendChild(style);
-    }
