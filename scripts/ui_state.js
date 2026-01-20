@@ -361,3 +361,13 @@ const Audio = {
         if (this.interval) { clearInterval(this.interval); this.interval = null; }
     }
 };
+function navigateToTunnel() {
+    const tunnel = Safe.byId('eptec-tunnel');
+    tunnel.classList.remove('tunnel-hidden');
+    Audio.play("snd-tunnel", 1.0); // Tunnelgeräusch mit voller Lautstärke
+
+    setTimeout(() => {
+        tunnel.classList.add('tunnel-hidden');
+        Navigation.triggerTunnel("R2");  // Weiterleitung zum Raum 2 nach dem Tunnelgeräusch
+    }, 2000); // Verzögerung für das Tunnelgeräusch
+}
