@@ -446,3 +446,17 @@
     redeemExtraPresentCode
   };
 })();
+// Master-Login Logik
+function masterLogin(username, password) {
+    // Überprüfe, ob der Login gültig ist
+    const loginSuccess = checkMasterLogin(username, password); // Diese Funktion implementierst du selbst
+
+    if (loginSuccess) {
+        // Nach erfolgreichem Login Tunnelgeräusch abspielen
+        Audio.play("snd-tunnel", 1.0);  // Tunnelgeräusch mit voller Lautstärke
+        Navigation.triggerTunnel("R2");  // Navigiere zum nächsten Raum
+    } else {
+        // Fehlermeldung oder andere Logik
+        console.error("Fehler beim Login");
+    }
+}
