@@ -1,10 +1,25 @@
 /**
  * scripts/mock_backend.js
- * EPTEC Phase-1 Backend (Mock)
+ * EPTEC Phase-1 Backend (Mock) — FINAL + Ergänzungen
+ *
  * - LocalStorage "DB"
  * - Verification + Password Reset Links simulated
- * - Added: Present (global), Referral (user), Extra-Present (VIP) code logic
- * - Designed to be swapped later with real HTTP backend
+ * - Codes:
+ *   - Present (global, admin-generated, 30 days, active/inactive, apply once per user)
+ *   - Referral (user-generated, unlimited, for new customers)
+ *   - VIP (admin-generated, one-time redemption, active/inactive)
+ * - Admin lists:
+ *   - listPresentCampaigns / disablePresentCampaign
+ *   - listVipCodes / disableVipCode
+ * - Newsletter/Inbox (placeholder):
+ *   - sendBroadcast -> delivered into each user's inbox
+ *   - getUserInbox / markInboxRead
+ * - Country locks (admin emergency storage):
+ *   - setCountryLock / getCountryLocks / clearCountryLock
+ * - Username policy:
+ *   - isUsernameAllowed (reserved words + forbidden words + characters)
+ *
+ * Designed to be swapped later with real HTTP backend.
  */
 
 (() => {
@@ -16,7 +31,7 @@
     },
     nowISO() { return new Date().toISOString(); },
     nowMs() { return Date.now(); },
-    randToken(len = 32) {
+    randToken(len = 16) {
       const a = new Uint8Array(len);
       crypto.getRandomValues(a);
       return Array.from(a).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -24,24 +39,74 @@
     clean(s) { return String(s ?? "").trim(); }
   };
 
-  const DB_KEY = "EPTEC_MOCK_DB_V1";
+  const DB_KEY = "EPTEC_MOCK_DB_V2";
+
+  // ------------------------------------------------------------------
+  // Username safety / policy (extendable)
+  // ------------------------------------------------------------------
+  const RESERVED_USERNAMES = [
+    "admin","root","system","support","security","eptec","billing","payment","moderator"
+  ];
+
+  const FORBIDDEN_WORDS = [
+    "fuck","shit","bitch","cunt","nazi","hitler","terror","porn"
+  ];
+
+  // Allow: letters, numbers, underscore, dash, dot (feel free to tighten)
+  const USERNAME_ALLOWED_CHARS = /^[a-zA-Z0-9_.-]+$/;
+
+  function isUsernameAllowed(username) {
+    const u = Safe.clean(username).toLowerCase();
+    if (!u) return { ok: false, reason: "EMPTY" };
+    if (u.length < 4) return { ok: false, reason: "TOO_SHORT" };
+    if (!USERNAME_ALLOWED_CHARS.test(u)) return { ok: false, reason: "BAD_CHARS" };
+    if (RESERVED_USERNAMES.includes(u)) return { ok: false, reason: "RESERVED" };
+    if (FORBIDDEN_WORDS.some(w => u.includes(w))) return { ok: false, reason: "FORBIDDEN" };
+    return { ok: true };
+  }
+
+  // ------------------------------------------------------------------
+  // DB
+  // ------------------------------------------------------------------
+  function emptyDB() {
+    return {
+      users: {},       // usernameLower -> user object
+      byEmail: {},     // emailLower -> usernameLower
+      mails: [],       // global simulated mailbox feed
+      inbox: {},       // usernameLower -> [{id, createdAt, subject, body, read}]
+      codes: {
+        present: {},   // CODE -> { code, discountPercent, createdAt, validUntil, active }
+        vip: {}        // CODE -> { code, freeMonths, freeForever, maxRedemptions, redeemedBy, redeemedAt, createdAt, active }
+      },
+      admin: {
+        countryLocks: {},  // COUNTRY -> { status, step, requestedAt, effectiveAt, activatedAt? }
+        broadcasts: []     // [{id, createdAt, subject, body, meta}]
+      }
+    };
+  }
 
   function loadDB() {
     return Safe.try(() => {
       const raw = localStorage.getItem(DB_KEY);
-      if (!raw) return { users: {}, byEmail: {}, mails: [], codes: { present: {}, extra: {} } };
+      if (!raw) return emptyDB();
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return { users: {}, byEmail: {}, mails: [], codes: { present: {}, extra: {} } };
+      if (!parsed || typeof parsed !== "object") return emptyDB();
 
       parsed.users = parsed.users && typeof parsed.users === "object" ? parsed.users : {};
       parsed.byEmail = parsed.byEmail && typeof parsed.byEmail === "object" ? parsed.byEmail : {};
       parsed.mails = Array.isArray(parsed.mails) ? parsed.mails : [];
-      parsed.codes = parsed.codes && typeof parsed.codes === "object" ? parsed.codes : { present: {}, extra: {} };
+      parsed.inbox = parsed.inbox && typeof parsed.inbox === "object" ? parsed.inbox : {};
+
+      parsed.codes = parsed.codes && typeof parsed.codes === "object" ? parsed.codes : { present:{}, vip:{} };
       parsed.codes.present = parsed.codes.present && typeof parsed.codes.present === "object" ? parsed.codes.present : {};
-      parsed.codes.extra = parsed.codes.extra && typeof parsed.codes.extra === "object" ? parsed.codes.extra : {};
+      parsed.codes.vip = parsed.codes.vip && typeof parsed.codes.vip === "object" ? parsed.codes.vip : {};
+
+      parsed.admin = parsed.admin && typeof parsed.admin === "object" ? parsed.admin : { countryLocks:{}, broadcasts:[] };
+      parsed.admin.countryLocks = parsed.admin.countryLocks && typeof parsed.admin.countryLocks === "object" ? parsed.admin.countryLocks : {};
+      parsed.admin.broadcasts = Array.isArray(parsed.admin.broadcasts) ? parsed.admin.broadcasts : [];
 
       return parsed;
-    }, "loadDB") || { users: {}, byEmail: {}, mails: [], codes: { present: {}, extra: {} } };
+    }, "loadDB") || emptyDB();
   }
 
   function saveDB(db) {
@@ -49,6 +114,7 @@
   }
 
   function hashPassword(pw) {
+    // placeholder hash for demo
     let h = 2166136261;
     const s = String(pw);
     for (let i = 0; i < s.length; i++) {
@@ -71,23 +137,23 @@
 
   function pushMail(db, mail) {
     db.mails.unshift(mail);
-    if (db.mails.length > 50) db.mails.pop();
+    if (db.mails.length > 80) db.mails.pop();
+  }
+
+  function pushInbox(db, usernameLower, mail) {
+    const u = String(usernameLower || "").toLowerCase();
+    if (!u) return;
+    db.inbox[u] = Array.isArray(db.inbox[u]) ? db.inbox[u] : [];
+    db.inbox[u].unshift(mail);
+    if (db.inbox[u].length > 200) db.inbox[u].pop();
   }
 
   function buildVerifyLink(token) { return `#verify:${token}`; }
   function buildResetLink(token) { return `#reset:${token}`; }
 
-  function ensureUsernameFree(username) {
-    const db = loadDB();
-    return !findByUsername(db, username);
-  }
-
-  function suggestUsernames(base) {
-    const b = Safe.clean(base).replace(/\s+/g, "");
-    const t = () => Math.floor(Math.random() * 900 + 100);
-    return [`${b}${t()}`, `${b}_${t()}`];
-  }
-
+  // ------------------------------------------------------------------
+  // Session
+  // ------------------------------------------------------------------
   function getSession() {
     return Safe.try(() => {
       const raw = localStorage.getItem("EPTEC_SESSION_V1");
@@ -105,22 +171,40 @@
     return findByUsername(db, uname);
   }
 
-  // ------------------------------------------------------------
-  // REGISTER / VERIFY / LOGIN (existing)
-  // ------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // Username availability + suggestions
+  // ------------------------------------------------------------------
+  function ensureUsernameFree(username) {
+    const db = loadDB();
+    return !findByUsername(db, username);
+  }
+
+  function suggestUsernames(base) {
+    const b = Safe.clean(base).replace(/\s+/g, "");
+    const t = () => Math.floor(Math.random() * 900 + 100);
+    return [`${b}${t()}`, `${b}_${t()}`];
+  }
+
+  // ------------------------------------------------------------------
+  // REGISTER / VERIFY / LOGIN / RESET (simulation)
+  // ------------------------------------------------------------------
   function register(payload) {
     const db = loadDB();
 
     const firstName = Safe.clean(payload?.firstName);
-    const lastName = Safe.clean(payload?.lastName);
+    const lastName  = Safe.clean(payload?.lastName);
     const birthdate = Safe.clean(payload?.birthdate);
-    const email = Safe.clean(payload?.email).toLowerCase();
-    const username = Safe.clean(payload?.username).toLowerCase();
-    const password = Safe.clean(payload?.password);
+    const email     = Safe.clean(payload?.email).toLowerCase();
+    const username  = Safe.clean(payload?.username).toLowerCase();
+    const password  = Safe.clean(payload?.password);
 
-    if (!email || !username || !password) return { ok: false, code: "MISSING_FIELDS", message: "Fehlende Felder." };
-    if (findByUsername(db, username)) return { ok: false, code: "USERNAME_TAKEN", message: "Username ist bereits vergeben." };
-    if (findByEmail(db, email)) return { ok: false, code: "EMAIL_TAKEN", message: "E-Mail ist bereits registriert." };
+    if (!email || !username || !password) return { ok:false, code:"MISSING_FIELDS", message:"Fehlende Felder." };
+
+    const allow = isUsernameAllowed(username);
+    if (!allow.ok) return { ok:false, code:"USERNAME_NOT_ALLOWED", message:`Username nicht erlaubt (${allow.reason}).` };
+
+    if (findByUsername(db, username)) return { ok:false, code:"USERNAME_TAKEN", message:"Username ist bereits vergeben." };
+    if (findByEmail(db, email)) return { ok:false, code:"EMAIL_TAKEN", message:"E-Mail ist bereits registriert." };
 
     const verifyToken = Safe.randToken(16);
 
@@ -137,31 +221,44 @@
       createdAt: Safe.nowISO(),
       updatedAt: Safe.nowISO(),
 
-      // NEW: monetization state
-      referralCode: null,                 // user-generated
-      usedPresentCodes: {},               // { CODE: timestamp }
-      vip: { freeForever: false, freeMonths: 0 },
-      billing: { signupFeeWaived: false } // demo flag
+      referralCode: null,        // user-generated
+      usedPresentCodes: {},      // CODE -> timestamp
+      vip: { freeForever:false, freeMonths:0 },
+      billing: { signupFeeWaived:false }
     };
 
     db.users[username] = user;
     db.byEmail[email] = username;
 
+    // create inbox container
+    db.inbox[username] = Array.isArray(db.inbox[username]) ? db.inbox[username] : [];
+
     const verifyLink = buildVerifyLink(verifyToken);
+
     pushMail(db, {
       type: "verify",
       to: email,
       subject: "Willkommen – Verifiziere dein Konto",
       body:
-        "Herzlich willkommen, vielen Dank für Ihr Beitreten.\n" +
-        "Bitte klicken Sie auf den Verifizierungslink zum Freischalten Ihres Kontos:\n" +
+        "Herzlich willkommen.\n" +
+        "Bitte klicken Sie den Verifizierungslink:\n" +
         verifyLink,
       link: verifyLink,
       createdAt: Safe.nowISO()
     });
 
+    // also drop into user inbox
+    pushInbox(db, username, {
+      id: "MAIL-" + Safe.randToken(6).toUpperCase(),
+      createdAt: Safe.nowISO(),
+      subject: "Verifizierung (Simulation)",
+      body: `Bitte öffnen: ${verifyLink}`,
+      link: verifyLink,
+      read: false
+    });
+
     saveDB(db);
-    return { ok: true, code: "REGISTERED", message: "Verifizierungsmail wurde (simuliert) versendet.", verifyLink };
+    return { ok:true, code:"REGISTERED", message:"Verifizierungsmail wurde (simuliert) versendet.", verifyLink };
   }
 
   function verifyByToken(token) {
@@ -169,7 +266,7 @@
     const t = Safe.clean(token);
 
     const user = Object.values(db.users).find(u => u.verifyToken === t);
-    if (!user) return { ok: false, code: "TOKEN_INVALID", message: "Ungültiger Verifizierungslink." };
+    if (!user) return { ok:false, code:"TOKEN_INVALID", message:"Ungültiger Verifizierungslink." };
 
     user.verified = true;
     user.verifyToken = null;
@@ -180,14 +277,20 @@
       type: "confirm",
       to: user.email,
       subject: "Konto freigeschaltet",
-      body:
-        "Vielen Dank für Ihre Registrierung.\n" +
-        "Hiermit sind Sie freigeschaltet. Sie können sich mit Username und Passwort anmelden.",
+      body: "Vielen Dank. Sie können sich jetzt anmelden.",
       createdAt: Safe.nowISO()
     });
 
+    pushInbox(db, user.username, {
+      id: "MAIL-" + Safe.randToken(6).toUpperCase(),
+      createdAt: Safe.nowISO(),
+      subject: "Bestätigung (Simulation)",
+      body: "Konto freigeschaltet. Anmeldung möglich.",
+      read: false
+    });
+
     saveDB(db);
-    return { ok: true, code: "VERIFIED", message: "Konto ist freigeschaltet." };
+    return { ok:true, code:"VERIFIED", message:"Konto ist freigeschaltet." };
   }
 
   function login(payload) {
@@ -196,9 +299,9 @@
     const password = Safe.clean(payload?.password);
 
     const u = findByUsername(db, username);
-    if (!u) return { ok: false, code: "INVALID", message: "Ungültige Zugangsdaten." };
-    if (!u.verified) return { ok: false, code: "NOT_VERIFIED", message: "Bitte zuerst E-Mail verifizieren." };
-    if (u.passHash !== hashPassword(password)) return { ok: false, code: "INVALID", message: "Ungültige Zugangsdaten." };
+    if (!u) return { ok:false, code:"INVALID", message:"Ungültige Zugangsdaten." };
+    if (!u.verified) return { ok:false, code:"NOT_VERIFIED", message:"Bitte zuerst E-Mail verifizieren." };
+    if (u.passHash !== hashPassword(password)) return { ok:false, code:"INVALID", message:"Ungültige Zugangsdaten." };
 
     const session = {
       sessionId: "EP-" + Safe.randToken(8).toUpperCase(),
@@ -206,16 +309,16 @@
       createdAt: Safe.nowISO()
     };
     localStorage.setItem("EPTEC_SESSION_V1", JSON.stringify(session));
-    return { ok: true, code: "LOGGED_IN", message: "Login erfolgreich.", session };
+    return { ok:true, code:"LOGGED_IN", message:"Login erfolgreich.", session };
   }
 
   function requestPasswordReset(payload) {
     const db = loadDB();
     const identity = Safe.clean(payload?.identity).toLowerCase();
-    if (!identity) return { ok: false, code: "MISSING", message: "Bitte E-Mail oder Username eingeben." };
+    if (!identity) return { ok:false, code:"MISSING", message:"Bitte E-Mail oder Username eingeben." };
 
     const u = db.users[identity] || findByEmail(db, identity);
-    if (!u) return { ok: true, code: "MAIL_SENT", message: "Wenn der Account existiert, wurde ein Link gesendet." };
+    if (!u) return { ok:true, code:"MAIL_SENT", message:"Wenn der Account existiert, wurde ein Link gesendet." };
 
     const token = Safe.randToken(16);
     u.resetToken = token;
@@ -223,20 +326,27 @@
     db.users[u.username] = u;
 
     const resetLink = buildResetLink(token);
+
     pushMail(db, {
       type: "reset",
       to: u.email,
       subject: "Passwort zurücksetzen",
-      body:
-        "Vielen Dank, dass Sie sich melden.\n" +
-        "Klicken Sie auf den Link, um ein neues Passwort zu setzen:\n" +
-        resetLink,
+      body: "Klicken Sie auf den Link:\n" + resetLink,
       link: resetLink,
       createdAt: Safe.nowISO()
     });
 
+    pushInbox(db, u.username, {
+      id: "MAIL-" + Safe.randToken(6).toUpperCase(),
+      createdAt: Safe.nowISO(),
+      subject: "Passwort Reset (Simulation)",
+      body: `Bitte öffnen: ${resetLink}`,
+      link: resetLink,
+      read: false
+    });
+
     saveDB(db);
-    return { ok: true, code: "MAIL_SENT", message: "Reset-Link wurde (simuliert) versendet.", resetLink };
+    return { ok:true, code:"MAIL_SENT", message:"Reset-Link wurde (simuliert) versendet.", resetLink };
   }
 
   function resetPasswordByToken(payload) {
@@ -244,10 +354,10 @@
     const token = Safe.clean(payload?.token);
     const newPassword = Safe.clean(payload?.newPassword);
 
-    if (!token || !newPassword) return { ok: false, code: "MISSING", message: "Fehlende Daten." };
+    if (!token || !newPassword) return { ok:false, code:"MISSING", message:"Fehlende Daten." };
 
     const user = Object.values(db.users).find(u => u.resetToken === token);
-    if (!user) return { ok: false, code: "TOKEN_INVALID", message: "Ungültiger Reset-Link." };
+    if (!user) return { ok:false, code:"TOKEN_INVALID", message:"Ungültiger Reset-Link." };
 
     user.passHash = hashPassword(newPassword);
     user.resetToken = null;
@@ -258,58 +368,84 @@
       type: "confirm_reset",
       to: user.email,
       subject: "Passwort geändert",
-      body: "Vielen Dank. Sie können jetzt das neue Passwort verwenden.",
+      body: "Vielen Dank. Neues Passwort ist aktiv.",
       createdAt: Safe.nowISO()
     });
 
+    pushInbox(db, user.username, {
+      id: "MAIL-" + Safe.randToken(6).toUpperCase(),
+      createdAt: Safe.nowISO(),
+      subject: "Passwort geändert (Simulation)",
+      body: "Passwort wurde geändert.",
+      read: false
+    });
+
     saveDB(db);
-    return { ok: true, code: "RESET_OK", message: "Passwort wurde geändert." };
+    return { ok:true, code:"RESET_OK", message:"Passwort wurde geändert." };
   }
 
   function getMailbox() {
     const db = loadDB();
-    return db.mails.slice(0, 20);
+    return db.mails.slice(0, 30);
   }
 
-  // ------------------------------------------------------------
-  // NEW: GLOBAL PRESENT CAMPAIGN (Admin) + Apply (User)
-  // ------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // PRESENT CAMPAIGN (admin) + APPLY (user)
+  // ------------------------------------------------------------------
   function createPresentCampaign(code, discountPercent = 50, daysValid = 30) {
     const db = loadDB();
     const c = Safe.clean(code).toUpperCase();
-    if (!c) return { ok: false, code: "EMPTY" };
+    if (!c) return { ok:false, code:"EMPTY" };
 
     const createdAt = Safe.nowISO();
-    const validUntil = new Date(Safe.nowMs() + daysValid * 24 * 60 * 60 * 1000).toISOString();
+    const validUntil = new Date(Safe.nowMs() + Number(daysValid) * 24 * 60 * 60 * 1000).toISOString();
 
     db.codes.present[c] = {
       code: c,
       discountPercent: Number(discountPercent) || 50,
       createdAt,
-      validUntil
+      validUntil,
+      active: true
     };
+
     saveDB(db);
-    return { ok: true, present: db.codes.present[c] };
+    return { ok:true, present: db.codes.present[c] };
+  }
+
+  function listPresentCampaigns() {
+    const db = loadDB();
+    return { ok:true, presents: Object.values(db.codes.present || {}).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))) };
+  }
+
+  function disablePresentCampaign(code) {
+    const db = loadDB();
+    const c = Safe.clean(code).toUpperCase();
+    const p = db.codes.present[c];
+    if (!p) return { ok:false, code:"NOT_FOUND" };
+    p.active = false;
+    p.disabledAt = Safe.nowISO();
+    db.codes.present[c] = p;
+    saveDB(db);
+    return { ok:true, present: p };
   }
 
   function applyPresentCode(username, code) {
     const db = loadDB();
     const u = findByUsername(db, username);
-    if (!u) return { ok: false, code: "NO_USER" };
+    if (!u) return { ok:false, code:"NO_USER" };
 
     const c = Safe.clean(code).toUpperCase();
     const campaign = db.codes.present[c];
-    if (!campaign) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
+    if (!campaign) return { ok:false, code:"INVALID_CODE", message:"Code ungültig." };
+    if (campaign.active === false) return { ok:false, code:"DISABLED", message:"Code deaktiviert.", campaign };
 
-    // expired?
     if (campaign.validUntil && new Date() > new Date(campaign.validUntil)) {
-      return { ok: false, code: "EXPIRED", message: "Code abgelaufen.", campaign };
+      return { ok:false, code:"EXPIRED", message:"Code abgelaufen.", campaign };
     }
 
-    // one-time per user
     u.usedPresentCodes = u.usedPresentCodes && typeof u.usedPresentCodes === "object" ? u.usedPresentCodes : {};
     if (u.usedPresentCodes[c]) {
-      return { ok: false, code: "ALREADY_USED", message: "Code bereits verwendet.", campaign };
+      return { ok:false, code:"ALREADY_USED", message:"Code bereits verwendet.", campaign };
     }
 
     u.usedPresentCodes[c] = Safe.nowISO();
@@ -317,124 +453,234 @@
     db.users[u.username] = u;
     saveDB(db);
 
-    return { ok: true, code: "APPLIED", campaign };
+    return { ok:true, code:"APPLIED", campaign };
   }
 
-  // ------------------------------------------------------------
-  // NEW: REFERRAL (User) – unlimited, for new customers (demo flag)
-  // ------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // REFERRAL (user generated) + redeem (new customer)
+  // ------------------------------------------------------------------
   function getOrCreateReferralCode(username) {
     const db = loadDB();
     const u = findByUsername(db, username);
-    if (!u) return { ok: false, code: "NO_USER" };
+    if (!u) return { ok:false, code:"NO_USER" };
 
-    if (u.referralCode) return { ok: true, referralCode: u.referralCode };
+    if (u.referralCode) return { ok:true, referralCode: u.referralCode };
 
-    // Generate stable-ish code
     const ref = ("REF-" + Safe.randToken(6)).toUpperCase();
     u.referralCode = ref;
     u.updatedAt = Safe.nowISO();
     db.users[u.username] = u;
     saveDB(db);
 
-    return { ok: true, referralCode: ref };
+    return { ok:true, referralCode: ref };
   }
 
   function redeemReferralCode(newUsername, referralCode) {
     const db = loadDB();
     const newU = findByUsername(db, newUsername);
-    if (!newU) return { ok: false, code: "NO_USER" };
+    if (!newU) return { ok:false, code:"NO_USER" };
 
-    // demo: treat "new customer" as "created recently and no signupFeeWaived yet"
     if (newU.billing?.signupFeeWaived) {
-      return { ok: false, code: "NOT_NEW", message: "Nur für Neukunden." };
+      return { ok:false, code:"NOT_NEW", message:"Nur für Neukunden." };
     }
 
     const ref = Safe.clean(referralCode).toUpperCase();
-    if (!ref.startsWith("REF-")) return { ok: false, code: "INVALID_REF" };
+    if (!ref.startsWith("REF-")) return { ok:false, code:"INVALID_REF", message:"Geschenkkode ungültig." };
 
-    // Find owner (not required, but nice)
     const owner = Object.values(db.users).find(u => (u.referralCode || "").toUpperCase() === ref);
-
-    // Prevent self-referral
     if (owner && owner.username === newU.username) {
-      return { ok: false, code: "SELF_REFERRAL", message: "Nicht für Eigenwerbung." };
+      return { ok:false, code:"SELF_REFERRAL", message:"Nicht für Eigenwerbung." };
     }
 
-    // Apply effect (demo flag)
     newU.billing = newU.billing || {};
     newU.billing.signupFeeWaived = true;
     newU.updatedAt = Safe.nowISO();
     db.users[newU.username] = newU;
     saveDB(db);
 
-    return { ok: true, code: "REF_APPLIED", message: "Einmalzahlung erlassen (Demo).", owner: owner ? owner.username : null };
+    return { ok:true, code:"REF_APPLIED", message:"Einmalzahlung erlassen (Demo).", owner: owner ? owner.username : null };
   }
 
-  // ------------------------------------------------------------
-  // NEW: EXTRA-PRESENT (VIP) – admin-generated, max_redemptions=1
-  // ------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // VIP (admin) create + redeem (user)
+  // ------------------------------------------------------------------
   function createExtraPresentCode({ freeMonths = 0, freeForever = false } = {}) {
     const db = loadDB();
     const code = ("VIP-" + Safe.randToken(6)).toUpperCase();
 
-    db.codes.extra[code] = {
+    db.codes.vip[code] = {
       code,
       freeMonths: Number(freeMonths) || 0,
       freeForever: !!freeForever,
       maxRedemptions: 1,
       redeemedBy: null,
       redeemedAt: null,
-      createdAt: Safe.nowISO()
+      createdAt: Safe.nowISO(),
+      active: true
     };
 
     saveDB(db);
-    return { ok: true, extra: db.codes.extra[code] };
+    return { ok:true, extra: db.codes.vip[code] };
+  }
+
+  function listVipCodes() {
+    const db = loadDB();
+    return { ok:true, vipCodes: Object.values(db.codes.vip || {}).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))) };
+  }
+
+  function disableVipCode(code) {
+    const db = loadDB();
+    const c = Safe.clean(code).toUpperCase();
+    const v = db.codes.vip[c];
+    if (!v) return { ok:false, code:"NOT_FOUND" };
+    v.active = false;
+    v.disabledAt = Safe.nowISO();
+    db.codes.vip[c] = v;
+    saveDB(db);
+    return { ok:true, vip: v };
   }
 
   function redeemExtraPresentCode(username, code) {
     const db = loadDB();
     const u = findByUsername(db, username);
-    if (!u) return { ok: false, code: "NO_USER" };
+    if (!u) return { ok:false, code:"NO_USER" };
 
     const c = Safe.clean(code).toUpperCase();
-    const x = db.codes.extra[c];
-    if (!x) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
-
-    if (x.redeemedBy) return { ok: false, code: "ALREADY_REDEEMED", message: "Code bereits eingelöst." };
+    const x = db.codes.vip[c];
+    if (!x) return { ok:false, code:"INVALID_CODE", message:"Code ungültig." };
+    if (x.active === false) return { ok:false, code:"DISABLED", message:"Code deaktiviert." };
+    if (x.redeemedBy) return { ok:false, code:"ALREADY_REDEEMED", message:"Code bereits eingelöst." };
 
     x.redeemedBy = u.username;
     x.redeemedAt = Safe.nowISO();
 
-    u.vip = u.vip || { freeForever: false, freeMonths: 0 };
+    u.vip = u.vip || { freeForever:false, freeMonths:0 };
     u.vip.freeForever = u.vip.freeForever || !!x.freeForever;
     u.vip.freeMonths = Number(u.vip.freeMonths || 0) + Number(x.freeMonths || 0);
 
     u.updatedAt = Safe.nowISO();
     db.users[u.username] = u;
-    db.codes.extra[c] = x;
-    saveDB(db);
+    db.codes.vip[c] = x;
 
-    return { ok: true, code: "VIP_APPLIED", extra: x, vip: u.vip };
+    saveDB(db);
+    return { ok:true, code:"VIP_APPLIED", extra: x, vip: u.vip };
   }
 
-  // Public API
+  // ------------------------------------------------------------------
+  // NEWSLETTER / INBOX (placeholder but persistent)
+  // ------------------------------------------------------------------
+  function sendBroadcast({ subject = "Newsletter", body = "", meta = {} } = {}) {
+    const db = loadDB();
+    const subj = Safe.clean(subject) || "Newsletter";
+    const msg = Safe.clean(body);
+    if (!msg) return { ok:false, code:"EMPTY" };
+
+    const entry = {
+      id: "BC-" + Safe.randToken(6).toUpperCase(),
+      createdAt: Safe.nowISO(),
+      subject: subj,
+      body: msg,
+      meta: isObj(meta) ? meta : {}
+    };
+
+    db.admin.broadcasts.unshift(entry);
+    while (db.admin.broadcasts.length > 50) db.admin.broadcasts.pop();
+
+    // deliver to every user inbox
+    Object.keys(db.users).forEach(uName => {
+      pushInbox(db, uName, {
+        id: "MAIL-" + Safe.randToken(6).toUpperCase(),
+        createdAt: Safe.nowISO(),
+        subject: subj,
+        body: msg,
+        read: false,
+        broadcastId: entry.id
+      });
+    });
+
+    saveDB(db);
+    return { ok:true, broadcast: entry };
+  }
+
+  function getUserInbox(username) {
+    const db = loadDB();
+    const u = Safe.clean(username).toLowerCase();
+    if (!u) return { ok:false, code:"EMPTY" };
+    const list = Array.isArray(db.inbox[u]) ? db.inbox[u] : [];
+    return { ok:true, inbox: list.slice(0, 50) };
+  }
+
+  function markInboxRead(username, mailId) {
+    const db = loadDB();
+    const u = Safe.clean(username).toLowerCase();
+    const id = Safe.clean(mailId);
+    if (!u || !id) return { ok:false, code:"EMPTY" };
+
+    const list = Array.isArray(db.inbox[u]) ? db.inbox[u] : [];
+    const item = list.find(m => String(m.id) === id);
+    if (!item) return { ok:false, code:"NOT_FOUND" };
+    item.read = true;
+    item.readAt = Safe.nowISO();
+
+    saveDB(db);
+    return { ok:true };
+  }
+
+  // ------------------------------------------------------------------
+  // COUNTRY LOCKS (admin storage)
+  // ------------------------------------------------------------------
+  function setCountryLock(country, lockObj) {
+    const db = loadDB();
+    const c = Safe.clean(country).toUpperCase();
+    if (!c) return { ok:false, code:"EMPTY" };
+    db.admin.countryLocks[c] = isObj(lockObj) ? lockObj : { status:"PENDING", requestedAt: Safe.nowISO() };
+    saveDB(db);
+    return { ok:true, lock: db.admin.countryLocks[c] };
+  }
+
+  function getCountryLocks() {
+    const db = loadDB();
+    return { ok:true, locks: db.admin.countryLocks || {} };
+  }
+
+  function clearCountryLock(country) {
+    const db = loadDB();
+    const c = Safe.clean(country).toUpperCase();
+    if (!c) return { ok:false, code:"EMPTY" };
+    delete db.admin.countryLocks[c];
+    saveDB(db);
+    return { ok:true };
+  }
+
+  // ------------------------------------------------------------------
+  // PUBLIC API
+  // ------------------------------------------------------------------
   window.EPTEC_MOCK_BACKEND = {
+    // username policy
+    isUsernameAllowed,
+
+    // legacy helpers
     ensureUsernameFree,
     suggestUsernames,
+
+    // auth
     register,
     verifyByToken,
     login,
     requestPasswordReset,
     resetPasswordByToken,
-    getMailbox,
 
-    // new helpers
+    // session helpers
     getSession,
     getCurrentUser,
 
+    // mail simulation
+    getMailbox,
+
     // present
     createPresentCampaign,
+    listPresentCampaigns,
+    disablePresentCampaign,
     applyPresentCode,
 
     // referral
@@ -443,20 +689,18 @@
 
     // vip
     createExtraPresentCode,
-    redeemExtraPresentCode
+    listVipCodes,
+    disableVipCode,
+    redeemExtraPresentCode,
+
+    // newsletter/inbox
+    sendBroadcast,
+    getUserInbox,
+    markInboxRead,
+
+    // country locks
+    setCountryLock,
+    getCountryLocks,
+    clearCountryLock
   };
 })();
-// Master-Login Logik
-function masterLogin(username, password) {
-    // Überprüfe, ob der Login gültig ist
-    const loginSuccess = checkMasterLogin(username, password); // Diese Funktion implementierst du selbst
-
-    if (loginSuccess) {
-        // Nach erfolgreichem Login Tunnelgeräusch abspielen
-        Audio.play("snd-tunnel", 1.0);  // Tunnelgeräusch mit voller Lautstärke
-        Navigation.triggerTunnel("R2");  // Navigiere zum nächsten Raum
-    } else {
-        // Fehlermeldung oder andere Logik
-        console.error("Fehler beim Login");
-    }
-}
