@@ -385,4 +385,40 @@
   };
 
   document.addEventListener("DOMContentLoaded", init);
+/* -------------------------------------------------------
+   PLACEHOLDERS (Language-aware, grey hints)
+------------------------------------------------------- */
+function applyPlaceholders(lang) {
+  const L = (lang || document.documentElement.lang || "en").toLowerCase();
+  const isEN = L === "en";
+
+  const ph = {
+    username: isEN ? "Username" : "Benutzername",
+    password: isEN ? "Password" : "Passwort",
+    email:    isEN ? "Email address" : "E-Mail-Adresse",
+    dob:      isEN ? "MM/DD/YYYY" : "DD.MM.YYYY"
+  };
+
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && !el.getAttribute("placeholder")) {
+      el.setAttribute("placeholder", v);
+    }
+  };
+
+  // Login
+  set("login-username", ph.username);
+  set("login-password", ph.password);
+
+  // Register
+  set("reg-username", ph.username);
+  set("reg-password", ph.password);
+  set("reg-email", ph.email);
+  set("reg-birthdate", ph.dob);
+}
+
+// apply once on load
+document.addEventListener("DOMContentLoaded", () => {
+  applyPlaceholders();
+});
 })();
