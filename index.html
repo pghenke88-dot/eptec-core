@@ -467,35 +467,6 @@
       document.getElementById('room-2-view').style.display = 'block';
       updateDashboardUI();
     }
-
-    document.getElementById('paywall-close').onclick = () => {
-      document.getElementById('paywall-screen').classList.add('paywall-hidden');
-    };
-
-    // Paywall Logic
-    document.getElementById('paywall-vip-apply').onclick = () => {
-      const code = document.getElementById('paywall-vip-input').value;
-      if (code.startsWith('VIP-')) {
-        appState.construction = { active: true, tier: 'VIP' };
-        appState.controlling = { active: true, tier: 'VIP' };
-        document.getElementById('paywall-screen').classList.add('paywall-hidden');
-        showDashboard();
-      }
-    };
-
-    // Admin Tools
-    document.getElementById('admin-vip-create').onclick = () => {
-      const months = document.getElementById('admin-vip-months').value || 1;
-      const code = "VIP-" + Math.random().toString(36).substr(2, 5).toUpperCase();
-      document.getElementById('admin-vip-status').innerText = "Generated: " + code + " (" + months + " Months)";
-    };
-
-    // Language Toggle
-    document.getElementById('lang-toggle').onclick = () => {
-      document.getElementById('language-switcher').classList.toggle('lang-open');
-    };
-  </script>
-
   <script src="scripts/sounds.js" defer></script>
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
