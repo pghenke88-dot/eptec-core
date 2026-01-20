@@ -2426,12 +2426,3 @@ window.addEventListener('load', () => {
     console.log("[EPTEC] Language switcher HARD-BOUND");
     return true;
   }
-
-  // Retry until DOM + overlays are fully ready
-  let tries = 0;
-  const iv = setInterval(() => {
-    tries++;
-    if (forceLangSwitcher() || tries > 80) clearInterval(iv);
-  }, 50);
-})();
-
