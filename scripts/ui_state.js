@@ -294,3 +294,46 @@
   window.EPTEC_UI_STATE.updateProductStatus = updateProductStatus;
 
 })();
+// Erweiterung von State: Neue Funktion für Tür-Status und Benutzerfeedback
+(() => {
+  "use strict";
+
+  // Funktion zum Setzen des Türstatus (ob eine Tür freigeschaltet ist oder nicht)
+  function setDoorStatus(door, status) {
+    const validDoors = ['construction', 'controlling'];
+    if (validDoors.includes(door)) {
+      EPTEC_UI_STATE.set({
+        products: {
+          ...EPTEC_UI_STATE.state.products,
+          [door]: { ...EPTEC_UI_STATE.state.products[door], active: status }
+        }
+      });
+    }
+  }
+
+  // Funktion zum Anzeigen von Benutzerfeedback
+  function showFeedback(message, type) {
+    const feedback = {
+      success: "Erfolg: " + message,
+      error: "Fehler: " + message,
+      warning: "Warnung: " + message
+    };
+
+    const msg = feedback[type] || feedback.success;
+    EPTEC_UI_STATE.set({
+      feedback: { message: msg, type }
+    });
+  }
+
+  // Event-Listener für Benutzerinteraktionen
+  EPTEC_UI_STATE.onChange((newState) => {
+    if (newState.feedback) {
+      console.log(newState.feedback.message); // Hier kannst du die Anzeige der Nachrichten im UI anpassen
+    }
+  });
+
+  // Füge die Funktionen dem globalen Objekt hinzu
+  window.EPTEC_UI_STATE.setDoorStatus = setDoorStatus;
+  window.EPTEC_UI_STATE.showFeedback = showFeedback;
+
+})();
