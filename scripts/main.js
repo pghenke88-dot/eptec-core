@@ -2407,22 +2407,4 @@ window.addEventListener('load', () => {
       sw.classList.remove("lang-open");
     }, true);
 
-    // --- LANGUAGE CHANGE ---
-    rail.querySelectorAll(".lang-item").forEach(btn => {
-      btn.onclick = null;
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        const lang = btn.getAttribute("data-lang");
-        if (typeof window.setLanguage === "function") {
-          window.setLanguage(lang);
-        }
-        sw.classList.remove("lang-open");
-      }, true);
-    });
-
-    console.log("[EPTEC] Language switcher HARD-BOUND");
-    return true;
-  }
+  
