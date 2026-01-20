@@ -337,3 +337,27 @@
   window.EPTEC_UI_STATE.showFeedback = showFeedback;
 
 })();
+const Audio = {
+    interval: null,
+    play(soundID, volume = 1.0) {
+        Safe.try(() => {
+            const snd = Safe.byId(soundID);
+            if (!snd) return;
+            snd.volume = Safe.clamp01(volume);
+            snd.play().catch(() => {}); // autoplay policies -> no-crash
+        }, "Audio.play");
+    },
+
+    startRandomDielenKnacken() {
+        this.stopAmbient();
+        this.interval = setInterval(() => {
+            if (Math.random() > 0.7 && Navigation.currentLocation === "R2") {
+                this.play("snd-dielen-knacken", 0.3); // Das Geräusch von Dielenknacken
+            }
+        }, 45000);
+    },
+
+    stopAmbient() {
+        if (this.interval) { clearInterval(this.interval); this.interval = null; }
+    }
+};
