@@ -220,3 +220,45 @@
   window.RegistrationEngine.validateUserData = validateUserData;
 
 })();
+(() => {
+  "use strict";
+
+  // Erweiterung von RegistrationEngine: Validierung für das Geburtsdatum und Benutzerrollen
+  function validateBirthdate(dob, lang) {
+    const dobHint = dobFormatHint(lang); // Holt sich das Format aus der bestehenden Funktion
+    const regex = new RegExp(`^\\d{2}[-/\\.\\s]?\\d{2}[-/\\.\\s]?\\d{4}$`);
+    const isValid = regex.test(dob);
+
+    return isValid ? { valid: true, message: `Geburtsdatum im Format ${dobHint}` } :
+      { valid: false, message: `Ungültiges Geburtsdatum. Bitte im Format ${dobHint} eingeben.` };
+  }
+
+  // Setzt die Benutzerrolle basierend auf dem eingegebenen Status (admin, user, etc.)
+  function setUserRole(username, role) {
+    const roles = ['admin', 'user', 'guest'];
+    if (roles.includes(role)) {
+      // Update im State für die Rolle des Benutzers
+      EPTEC_UI_STATE.set({
+        user: { username, role }
+      });
+      return { ok: true, message: `Rolle für ${username} als ${role} gesetzt.` };
+    } else {
+      return { ok: false, message: `Ungültige Rolle: ${role}.` };
+    }
+  }
+
+  // Beispiel: Benutzerrolle festlegen und Feedback ausgeben
+  function setUserRoleAndNotify(username, role) {
+    const result = setUserRole(username, role);
+    if (result.ok) {
+      EPTEC_UI_STATE.showFeedback(result.message, 'success');
+    } else {
+      EPTEC_UI_STATE.showFeedback(result.message, 'error');
+    }
+  }
+
+  // Füge die Funktionen dem globalen Objekt hinzu
+  window.RegistrationEngine.validateBirthdate = validateBirthdate;
+  window.RegistrationEngine.setUserRoleAndNotify = setUserRoleAndNotify;
+
+})();
