@@ -1,151 +1,388 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import session from "express-session";
-import csrf from "csurf";
-import crypto from "crypto";
-
-const app = express();
-
-// ✅ deine GitHub Pages Origin (genau so!)
-const FRONTEND_ORIGIN = "https://pghenke88-dot.github.io";
-
-// Behind hosting proxies (Render/Railway/Fly/etc.)
-app.set("trust proxy", 1);
-
-app.use(express.json());
-app.use(cookieParser());
-
-// ✅ CORS: NICHT "*" bei credentials
-app.use(cors({
-  origin: FRONTEND_ORIGIN,
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "X-CSRF-Token"]
-}));
-
-// Preflight
-app.options("*", cors({
-  origin: FRONTEND_ORIGIN,
-  credentials: true
-}));
-
-// ✅ Session Cookie: HttpOnly, Secure, SameSite=None (Cross-Site)
-app.use(session({
-  name: "eptec_session",
-  secret: process.env.SESSION_SECRET || "CHANGE_ME_IN_ENV",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: true,        // 🔥 MUST be true for SameSite=None
-    sameSite: "none",    // 🔥 cross-site (GitHub Pages -> API domain)
-    maxAge: 1000 * 60 * 60 * 24 * 7
-  }
-}));
-
 /**
- * ✅ CSRF Setup
- * We use csurf with session-based tokens.
- * Frontend must fetch /auth/csrf once and then send header X-CSRF-Token on POSTs.
+ * scripts/registration_engine.js
+ * EPTEC REGISTRATION ENGINE – FINAL (UI + Validation + Door/Paywall Bindings)
+ *
+ * - Opens/closes register modal via EPTEC_UI_STATE (already used by ui_controller)
+ * - Live validation with red/locked behavior
+ * - Username uniqueness check via EPTEC_MOCK_BACKEND.ensureUsernameFree
+ * - Password rule: min 5, 1 uppercase, 1 special
+ * - DOB validation: locale hint + accepts common formats
+ * - Basic forbidden words filter (extendable)
+ * - Door clicks: if locked -> paywall overlay; if unlocked -> go dashboard
+ * - Paywall apply:
+ *    - Referral (new customer) -> EPTEC_STATE_MANAGER.redeemReferralForCurrentUser
+ *    - VIP -> EPTEC_STATE_MANAGER.redeemVipForCurrentUser + unlock doors
+ *
+ * NO DOM injection beyond class/text updates.
+ * NO business logic duplication: uses EPTEC_STATE_MANAGER + EPTEC_MOCK_BACKEND.
  */
-const csrfProtection = csrf();
 
-// Issue a CSRF token (frontend fetches this first)
-app.get("/auth/csrf", csrfProtection, (req, res) => {
-  res.json({ ok: true, data: { csrfToken: req.csrfToken() } });
-});
+(() => {
+  "use strict";
 
-// ------------------------------------------------------------
-// Minimal in-memory store (replace with DB later)
-// ------------------------------------------------------------
-const USERS = new Map(); // usernameLower -> { username, email, passHash }
-function hashPassword(pw) {
-  // minimal placeholder; use bcrypt/argon2 in production
-  return crypto.createHash("sha256").update(String(pw)).digest("hex");
-}
+  const $ = (id) => document.getElementById(id);
 
-// ------------------------------------------------------------
-// Auth endpoints (match your api_client.js)
-// ------------------------------------------------------------
+  const FORBIDDEN = [
+    "admin", "root", "fuck", "shit", "hitler", "nazi", "porn", "terror"
+  ];
 
-// Register (CSRF protected)
-app.post("/auth/register", csrfProtection, (req, res) => {
-  const { username, password, email } = req.body || {};
-  if (!username || !password || !email) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
+  const RULES = {
+    USERNAME_MIN: 4,
+    PASSWORD_MIN: 5
+  };
 
-  const key = String(username).toLowerCase().trim();
-  if (USERS.has(key)) return res.status(409).json({ ok: false, message: "USERNAME_TAKEN" });
+  function s(v) { return String(v ?? ""); }
+  function trim(v) { return s(v).trim(); }
 
-  USERS.set(key, {
-    username: String(username).trim(),
-    email: String(email).trim(),
-    passHash: hashPassword(password)
-  });
-
-  // Later: send verification email here
-  res.json({ ok: true, message: "REGISTER_OK" });
-});
-
-// Login (CSRF protected)
-app.post("/auth/login", csrfProtection, (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
-
-  const key = String(username).toLowerCase().trim();
-  const user = USERS.get(key);
-  if (!user) return res.status(401).json({ ok: false, message: "LOGIN_INVALID" });
-
-  if (user.passHash !== hashPassword(password)) {
-    return res.status(401).json({ ok: false, message: "LOGIN_INVALID" });
+  function langGuess() {
+    // best-effort: from html lang, otherwise navigator
+    const htmlLang = (document.documentElement.getAttribute("lang") || "").trim().toLowerCase();
+    if (htmlLang) return htmlLang;
+    return (navigator.language || "en").slice(0,2).toLowerCase();
   }
 
-  // ✅ session established
-  req.session.userId = key;
+  function dobFormatHint(lang) {
+    const l = (lang || langGuess()).toLowerCase();
+    if (l === "en") return "MM/DD/YYYY";
+    if (l === "ar") return "DD/MM/YYYY";
+    return "DD.MM.YYYY";
+  }
 
-  res.json({ ok: true, message: "LOGIN_OK" });
-});
+  function isForbiddenWord(value) {
+    const v = trim(value).toLowerCase();
+    if (!v) return false;
+    return FORBIDDEN.some(w => v.includes(w));
+  }
 
-// Session check (optional but useful)
-app.get("/auth/session", (req, res) => {
-  res.json({ ok: true, data: { loggedIn: !!req.session.userId } });
-});
+  function validateEmail(email) {
+    const e = trim(email);
+    if (!e) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(e);
+  }
 
-// Logout
-app.post("/auth/logout", csrfProtection, (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie("eptec_session", { httpOnly: true, secure: true, sameSite: "none" });
-    res.json({ ok: true, message: "LOGOUT_OK" });
-  });
-});
+  function validatePassword(pw) {
+    const p = s(pw);
+    if (p.length < RULES.PASSWORD_MIN) return { ok:false, reason:"PASS_MIN" };
+    if (!/[A-Z]/.test(p)) return { ok:false, reason:"PASS_UPPER" };
+    if (!/[^A-Za-z0-9]/.test(p)) return { ok:false, reason:"PASS_SPECIAL" };
+    return { ok:true };
+  }
 
-// Forgot password (CSRF protected; later: email)
-app.post("/auth/forgot", csrfProtection, (req, res) => {
-  const { identity } = req.body || {};
-  if (!identity) return res.status(400).json({ ok: false, message: "MISSING_IDENTITY" });
+  function parseDOB(input, lang) {
+    const v = trim(input);
+    if (!v) return null;
 
-  // Later: generate token, email it
-  res.json({ ok: true, message: "FORGOT_OK" });
-});
+    // accept ISO yyyy-mm-dd (some users paste that)
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const yy = +m[1], mm = +m[2], dd = +m[3];
+      return isRealDate(yy, mm, dd) ? { yy, mm, dd } : null;
+    }
 
-// Reset password (CSRF protected; later: token validation)
-app.post("/auth/reset", csrfProtection, (req, res) => {
-  const { token, newPassword } = req.body || {};
-  if (!token || !newPassword) return res.status(400).json({ ok: false, message: "MISSING_FIELDS" });
+    const l = (lang || langGuess()).toLowerCase();
 
-  // Later: validate token -> find user -> update password hash
-  res.json({ ok: true, message: "RESET_OK" });
-});
+    // EN: mm/dd/yyyy
+    if (l === "en") {
+      m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      const mm = +m[1], dd = +m[2], yy = +m[3];
+      return isRealDate(yy, mm, dd) ? { yy, mm, dd } : null;
+    }
 
-// Verify (CSRF protected; later: token validation)
-app.post("/auth/verify", csrfProtection, (req, res) => {
-  const { token } = req.body || {};
-  if (!token) return res.status(400).json({ ok: false, message: "MISSING_TOKEN" });
+    // default: dd.mm.yyyy
+    m = v.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (m) {
+      const dd = +m[1], mm = +m[2], yy = +m[3];
+      return isRealDate(yy, mm, dd) ? { yy, mm, dd } : null;
+    }
 
-  // Later: validate token -> mark verified
-  res.json({ ok: true, message: "VERIFY_OK" });
-});
+    // fallback: dd/mm/yyyy
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) {
+      const dd = +m[1], mm = +m[2], yy = +m[3];
+      return isRealDate(yy, mm, dd) ? { yy, mm, dd } : null;
+    }
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("EPTEC API listening");
-});
+    return null;
+  }
+
+  function isRealDate(yy, mm, dd) {
+    if (!(yy >= 1900 && yy <= 2100)) return false;
+    if (!(mm >= 1 && mm <= 12)) return false;
+    if (!(dd >= 1 && dd <= 31)) return false;
+    const d = new Date(yy, mm - 1, dd);
+    return d.getFullYear() === yy && (d.getMonth() + 1) === mm && d.getDate() === dd;
+  }
+
+  function setInvalid(el, on) {
+    if (!el) return;
+    el.classList.toggle("eptec-invalid", !!on);
+  }
+
+  function setLocked(btn, locked) {
+    if (!btn) return;
+    btn.classList.toggle("locked", !!locked);
+    btn.disabled = !!locked;
+  }
+
+  function msgRegister(text, type="warn") {
+    window.EPTEC_UI?.showMsg?.("register-message", text, type);
+  }
+
+  function msgLogin(text, type="error") {
+    window.EPTEC_UI?.showMsg?.("login-message", text, type);
+  }
+
+  /* -------------------------------------------------------
+     REGISTER FLOW
+  ------------------------------------------------------- */
+  function bindRegister() {
+    const uEl = $("reg-username");
+    const pEl = $("reg-password");
+    const eEl = $("reg-email");
+    const dEl = $("reg-birthdate");
+    const submit = $("reg-submit");
+
+    // Grey hint for DOB
+    if (dEl && !dEl.getAttribute("placeholder")) {
+      dEl.setAttribute("placeholder", dobFormatHint());
+    }
+
+    function usernameFree(name) {
+      const mb = window.EPTEC_MOCK_BACKEND;
+      if (mb?.ensureUsernameFree) return mb.ensureUsernameFree(name) !== false;
+      // fallback allow
+      return true;
+    }
+
+    function refresh() {
+      const username = trim(uEl?.value);
+      const email = trim(eEl?.value);
+      const pw = s(pEl?.value);
+      const dob = trim(dEl?.value);
+
+      // username rules: no profanity, min length, uniqueness
+      let userOk = true;
+      if (!username || username.length < RULES.USERNAME_MIN) userOk = false;
+      if (userOk && isForbiddenWord(username)) userOk = false;
+      const freeOk = userOk ? usernameFree(username) : false;
+
+      // password rules
+      const pwRes = validatePassword(pw);
+      const passOk = !!pwRes.ok;
+
+      // email
+      const mailOk = validateEmail(email);
+
+      // dob
+      const dobOk = !!parseDOB(dob, langGuess());
+
+      // visuals
+      setInvalid(uEl, !!username && !freeOk);
+      setInvalid(pEl, !!pw && !passOk);
+      setInvalid(eEl, !!email && !mailOk);
+      setInvalid(dEl, !!dob && !dobOk);
+
+      // message (only when user typed something)
+      window.EPTEC_UI?.hideMsg?.("register-message");
+      if (username && userOk && !freeOk) msgRegister("Username ist bereits vergeben.", "error");
+      else if (username && isForbiddenWord(username)) msgRegister("Username nicht erlaubt.", "warn");
+      else if (email && !mailOk) msgRegister("E-Mail ungültig.", "warn");
+      else if (dob && !dobOk) msgRegister("Geburtsdatum-Format falsch.", "warn");
+      else if (pw && !passOk) {
+        if (pwRes.reason === "PASS_MIN") msgRegister("Passwort: mindestens 5 Zeichen.", "warn");
+        else if (pwRes.reason === "PASS_UPPER") msgRegister("Passwort: mindestens 1 Großbuchstabe.", "warn");
+        else if (pwRes.reason === "PASS_SPECIAL") msgRegister("Passwort: mindestens 1 Sonderzeichen.", "warn");
+      }
+
+      const allOk = freeOk && passOk && mailOk && dobOk;
+      setLocked(submit, !allOk);
+      return { allOk, username, email, pw, dob };
+    }
+
+    [uEl, pEl, eEl, dEl].forEach(el => {
+      el?.addEventListener("input", refresh);
+      el?.addEventListener("focus", () => window.SoundEngine?.uiFocus?.());
+    });
+
+    submit?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      const { allOk } = refresh();
+      if (!allOk) return;
+
+      const payload = {
+        firstName: trim($("reg-first-name")?.value),
+        lastName:  trim($("reg-last-name")?.value),
+        birthdate: trim($("reg-birthdate")?.value),
+        email:     trim($("reg-email")?.value),
+        username:  trim($("reg-username")?.value),
+        password:  s($("reg-password")?.value)
+      };
+
+      const mb = window.EPTEC_MOCK_BACKEND;
+      const res = mb?.register ? mb.register(payload) : { ok:false, message:"Backend fehlt." };
+
+      if (!res?.ok) {
+        msgRegister(res?.message || "Registrierung fehlgeschlagen.", "error");
+        return;
+      }
+
+      // Placeholder confirmation (mailbox simulation lives in mock_backend)
+      window.EPTEC_UI?.toast?.("Registrierung erstellt. Verifizierung (Simulation) im Postfach.", "ok", 2600);
+      window.EPTEC_UI_STATE?.set?.({ modal: null });
+    });
+
+    refresh();
+  }
+
+  /* -------------------------------------------------------
+     LOGIN FAIL FEEDBACK (visible)
+  ------------------------------------------------------- */
+  function bindLogin() {
+    const btn = $("btn-login");
+    btn?.addEventListener("click", () => {
+      const u = trim($("login-username")?.value);
+      const p = trim($("login-password")?.value);
+
+      window.EPTEC_UI?.hideMsg?.("login-message");
+
+      if (!u || !p) {
+        msgLogin("Login fehlgeschlagen.", "error");
+        return;
+      }
+
+      const mb = window.EPTEC_MOCK_BACKEND;
+      const res = mb?.login ? mb.login({ username: u, password: p }) : { ok:false, message:"Backend fehlt." };
+      if (!res?.ok) {
+        msgLogin(res?.message || "Ungültige Zugangsdaten.", "error");
+        return;
+      }
+
+      // after login: hydrate state + go tunnel to doors (R1)
+      window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.();
+      window.SoundEngine?.tunnelFall?.();
+      window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1");
+    });
+  }
+
+  /* -------------------------------------------------------
+     DOORS + PAYWALL
+     (filmable, no real billing; uses StateManager + MockBackend)
+  ------------------------------------------------------- */
+  function showPaywall() {
+    const pw = $("paywall-screen");
+    if (!pw) return;
+    pw.classList.remove("paywall-hidden");
+    pw.setAttribute("aria-hidden", "false");
+  }
+
+  function hidePaywall() {
+    const pw = $("paywall-screen");
+    if (!pw) return;
+    pw.classList.add("paywall-hidden");
+    pw.setAttribute("aria-hidden", "true");
+  }
+
+  function gotoDashboard() {
+    // use UI_STATE view mapping used by ui_controller
+    window.EPTEC_UI_STATE?.set?.({ view: "room2" });
+  }
+
+  function bindDoorsAndPaywall() {
+    $("paywall-close")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      hidePaywall();
+    });
+
+    const tryEnter = (doorKey) => {
+      const sm = window.EPTEC_STATE_MANAGER;
+      if (!sm?.canEnterDoor) return { ok:false, reason:"NO_STATE" };
+      return sm.canEnterDoor(doorKey);
+    };
+
+    $("door-construction")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      const res = tryEnter("construction");
+      if (res.ok) return gotoDashboard();
+      showPaywall();
+    });
+
+    $("door-controlling")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      const res = tryEnter("controlling");
+      if (res.ok) return gotoDashboard();
+      showPaywall();
+    });
+
+    // Paywall selection (placeholder: activates baseline)
+    $("paywall-construction-btn")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      window.EPTEC_STATE_MANAGER?.unlockDoor?.("construction");
+      hidePaywall();
+      gotoDashboard();
+    });
+
+    $("paywall-controlling-btn")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      // controlling implies construction (your coupling rule)
+      window.EPTEC_STATE_MANAGER?.unlockDoor?.("controlling");
+      hidePaywall();
+      gotoDashboard();
+    });
+
+    // Referral apply (new customer) – under paywall
+    $("paywall-referral-apply")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      const code = trim($("paywall-referral-input")?.value).toUpperCase();
+      if (!code) return window.EPTEC_UI?.toast?.("Bitte Geschenkkode eingeben.", "warn");
+
+      const res = window.EPTEC_STATE_MANAGER?.redeemReferralForCurrentUser?.(code);
+      if (res?.ok) {
+        window.EPTEC_UI?.toast?.("Geschenkkode akzeptiert (Demo).", "ok");
+      } else {
+        window.EPTEC_UI?.toast?.(res?.message || "Geschenkkode ungültig.", "warn");
+      }
+    });
+
+    // VIP apply (bypass paywall)
+    $("paywall-vip-apply")?.addEventListener("click", () => {
+      window.SoundEngine?.uiConfirm?.();
+      const code = trim($("paywall-vip-input")?.value).toUpperCase();
+      if (!code) return window.EPTEC_UI?.toast?.("Bitte VIP-Code eingeben.", "warn");
+
+      const res = window.EPTEC_STATE_MANAGER?.redeemVipForCurrentUser?.(code);
+      if (res?.ok) {
+        // VIP: unlock both doors for demo access
+        window.EPTEC_STATE_MANAGER?.unlockDoor?.("construction");
+        window.EPTEC_STATE_MANAGER?.unlockDoor?.("controlling");
+        window.EPTEC_UI?.toast?.("VIP aktiviert. Türen freigeschaltet.", "ok");
+        hidePaywall();
+        gotoDashboard();
+      } else {
+        window.EPTEC_UI?.toast?.(res?.message || "VIP-Code ungültig.", "warn");
+      }
+    });
+  }
+
+  /* -------------------------------------------------------
+     INIT
+  ------------------------------------------------------- */
+  function init() {
+    // Ensure UI init ran
+    window.EPTEC_UI?.init?.();
+
+    bindLogin();
+    bindRegister();
+    bindDoorsAndPaywall();
+
+    // hydrate once at start (safe)
+    window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.();
+  }
+
+  window.RegistrationEngine = {
+    init,
+    dobFormatHint
+  };
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
