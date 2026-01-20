@@ -2259,4 +2259,53 @@ window.addEventListener('load', () => {
   }
   window.addEventListener("load", run);
 })();
+/* =========================================================
+   EPTEC GLOBE BLOCKER DETECTOR (append-only)
+   Purpose:
+   - Detect which DOM element is physically blocking the globe
+   - Logs the REAL topmost element at the globe position
+   - No mutation, no fixes, only diagnostics
+   ========================================================= */
+(() => {
+  "use strict";
+
+  function inspect() {
+    const toggle = document.getElementById("lang-toggle");
+    if (!toggle) {
+      console.warn("[EPTEC][LANG] ❌ #lang-toggle not found");
+      return;
+    }
+
+    const r = toggle.getBoundingClientRect();
+    const x = Math.floor(r.left + r.width / 2);
+    const y = Math.floor(r.top + r.height / 2);
+
+    const el = document.elementFromPoint(x, y);
+
+    console.group("🧪 EPTEC LANG BLOCKER REPORT");
+    console.log("Globe center:", { x, y });
+    console.log("Expected element:", toggle);
+    console.log("Actual top element:", el);
+
+    if (el !== toggle) {
+      console.warn("❌ BLOCKED BY:", el);
+      console.warn("Tag:", el.tagName);
+      console.warn("ID:", el.id);
+      console.warn("Class:", el.className);
+      console.warn("Computed styles:", getComputedStyle(el));
+    } else {
+      console.log("✅ Globe is topmost and clickable");
+    }
+
+    console.groupEnd();
+  }
+
+  // Run after layout is fully settled
+  setTimeout(inspect, 300);
+  setTimeout(inspect, 800);
+  setTimeout(inspect, 1500);
+
+  // Also allow manual trigger
+  window.__EPTEC_CHECK_LANG_BLOCKER__ = inspect;
+})();
 
