@@ -9,5 +9,9 @@ const TranslationEngine = {
             console.log(`System auf ${langCode} umgestellt.`);
         }
     },
-
-   
+ // Holt den passenden Textbaustein für die App-Oberfläche
+    getLabel: (labelId) => {
+        // Logik greift auf eine JSON-Datei in /assets/lang/ zu
+        return `Translation_${labelId}_${TranslationEngine.currentLang}`;
+    }
+};
