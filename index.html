@@ -5,178 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EPTEC MASTER CONTROL</title>
 
+  <!-- Core Styles -->
   <link rel="stylesheet" href="assets/style.css">
   <link rel="stylesheet" href="assets/ui_elements.css">
   <link rel="stylesheet" href="assets/imagine.css">
   <link rel="stylesheet" href="assets/hidden.css">
-
-  <style>
-    /* safety / backdrop */
-    #meadow-view { display: flex !important; }
-    .tunnel-active { filter: brightness(2) blur(15px); pointer-events: none; }
-
-    /* language switcher (works with main.js toggling .lang-open) */
-    .lang-switcher{
-      position: fixed;
-      top: 14px;
-      right: 14px;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-      user-select: none;
-    }
-    #lang-toggle{
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.35);
-      background: rgba(0,0,0,.22);
-      backdrop-filter: blur(10px);
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      font-size: 20px;
-      line-height: 1;
-      color: white;
-    }
-    #lang-rail{
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transform-origin: right center;
-      transform: translateX(12px) scaleX(0);
-      opacity: 0;
-      pointer-events: none;
-      transition: transform 220ms ease, opacity 220ms ease;
-    }
-    .lang-open #lang-rail{
-      transform: translateX(0) scaleX(1);
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .lang-item{
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.25);
-      background: rgba(0,0,0,.20);
-      backdrop-filter: blur(10px);
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      font-size: 16px;
-      line-height: 1;
-      transition: transform 160ms ease, background 160ms ease;
-      color: white;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    .lang-item:hover{ transform: translateY(-2px); background: rgba(0,0,0,.32); }
-
-    /* minimal paywall overlay css */
-    #paywall-screen{
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .paywall-hidden{ display:none !important; }
-    .paywall-card{
-      width: min(760px, 94vw);
-      max-height: 84vh;
-      overflow: auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 18px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      box-shadow: 0 20px 60px rgba(0,0,0,.35);
-    }
-    .paywall-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-    .paywall-title{ font-weight: 800; font-size: 18px; }
-    .paywall-close{
-      border: 1px solid #ddd;
-      background: #fff;
-      border-radius: 12px;
-      padding: 8px 10px;
-      cursor: pointer;
-      min-height: 40px;
-      min-width: 44px;
-      font-size: 18px;
-      line-height: 1;
-    }
-    .paywall-message{ opacity: .85; margin-bottom: 14px; }
-    .paywall-section{ border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px; }
-    .paywall-section-title{ font-weight: 700; margin-bottom: 10px; }
-    .paywall-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .paywall-btn{
-      border: 1px solid #111;
-      background: #fff;
-      border-radius: 12px;
-      padding: 10px 14px;
-      cursor: pointer;
-      min-height: 44px;
-    }
-    .paywall-input{
-      flex: 1 1 260px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 10px 12px;
-      min-height: 44px;
-    }
-
-    /* footer */
-    .legal-footer{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-    }
-    .legal-link{ cursor:pointer; text-decoration: underline; }
-  </style>
 </head>
 
 <body>
 
+  <!-- HEADER -->
   <header class="app-header">
     <h1 id="app-title">Contract Office</h1>
     <div id="app-subtitle">by Johannes Büngener</div>
     <div id="system-clock"></div>
   </header>
 
-  <!-- 🌍 Language switcher -->
-  <div id="language-switcher" class="lang-switcher" aria-label="Language">
-    <div id="lang-rail" aria-hidden="true">
-      <button class="lang-item" type="button" data-lang="en">EN</button>
-      <button class="lang-item" type="button" data-lang="de">DE</button>
-      <button class="lang-item" type="button" data-lang="es">ES</button>
-      <button class="lang-item" type="button" data-lang="fr">FR</button>
-      <button class="lang-item" type="button" data-lang="it">IT</button>
-      <button class="lang-item" type="button" data-lang="pt">PT</button>
-      <button class="lang-item" type="button" data-lang="nl">NL</button>
-      <button class="lang-item" type="button" data-lang="ru">RU</button>
-      <button class="lang-item" type="button" data-lang="uk">UA</button>
-      <button class="lang-item" type="button" data-lang="ar">AR</button>
-      <button class="lang-item" type="button" data-lang="zh">ZH</button>
-      <button class="lang-item" type="button" data-lang="ja">JA</button>
+  <!-- LANGUAGE SWITCHER -->
+  <div id="language-switcher" class="lang-switcher">
+    <div id="lang-rail">
+      <button class="lang-item" data-lang="en">EN</button>
+      <button class="lang-item" data-lang="de">DE</button>
+      <button class="lang-item" data-lang="es">ES</button>
+      <button class="lang-item" data-lang="fr">FR</button>
+      <button class="lang-item" data-lang="it">IT</button>
+      <button class="lang-item" data-lang="pt">PT</button>
+      <button class="lang-item" data-lang="nl">NL</button>
+      <button class="lang-item" data-lang="ru">RU</button>
+      <button class="lang-item" data-lang="uk">UA</button>
+      <button class="lang-item" data-lang="ar">AR</button>
+      <button class="lang-item" data-lang="zh">ZH</button>
+      <button class="lang-item" data-lang="ja">JA</button>
     </div>
-    <button id="lang-toggle" type="button">🌐</button>
+    <button id="lang-toggle">🌐</button>
   </div>
 
-  <!-- 🌱 Meadow / Entry -->
+  <!-- START / MEADOW -->
   <section id="meadow-view" class="grassy-meadow">
+
     <div id="entry-ui" class="entry-ui">
+
       <input id="login-username" class="entry-input" autocomplete="username">
       <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
 
@@ -188,14 +56,15 @@
 
       <div id="login-message" class="system-msg"></div>
 
-      <div id="admin-gate" class="admin-gate">
+      <div id="admin-gate">
         <input id="admin-code" class="entry-input" autocomplete="off">
         <button id="admin-submit" class="entry-btn"></button>
       </div>
+
     </div>
 
-    <!-- ✅ Footer back -->
-    <div id="legal-footer" class="legal-footer">
+    <!-- FOOTER -->
+    <footer id="legal-footer" class="legal-footer">
       <span id="link-imprint" class="legal-link"></span>
       <span>|</span>
       <span id="link-terms" class="legal-link"></span>
@@ -203,185 +72,63 @@
       <span id="link-support" class="legal-link"></span>
       <span>|</span>
       <span id="link-privacy-footer" class="legal-link"></span>
-    </div>
+    </footer>
+
   </section>
 
-  <!-- Register modal -->
+  <!-- REGISTER -->
   <section id="register-screen" class="modal modal-hidden">
     <div class="modal-card register-card">
-      <div id="register-title" class="modal-title"></div>
+      <div id="register-title"></div>
       <input id="reg-first-name" class="entry-input">
       <input id="reg-last-name" class="entry-input">
       <input id="reg-birthdate" class="entry-input">
       <input id="reg-email" class="entry-input">
       <input id="reg-username" class="entry-input">
       <input id="reg-password" class="entry-input" type="password">
-      <div id="reg-rules-username" class="rule-text"></div>
-      <div id="reg-rules-password" class="rule-text"></div>
-      <div id="register-message" class="system-msg"></div>
+      <div id="reg-rules-username"></div>
+      <div id="reg-rules-password"></div>
+      <div id="register-message"></div>
       <button id="reg-submit" class="entry-btn locked"></button>
       <button id="reg-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- Forgot modal -->
+  <!-- FORGOT -->
   <section id="forgot-screen" class="modal modal-hidden">
     <div class="modal-card forgot-card">
-      <div id="forgot-title" class="modal-title"></div>
+      <div id="forgot-title"></div>
       <input id="forgot-identity" class="entry-input">
-      <div id="forgot-message" class="system-msg"></div>
+      <div id="forgot-message"></div>
       <button id="forgot-submit" class="entry-btn"></button>
       <button id="forgot-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- Legal modal -->
+  <!-- LEGAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <div class="modal-card">
-      <div id="legal-title" class="modal-title"></div>
-      <div id="legal-body" style="white-space:pre-wrap;"></div>
+      <div id="legal-title"></div>
+      <div id="legal-body"></div>
       <button id="legal-close" class="entry-btn secondary"></button>
     </div>
   </section>
 
-  <!-- Room 1 (doors) -->
-  <section id="room-1-view" style="display:none;">
-    <div class="engraved-matrix"></div>
-    <div style="padding:40px;max-width:900px;margin:0 auto;color:white;">
-      <h2 style="margin:0 0 12px;">Choose a door</h2>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button id="door-construction" class="entry-btn" type="button">Door: Construction</button>
-        <button id="door-controlling" class="entry-btn" type="button">Door: Contract Controlling</button>
-      </div>
-      <div id="doors-status" class="system-msg" style="margin-top:14px;"></div>
-    </div>
-  </section>
-
-  <!-- Room 2 (dashboard) -->
-  <section id="room-2-view" style="display:none;">
-    <div style="padding:40px;color:white;max-width:900px;margin:0 auto;">
-      <h2>Dashboard</h2>
-      <div id="coupling-banner" class="system-msg" style="display:none;"></div>
-
-      <div style="margin-top:10px;">
-        <strong>Construction:</strong>
-        <span id="construction-status">—</span> / <span id="construction-tier">—</span>
-      </div>
-
-      <div>
-        <strong>Controlling:</strong>
-        <span id="controlling-status">—</span> / <span id="controlling-tier">—</span>
-      </div>
-
-      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-        <button id="demo-construction-on" class="entry-btn" type="button">Construction BASIS AN</button>
-        <button id="demo-controlling-on" class="entry-btn" type="button">Controlling BASIS AN</button>
-        <button id="demo-construction-off" class="entry-btn" type="button">Construction AUS</button>
-      </div>
-
-      <hr style="margin:20px 0;opacity:.25;">
-
-      <div id="referral-code-block" style="display:none;margin-top:10px;">
-        <div style="opacity:.85;">Dein Geschenkkode (unbegrenzt, für Neukunden)</div>
-        <div id="referral-code-value" style="margin-top:6px;">—</div>
-        <button id="referral-copy" class="entry-btn" type="button" style="margin-top:8px;">Kopieren</button>
-      </div>
-
-      <hr style="margin:20px 0;opacity:.25;">
-
-      <div style="margin-top:10px;">
-        <div style="opacity:.85;">Present-Code (global)</div>
-        <input id="present-code-input" class="entry-input" placeholder="XMAS2026" style="margin-top:6px;">
-        <button id="present-activate-btn" class="entry-btn" type="button" style="margin-top:8px;">Aktivieren</button>
-        <div id="present-status" class="system-msg" style="margin-top:10px;"></div>
-      </div>
-
-      <div style="margin-top:14px;">
-        <span>Nächste Abrechnung:</span>
-        <strong id="next-invoice-date">—</strong>
-        <span id="next-invoice-discount"></span>
-      </div>
-
-      <hr style="margin:20px 0;opacity:.25;">
-
-      <div style="margin-top:10px;">
-        <div style="opacity:.85;">Admin Panel (Demo)</div>
-
-        <div style="margin-top:10px;">
-          <div style="opacity:.75;">Present Campaign erstellen</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-            <input id="admin-present-code" class="entry-input" placeholder="XMAS2026">
-            <input id="admin-present-percent" class="entry-input" placeholder="50" style="max-width:120px;">
-            <button id="admin-present-create" class="entry-btn" type="button">Erstellen</button>
-          </div>
-          <div id="admin-present-status" class="system-msg" style="margin-top:10px;"></div>
-        </div>
-
-        <div style="margin-top:18px;">
-          <div style="opacity:.75;">VIP Code generieren</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-            <input id="admin-vip-months" class="entry-input" placeholder="free_months (z.B. 3)" style="max-width:220px;">
-            <button id="admin-vip-create" class="entry-btn" type="button">VIP Code erstellen</button>
-          </div>
-          <div id="admin-vip-status" class="system-msg" style="margin-top:10px;"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- flash + tunnel -->
+  <!-- TRANSITION FX -->
   <div id="eptec-white-flash" class="white-flash-hidden"></div>
   <div id="eptec-tunnel" class="tunnel-hidden">
     <div class="tunnel-wall"></div>
   </div>
 
-  <!-- Paywall overlay -->
-  <div id="paywall-screen" class="paywall-hidden" aria-hidden="true">
-    <div class="paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywall-title">
-      <div class="paywall-head">
-        <div id="paywall-title" class="paywall-title">Unlock Access</div>
-        <button id="paywall-close" class="paywall-close" type="button">✕</button>
-      </div>
-
-      <div id="paywall-message" class="paywall-message">
-        Choose plan and redeem optional codes to unlock this door.
-      </div>
-
-      <div class="paywall-section">
-        <div class="paywall-section-title">Room selection</div>
-        <div class="paywall-row">
-          <button id="paywall-construction-btn" type="button" class="paywall-btn">Construction</button>
-          <button id="paywall-controlling-btn" type="button" class="paywall-btn">Contract Controlling</button>
-        </div>
-      </div>
-
-      <div class="paywall-section">
-        <div class="paywall-section-title">Referral code (new customer)</div>
-        <div class="paywall-row">
-          <input id="paywall-referral-input" class="paywall-input" type="text" autocomplete="off" placeholder="Enter referral code" />
-          <button id="paywall-referral-apply" type="button" class="paywall-btn">Apply</button>
-        </div>
-      </div>
-
-      <div class="paywall-section">
-        <div class="paywall-section-title">VIP code</div>
-        <div class="paywall-row">
-          <input id="paywall-vip-input" class="paywall-input" type="text" autocomplete="off" placeholder="Enter VIP code" />
-          <button id="paywall-vip-apply" type="button" class="paywall-btn">Apply</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts (NO inline JS!) -->
-  <script src="scripts/sounds.js" defer></script>
-  <script src="scripts/ui_state.js" defer></script>
-  <script src="scripts/ui_controller.js" defer></script>
-  <script src="scripts/registration_engine.js" defer></script>
-  <script src="scripts/mock_backend.js" defer></script>
-  <script src="scripts/state_manager.js" defer></script>
-  <script src="scripts/logic.js" defer></script>
-  <script src="scripts/main.js" defer></script>
+  <!-- SCRIPTS (ORDER IS IMPORTANT) -->
+  <script src="scripts/sounds.js"></script>
+  <script src="scripts/ui_state.js"></script>
+  <script src="scripts/ui_controller.js"></script>
+  <script src="scripts/registration_engine.js"></script>
+  <script src="scripts/mock_backend.js"></script>
+  <script src="scripts/state_manager.js"></script>
+  <script src="scripts/logic.js"></script>
+  <script src="scripts/main.js"></script>
 
 </body>
 </html>
