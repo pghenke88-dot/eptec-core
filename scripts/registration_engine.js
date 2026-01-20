@@ -100,3 +100,86 @@
     dobFormatHint
   };
 })();
+/* =========================================================
+   PATCH FOR scripts/registration_engine.js  (append-only)
+   Drop this at the END of registration_engine.js (after existing code)
+   Purpose:
+   - Guarantees validateUsername / validatePassword exist
+   - Guarantees usernameSuggestions and dobFormatHint exist
+   - Keeps your existing logic if already present (no rewrite)
+   - Supports the red/green validation in main.js
+   ========================================================= */
+(() => {
+  "use strict";
+
+  // If RegistrationEngine is missing, create minimal one.
+  window.RegistrationEngine = window.RegistrationEngine || {};
+  const RE = window.RegistrationEngine;
+
+  // Username rules (as already displayed in UI):
+  // min 5 chars, 1 uppercase, 1 special char
+  const USERNAME_MIN = 5;
+  const USERNAME_UPPER_RE = /[A-Z]/;
+  const USERNAME_SPECIAL_RE = /[^A-Za-z0-9]/;
+
+  // Password rules:
+  // min 8 chars, 1 letter, 1 number, 1 special char
+  const PASS_MIN = 8;
+  const PASS_LETTER_RE = /[A-Za-z]/;
+  const PASS_NUMBER_RE = /[0-9]/;
+  const PASS_SPECIAL_RE = /[^A-Za-z0-9]/;
+
+  // Only add functions if missing (append-only policy)
+  if (typeof RE.validateUsername !== "function") {
+    RE.validateUsername = (name) => {
+      const s = String(name || "");
+      if (s.length < USERNAME_MIN) return false;
+      if (!USERNAME_UPPER_RE.test(s)) return false;
+      if (!USERNAME_SPECIAL_RE.test(s)) return false;
+      return true;
+    };
+  }
+
+  if (typeof RE.validatePassword !== "function") {
+    RE.validatePassword = (pw) => {
+      const s = String(pw || "");
+      if (s.length < PASS_MIN) return false;
+      if (!PASS_LETTER_RE.test(s)) return false;
+      if (!PASS_NUMBER_RE.test(s)) return false;
+      if (!PASS_SPECIAL_RE.test(s)) return false;
+      return true;
+    };
+  }
+
+  if (typeof RE.usernameSuggestions !== "function") {
+    RE.usernameSuggestions = (base) => {
+      const b = String(base || "").replace(/\s+/g, "");
+      const t = () => Math.floor(Math.random() * 900 + 100);
+      const safeBase = b || "User";
+      return [`${safeBase}${t()}`, `${safeBase}_${t()}`];
+    };
+  }
+
+  // DOB hint per language (display-only)
+  if (typeof RE.dobFormatHint !== "function") {
+    RE.dobFormatHint = (lang) => {
+      const l = String(lang || "en").toLowerCase();
+      if (l.startsWith("de")) return "TT.MM.JJJJ";
+      if (l.startsWith("fr")) return "JJ/MM/AAAA";
+      if (l.startsWith("es")) return "DD/MM/AAAA";
+      if (l.startsWith("it")) return "GG/MM/AAAA";
+      if (l.startsWith("pt")) return "DD/MM/AAAA";
+      if (l.startsWith("nl")) return "DD-MM-YYYY";
+      if (l.startsWith("ru") || l.startsWith("uk")) return "ДД.ММ.ГГГГ";
+      if (l.startsWith("ar")) return "DD/MM/YYYY";
+      if (l.startsWith("zh") || l.startsWith("ja")) return "YYYY-MM-DD";
+      return "YYYY-MM-DD";
+    };
+  }
+
+  // Optional: validateBirthdate if you want later (non-breaking)
+  if (typeof RE.validateBirthdate !== "function") {
+    RE.validateBirthdate = (_birthdateStr, _lang) => true; // keep permissive for now
+  }
+
+})();
