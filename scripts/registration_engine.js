@@ -1,20 +1,3 @@
-/**
- * scripts/registration_engine.js
- * EPTEC REGISTRATION ENGINE – FINAL (FULL MERGE)
- *
- * Includes EVERYTHING from:
- * - old engine (login feedback + doors/paywall bindings)
- * - placeholder patch (grey hints for inputs)
- * - eye-toggle patch (login + register password show/hide)
- * - new dramaturgy validation (red + blocking, no empty fields)
- * - backend policy wiring (isUsernameAllowed + ensureUsernameFree)
- * - master door 6264 hook (only if fields exist)
- *
- * Safe design:
- * - If door/paywall IDs do not exist yet -> NO CRASH, silently no-op.
- * - Does NOT require changes to main.js / index.html / logic.js.
- */
-
 (() => {
   "use strict";
 
