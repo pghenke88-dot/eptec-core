@@ -525,9 +525,3 @@ document.querySelector('#apply-present-code').addEventListener('submit', async (
     alert(`Fehler: ${result.message}`);
   }
 });
-
-// Aktualisierung der Benutzeroberfläche bei Sprachwechsel
-document.querySelector('#language-select').addEventListener('change', (e) => {
-  const selectedLang = e.target.value;
-  setLanguage(selectedLang); // Funktion aus Logic aufrufen
-});
