@@ -2105,4 +2105,58 @@ window.addEventListener('load', () => {
 
   console.log("[EPTEC] Language switcher proxy active");
 })();
+// EPTEC LANG TOGGLE RESCUE (append-only)
+(() => {
+  "use strict";
+
+  // Hilfsfunktion, um den Sprachumschalter zu aktivieren
+  function bindFlagCannon() {
+    const sw = document.getElementById("language-switcher");
+    const toggle = document.getElementById("lang-toggle");
+    const rail = document.getElementById("lang-rail");
+    if (!sw || !toggle || !rail) return false;
+
+    // 1) Sicherstellen, dass der Sprachumschalter klickbar bleibt
+    sw.style.zIndex = "2147483647"; // Höchster Z-Index
+    sw.style.pointerEvents = "auto"; // Klickbar
+    toggle.style.pointerEvents = "auto"; // Klickbar
+    rail.style.pointerEvents = "auto"; // Klickbar
+
+    // 2) CSS-Override einfügen, falls es noch nicht existiert
+    if (!document.getElementById("eptec-lang-rescue-style")) {
+      const style = document.createElement("style");
+      style.id = "eptec-lang-rescue-style";
+      style.textContent = `
+        #language-switcher, #language-switcher * { pointer-events: auto !important; }
+        #language-switcher { z-index: 2147483647 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // 3) Sicherstellen, dass der Toggle Button den "open" Zustand richtig schaltet
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      sw.classList.toggle("lang-open"); // Toggle den Zustand des Sprachauswahl-Menüs
+    }, true);
+
+    // 4) Klicks im Rail (Sprachoptionen) nicht schließen
+    rail.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
+
+    // 5) Klicks außerhalb des Sprachumschalters schließen das Menü
+    document.addEventListener("click", () => {
+      sw.classList.remove("lang-open");
+    }, true);
+
+    return true;
+  }
+
+  // Versuche den Sprachumschalter zu binden, oder versuche es in regelmäßigen Abständen
+  if (bindFlagCannon()) return;
+  let tries = 0;
+  const t = setInterval(() => {
 
