@@ -1,25 +1,97 @@
+/**
+ * scripts/registration_engine.js
+ * EPTEC REGISTRATION ENGINE – FINAL (Index-ID harmonisiert)
+ *
+ * ✅ Nutzt ausschließlich IDs, die im Index existieren
+ * ✅ Keine Doppel-Listener mit main.js (bindet NICHT admin-submit)
+ * ✅ Live-Validierung: rot + sperrend + "kein Feld leer" (Register)
+ * ✅ Placeholders (grau) für Login + Register + DOB-Hint (DE/EN)
+ * ✅ Username-Regeln (dramaturgisch):
+ *    - min 6
+ *    - 1 Großbuchstabe
+ *    - 1 special (._-)
+ *    - Backend-Policy: EPTEC_MOCK_BACKEND.isUsernameAllowed
+ *    - Unique: EPTEC_MOCK_BACKEND.ensureUsernameFree
+ * ✅ Passwort-Regeln:
+ *    - min 5
+ *    - 1 Großbuchstabe
+ *    - 1 Sonderzeichen (non-alnum)
+ * ✅ 👁 Eye-Toggle (Login + Register) wird minimal injiziert, falls nicht im HTML
+ * ✅ Forgot: Identity required + requestPasswordReset
+ *
+ * ❌ Nicht Aufgabe:
+ * - Admin Start Gate (200288) -> macht main.js
+ * - Tür-Gate (6264) -> kommt erst, wenn du DOOR-UI im Index hast (andocken später)
+ * - Paywall / Türen / Dashboard -> später separat (IDs fehlen aktuell)
+ */
+
 (() => {
   "use strict";
+
+  // -----------------------------
+  // ID-Map = „Aufhänger“ (Single Source of Truth)
+  // -----------------------------
+  const IDS = Object.freeze({
+    // Login box
+    loginUser: "login-username",
+    loginPass: "login-password",
+    btnLogin: "btn-login",
+    btnRegister: "btn-register",
+    btnForgot: "btn-forgot",
+    loginMsg: "login-message",
+
+    // Admin gate on start (exists in Index, but MAIN binds it)
+    adminCode: "admin-code",
+    adminSubmit: "admin-submit",
+
+    // Register modal
+    regFirst: "reg-first-name",
+    regLast: "reg-last-name",
+    regDob: "reg-birthdate",
+    regEmail: "reg-email",
+    regUser: "reg-username",
+    regPass: "reg-password",
+    regRuleUser: "reg-rules-username",
+    regRulePass: "reg-rules-password",
+    regMsg: "register-message",
+    regSubmit: "reg-submit",
+    regClose: "reg-close",
+
+    // Forgot modal
+    forgotIdentity: "forgot-identity",
+    forgotMsg: "forgot-message",
+    forgotSubmit: "forgot-submit",
+    forgotClose: "forgot-close",
+
+    // Legal
+    imprint: "link-imprint",
+    terms: "link-terms",
+    support: "link-support",
+    privacy: "link-privacy-footer"
+  });
 
   const $ = (id) => document.getElementById(id);
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
-  // ---- master door (under doors) ----
-  const MASTER_DOOR = "PatrickGeorgHenke6264";
+  function safeOn(id, event, fn, opts) {
+    const el = $(id);
+    if (!el) return false;
+    el.addEventListener(event, fn, opts);
+    return true;
+  }
 
-  // ------------------------------------------------------------
-  // Minimal texts (DE/EN) – extend later via locales
-  // ------------------------------------------------------------
+  // -----------------------------
+  // Minimal texts (EN/DE) — erweitert später via locales
+  // -----------------------------
   const TXT = {
     en: {
-      ph_login_user: "Username",
-      ph_login_pass: "Password",
+      ph_user: "Username",
+      ph_pass: "Password",
       ph_first: "First name",
       ph_last: "Last name",
       ph_email: "Email address",
-      ph_user: "Username",
-      ph_pass: "Password",
       ph_dob: "MM/DD/YYYY",
+      ph_forgot: "Email or username",
 
       req: "Required.",
       email_bad: "Invalid email address.",
@@ -29,20 +101,18 @@
       user_special: "Username: at least 1 special character (._-).",
       user_taken: "Username already taken.",
       user_forbidden: "Username not allowed.",
-
       pass_min: "Password: minimum 5 characters.",
       pass_upper: "Password: at least 1 uppercase letter.",
       pass_special: "Password: at least 1 special character."
     },
     de: {
-      ph_login_user: "Benutzername",
-      ph_login_pass: "Passwort",
+      ph_user: "Benutzername",
+      ph_pass: "Passwort",
       ph_first: "Vorname",
       ph_last: "Nachname",
       ph_email: "E-Mail-Adresse",
-      ph_user: "Benutzername",
-      ph_pass: "Passwort",
       ph_dob: "DD.MM.YYYY",
+      ph_forgot: "E-Mail oder Benutzername",
 
       req: "Pflichtfeld.",
       email_bad: "Ungültige E-Mail-Adresse.",
@@ -52,7 +122,6 @@
       user_special: "Benutzername: mindestens 1 Sonderzeichen (._-).",
       user_taken: "Benutzername ist bereits vergeben.",
       user_forbidden: "Benutzername nicht erlaubt.",
-
       pass_min: "Passwort: mindestens 5 Zeichen.",
       pass_upper: "Passwort: mindestens 1 Großbuchstabe.",
       pass_special: "Passwort: mindestens 1 Sonderzeichen."
@@ -67,8 +136,6 @@
       document.documentElement.getAttribute("lang") ||
       (navigator.language || "en").slice(0, 2)
     ).toLowerCase().trim();
-
-    // minimal dictionary only for EN/DE for now
     return raw === "de" ? "de" : "en";
   }
 
@@ -81,9 +148,9 @@
     return getLang() === "en" ? "MM/DD/YYYY" : "DD.MM.YYYY";
   }
 
-  // ------------------------------------------------------------
-  // UI helpers
-  // ------------------------------------------------------------
+  // -----------------------------
+  // UI helpers (rot + lock)
+  // -----------------------------
   function setPH(id, v) {
     const el = $(id);
     if (!el) return;
@@ -96,7 +163,7 @@
   function setInvalid(el, on) {
     if (!el) return;
     el.classList.toggle("eptec-invalid", !!on);
-    // visible fallback even without CSS
+    // fallback visibility even if CSS missing
     el.style.outline = on ? "2px solid rgba(255,60,60,.95)" : "";
     el.style.boxShadow = on ? "0 0 0 2px rgba(255,60,60,.25)" : "";
   }
@@ -134,9 +201,9 @@
     console.log("[TOAST]", type, msg);
   }
 
-  // ------------------------------------------------------------
-  // Eye toggle (inject minimal button if missing)
-  // ------------------------------------------------------------
+  // -----------------------------
+  // 👁 Eye toggle (inject minimal button)
+  // -----------------------------
   function ensureEyeToggle(inputId, toggleId) {
     const inp = $(inputId);
     if (!inp) return;
@@ -163,7 +230,6 @@
         btn.style.opacity = "0.65";
         btn.style.fontSize = "16px";
         btn.style.lineHeight = "1";
-
         wrap.appendChild(btn);
 
         if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
@@ -179,13 +245,13 @@
     });
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Validators (dramaturgy strict)
-  // ------------------------------------------------------------
+  // -----------------------------
   const USER_MIN = 6;
   const PASS_MIN = 5;
 
-  const RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+  const RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i; // ✅ correct (escaped dot)
   const RX_UPPER = /[A-Z]/;
   const RX_USER_SPECIAL = /[._-]/;        // username special
   const RX_PASS_SPECIAL = /[^A-Za-z0-9]/; // password special
@@ -268,40 +334,42 @@
     return true;
   }
 
-  // ------------------------------------------------------------
-  // Placeholders (patch merged)
-  // ------------------------------------------------------------
+  // -----------------------------
+  // Apply placeholders (grey hints)
+  // -----------------------------
   function applyPlaceholders() {
-    setPH("login-username", t("ph_login_user"));
-    setPH("login-password", t("ph_login_pass"));
+    setPH(IDS.loginUser, t("ph_user"));
+    setPH(IDS.loginPass, t("ph_pass"));
 
-    setPH("reg-first-name", t("ph_first"));
-    setPH("reg-last-name", t("ph_last"));
-    setPH("reg-email", t("ph_email"));
-    setPH("reg-username", t("ph_user"));
-    setPH("reg-password", t("ph_pass"));
-    setPH("reg-birthdate", dobHint());
+    setPH(IDS.regFirst, t("ph_first"));
+    setPH(IDS.regLast, t("ph_last"));
+    setPH(IDS.regEmail, t("ph_email"));
+    setPH(IDS.regUser, t("ph_user"));
+    setPH(IDS.regPass, t("ph_pass"));
+    setPH(IDS.regDob, dobHint());
+
+    setPH(IDS.forgotIdentity, t("ph_forgot"));
   }
 
-  // ------------------------------------------------------------
-  // Register strict validation (merged)
-  // ------------------------------------------------------------
+  // -----------------------------
+  // Register binding (strict)
+  // -----------------------------
   function bindRegister() {
-    const f1 = $("reg-first-name");
-    const f2 = $("reg-last-name");
-    const dob = $("reg-birthdate");
-    const em = $("reg-email");
-    const un = $("reg-username");
-    const pw = $("reg-password");
-    const submit = $("reg-submit");
+    const f1 = $(IDS.regFirst);
+    const f2 = $(IDS.regLast);
+    const dob = $(IDS.regDob);
+    const em = $(IDS.regEmail);
+    const un = $(IDS.regUser);
+    const pw = $(IDS.regPass);
+    const submit = $(IDS.regSubmit);
 
-    const ru = $("reg-rules-username");
-    const rp = $("reg-rules-password");
+    const ru = $(IDS.regRuleUser);
+    const rp = $(IDS.regRulePass);
 
     if (!f1 || !f2 || !dob || !em || !un || !pw || !submit) return;
 
     function refresh() {
-      hideMsg("register-message");
+      hideMsg(IDS.regMsg);
 
       const first = String(f1.value || "").trim();
       const last  = String(f2.value || "").trim();
@@ -316,9 +384,9 @@
       const dobRes = validateDOB(dobV);
       const emRes  = validateEmail(emV);
 
-      const uLocal = validateUsernameLocal(unV);
-      const uPolicy = uLocal.ok ? backendPolicy(unV) : { ok: false, reason: "LOCAL" };
-      const uFree = (uLocal.ok && uPolicy.ok) ? backendFree(unV) : false;
+      const uLocal  = validateUsernameLocal(unV);
+      const uPolicy = uLocal.ok ? backendPolicy(unV) : { ok: false };
+      const uFree   = (uLocal.ok && uPolicy.ok) ? backendFree(unV) : false;
 
       const pRes = validatePassword(pwV);
 
@@ -342,29 +410,26 @@
       setRuleText(rp, passMsg, !!passMsg);
 
       const allOk =
-        firstOk &&
-        lastOk &&
-        dobRes.ok &&
-        emRes.ok &&
-        uLocal.ok &&
-        uPolicy.ok &&
-        uFree &&
+        firstOk && lastOk &&
+        dobRes.ok && emRes.ok &&
+        uLocal.ok && uPolicy.ok && uFree &&
         pRes.ok;
 
       setLocked(submit, !allOk);
 
-      if (!firstOk || !lastOk) showMsg("register-message", t("req"), "warn");
-      else if (!dobRes.ok) showMsg("register-message", dobRes.msg, "warn");
-      else if (!emRes.ok) showMsg("register-message", emRes.msg, "warn");
-      else if (!uLocal.ok) showMsg("register-message", uLocal.msg, "warn");
-      else if (!uPolicy.ok) showMsg("register-message", t("user_forbidden"), "warn");
-      else if (!uFree) showMsg("register-message", t("user_taken"), "error");
-      else if (!pRes.ok) showMsg("register-message", pRes.msg, "warn");
+      // one clear visible message
+      if (!firstOk || !lastOk) showMsg(IDS.regMsg, t("req"), "warn");
+      else if (!dobRes.ok) showMsg(IDS.regMsg, dobRes.msg, "warn");
+      else if (!emRes.ok) showMsg(IDS.regMsg, emRes.msg, "warn");
+      else if (!uLocal.ok) showMsg(IDS.regMsg, uLocal.msg, "warn");
+      else if (!uPolicy.ok) showMsg(IDS.regMsg, t("user_forbidden"), "warn");
+      else if (!uFree) showMsg(IDS.regMsg, t("user_taken"), "error");
+      else if (!pRes.ok) showMsg(IDS.regMsg, pRes.msg, "warn");
 
       return allOk;
     }
 
-    [f1,f2,dob,em,un,pw].forEach(el => {
+    [f1,f2,dob,em,un,pw].forEach((el) => {
       el.addEventListener("input", refresh);
       el.addEventListener("blur", refresh);
       el.addEventListener("focus", () => safe(() => window.SoundEngine?.uiFocus?.()));
@@ -386,7 +451,7 @@
       const mb = window.EPTEC_MOCK_BACKEND;
       const res = mb?.register ? mb.register(payload) : { ok:false, message:"Backend missing." };
       if (!res?.ok) {
-        showMsg("register-message", res?.message || "Registration failed.", "error");
+        showMsg(IDS.regMsg, res?.message || "Registration failed.", "error");
         return;
       }
 
@@ -394,32 +459,26 @@
       safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
     });
 
-    $("reg-close")?.addEventListener("click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
+    safeOn(IDS.regClose, "click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
 
     refresh();
   }
 
-  // ------------------------------------------------------------
-  // Login feedback (old feature kept)
-  // NOTE: main.js already binds login. This is SAFE: we do NOT rebind
-  // if main already handles it. We only provide password eye + placeholders.
-  // ------------------------------------------------------------
-
-  // ------------------------------------------------------------
-  // Forgot minimal (old feature kept)
-  // ------------------------------------------------------------
+  // -----------------------------
+  // Forgot binding (minimal)
+  // -----------------------------
   function bindForgot() {
-    const inp = $("forgot-identity");
-    const btn = $("forgot-submit");
+    const inp = $(IDS.forgotIdentity);
+    const btn = $(IDS.forgotSubmit);
     if (!inp || !btn) return;
 
     function refresh() {
-      hideMsg("forgot-message");
+      hideMsg(IDS.forgotMsg);
       const v = String(inp.value || "").trim();
       const ok = !!v;
       setInvalid(inp, !ok && inp.value.length > 0);
       setLocked(btn, !ok);
-      if (!ok) showMsg("forgot-message", t("req"), "warn");
+      if (!ok) showMsg(IDS.forgotMsg, t("req"), "warn");
       return ok;
     }
 
@@ -434,143 +493,18 @@
       const identity = String(inp.value || "").trim();
       const res = mb?.requestPasswordReset ? mb.requestPasswordReset({ identity }) : { ok:true, message:"Reset requested (simulation)." };
 
-      showMsg("forgot-message", res?.message || "Reset requested.", "ok");
+      showMsg(IDS.forgotMsg, res?.message || "Reset requested.", "ok");
       setTimeout(() => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })), 650);
     });
 
-    $("forgot-close")?.addEventListener("click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
+    safeOn(IDS.forgotClose, "click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
 
     refresh();
   }
 
-  // ------------------------------------------------------------
-  // Doors/Paywall bindings (old features kept, SAFE no-op if missing)
-  // ------------------------------------------------------------
-  function bindDoorsAndPaywallIfPresent() {
-    const doorC = $("door-construction");
-    const doorK = $("door-controlling");
-    const pw = $("paywall-screen");
-
-    // if nothing exists yet -> no-op
-    if (!doorC && !doorK && !pw) return;
-
-    function showPaywall() {
-      if (!pw) return;
-      pw.classList.remove("modal-hidden");
-      pw.setAttribute("aria-hidden", "false");
-    }
-
-    function hidePaywall() {
-      if (!pw) return;
-      pw.classList.add("modal-hidden");
-      pw.setAttribute("aria-hidden", "true");
-    }
-
-    function gotoDashboard() {
-      safe(() => window.EPTEC_UI_STATE?.set?.({ view: "room2" }));
-    }
-
-    function tryEnter(doorKey) {
-      const sm = window.EPTEC_STATE_MANAGER;
-      if (!sm?.canEnterDoor) return { ok:false };
-      return sm.canEnterDoor(doorKey);
-    }
-
-    // doors
-    doorC?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      const res = tryEnter("construction");
-      if (res?.ok) return gotoDashboard();
-      showPaywall();
-    });
-
-    doorK?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      const res = tryEnter("controlling");
-      if (res?.ok) return gotoDashboard();
-      showPaywall();
-    });
-
-    // paywall close
-    $("paywall-close")?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      hidePaywall();
-    });
-
-    // unlock buttons if exist
-    $("paywall-construction-btn")?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      safe(() => window.EPTEC_STATE_MANAGER?.unlockDoor?.("construction"));
-      hidePaywall();
-      gotoDashboard();
-    });
-
-    $("paywall-controlling-btn")?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      safe(() => window.EPTEC_STATE_MANAGER?.unlockDoor?.("controlling"));
-      hidePaywall();
-      gotoDashboard();
-    });
-
-    // referral apply
-    $("paywall-referral-apply")?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      const code = String($("paywall-referral-input")?.value || "").trim().toUpperCase();
-      if (!code) return toast("Bitte Geschenkkode eingeben.", "warn", 2000);
-      const res = safe(() => window.EPTEC_STATE_MANAGER?.redeemReferralForCurrentUser?.(code));
-      if (res?.ok) toast("Geschenkkode akzeptiert.", "ok", 2200);
-      else toast(res?.message || "Geschenkkode ungültig.", "warn", 2200);
-    });
-
-    // vip apply
-    $("paywall-vip-apply")?.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      const code = String($("paywall-vip-input")?.value || "").trim().toUpperCase();
-      if (!code) return toast("Bitte VIP-Code eingeben.", "warn", 2000);
-      const res = safe(() => window.EPTEC_STATE_MANAGER?.redeemVipForCurrentUser?.(code));
-      if (res?.ok) {
-        safe(() => window.EPTEC_STATE_MANAGER?.unlockDoor?.("construction"));
-        safe(() => window.EPTEC_STATE_MANAGER?.unlockDoor?.("controlling"));
-        toast("VIP aktiviert. Türen freigeschaltet.", "ok", 2200);
-        hidePaywall();
-        gotoDashboard();
-      } else {
-        toast(res?.message || "VIP-Code ungültig.", "warn", 2200);
-      }
-    });
-  }
-
-  // ------------------------------------------------------------
-  // Master Door 6264 (only if fields exist)
-  // ------------------------------------------------------------
-  function bindMasterDoor6264() {
-    const input = $("admin-door-code");
-    const btn = $("admin-door-submit");
-    if (!input || !btn) return;
-
-    btn.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      const code = String(input.value || "").trim();
-
-      if (code === MASTER_DOOR) {
-        safe(() => window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.());
-        safe(() => window.SoundEngine?.tunnelFall?.());
-        safe(() => window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R2"));
-        return;
-      }
-
-      const ok = !!safe(() => window.EPTEC_BRAIN?.Auth?.verifyAdmin?.(code, 2));
-      if (!ok) return toast("Access denied.", "error", 2000);
-
-      safe(() => window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.());
-      safe(() => window.SoundEngine?.tunnelFall?.());
-      safe(() => window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R2"));
-    });
-  }
-
-  // ------------------------------------------------------------
-  // Language reactivity (best effort)
-  // ------------------------------------------------------------
+  // -----------------------------
+  // React to language changes
+  // -----------------------------
   function bindLangReactivity() {
     if (typeof window.EPTEC_UI_STATE?.onChange !== "function") return;
     let last = getLang();
@@ -579,38 +513,33 @@
       if (now === last) return;
       last = now;
       applyPlaceholders();
-      const dob = $("reg-birthdate");
+      const dob = $(IDS.regDob);
       if (dob) dob.setAttribute("placeholder", dobHint());
     });
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // INIT (single entry)
-  // ------------------------------------------------------------
+  // -----------------------------
   function init() {
+    // No admin-submit binding here (MAIN owns it)
     applyPlaceholders();
 
     // eye toggles for both login + register
-    ensureEyeToggle("login-password", "pw-toggle-login");
-    ensureEyeToggle("reg-password", "pw-toggle-register");
+    ensureEyeToggle(IDS.loginPass, "pw-toggle-login");
+    ensureEyeToggle(IDS.regPass, "pw-toggle-register");
 
     bindRegister();
     bindForgot();
-
-    // keep old features without crashing if UI not present yet
-    bindDoorsAndPaywallIfPresent();
-
-    // master door 6264 (only if fields exist)
-    bindMasterDoor6264();
-
     bindLangReactivity();
 
-    // expose helper
+    // expose tiny helper
     window.RegistrationEngine = window.RegistrationEngine || {};
     window.RegistrationEngine.dobFormatHint = () => dobHint();
 
-    console.log("EPTEC registration_engine: FINAL FULL MERGE active");
+    console.log("EPTEC registration_engine: FINAL (Index IDs) active");
   }
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+
