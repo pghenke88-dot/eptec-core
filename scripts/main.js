@@ -866,4 +866,32 @@ window.addEventListener('load', () => {
   Compliance.log("SYSTEM", "App Loaded", { sessionID: Config.ACTIVE_USER.sessionID });
   console.log('EPTEC SYSTEM: Main logic successfully loaded');
 });
+/* =========================================================
+   EPTEC NULL-GUARD for addEventListener (append-only)
+   Goal:
+   - Prevent "Cannot read properties of null (reading 'addEventListener')"
+   - Without editing existing code
+   - Only blocks the crash when element is null/undefined
+   ========================================================= */
+(() => {
+  "use strict";
+
+  try {
+    const _orig = EventTarget.prototype.addEventListener;
+
+    // avoid double patching
+    if (_orig && _orig.__eptec_null_guard) return;
+
+    function guardedAddEventListener(type, listener, options) {
+      // if target is null/undefined, silently ignore
+      if (this == null) return;
+      return _orig.call(this, type, listener, options);
+    }
+
+    guardedAddEventListener.__eptec_null_guard = true;
+    EventTarget.prototype.addEventListener = guardedAddEventListener;
+  } catch (e) {
+    try { console.warn("[EPTEC] addEventListener guard failed:", e); } catch {}
+  }
+})();
 
