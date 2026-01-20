@@ -1819,15 +1819,3 @@ document.querySelector('#admin-auth-form').addEventListener('submit', (e) => {
     alert('Zugang verweigert!');
   }
 });
-
-// Beispiel für das Laden und Starten von Systemprozessen bei Seitenaufruf
-window.addEventListener('load', () => {
-  initMain(); // Init-Funktion aus Main aufrufen
-  Compliance.log("SYSTEM", "App Loaded", { sessionID: Config.ACTIVE_USER.sessionID });
-  console.log('EPTEC SYSTEM: Main logic successfully loaded');
-});
-
-
-    console.log("[EPTEC] Language switcher hard-guard active");
-  });
-})();
