@@ -208,3 +208,12 @@
     toast
   };
 })();
+// Windgeräusch beim ersten Klick
+let firstClick = true;
+
+document.addEventListener("click", () => {
+    if (firstClick) {
+        Audio.play("snd-wind", 0.4);  // Windgeräusch mit Lautstärke 0.4
+        firstClick = false;  // Danach wird sichergestellt, dass das Geräusch nur einmal abgespielt wird
+    }
+});
