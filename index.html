@@ -506,3 +506,28 @@
   <script src="scripts/main.js" defer></script>
 </body>
 </html>
+// Event Listener für Türzugang
+document.querySelectorAll('.unlock-door-btn').forEach(button => {
+  button.addEventListener('click', () => {
+    const doorId = button.getAttribute('data-door-id');
+    unlockAndUpdateDoor(doorId);  // Funktion aus Logic aufrufen
+  });
+});
+
+// Event Listener für Rabatt-Codes
+document.querySelector('#apply-present-code').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code = e.target.elements['present-code'].value;
+  const result = await applyPresentCode(Config.ACTIVE_USER.name, code); // Aus Logic
+  if (result.ok) {
+    alert(`Code angewendet: ${result.code}`);
+  } else {
+    alert(`Fehler: ${result.message}`);
+  }
+});
+
+// Aktualisierung der Benutzeroberfläche bei Sprachwechsel
+document.querySelector('#language-select').addEventListener('change', (e) => {
+  const selectedLang = e.target.value;
+  setLanguage(selectedLang); // Funktion aus Logic aufrufen
+});
