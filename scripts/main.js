@@ -1,12 +1,11 @@
 /**
  * scripts/main.js
- * EPTEC MAIN – FINAL (i18n from locales + UI alive)
- * - Default EN
- * - Loads locales/<lang>.json (EN/DE now, extendable)
- * - Applies ALL button labels + hints + footer labels
- * - Writes dict into EPTEC_UI_STATE.state.i18n
- * - Binds clicks (Register/Forgot/Login/Admin) + shows login fail
- * - Clock follows locale
+ * EPTEC MAIN – FINAL (UI alive)
+ * - sets visible button labels (so UI isn't blank)
+ * - binds Register/Forgot clicks to UI_STATE modals
+ * - shows Login-fail message
+ * - starts EPTEC_UI renderer
+ * - language switcher + locale clock
  */
 
 (() => {
@@ -14,55 +13,40 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const LOCALE_MAP = {
-    en: { locale: "en-US", dir: "ltr" },
-    de: { locale: "de-DE", dir: "ltr" },
-    es: { locale: "es-ES", dir: "ltr" },
-    fr: { locale: "fr-FR", dir: "ltr" },
-    it: { locale: "it-IT", dir: "ltr" },
-    pt: { locale: "pt-PT", dir: "ltr" },
-    nl: { locale: "nl-NL", dir: "ltr" },
-    ru: { locale: "ru-RU", dir: "ltr" },
-    uk: { locale: "uk-UA", dir: "ltr" },
-    ar: { locale: "ar-SA", dir: "rtl" },
-    zh: { locale: "zh-CN", dir: "ltr" },
-    ja: { locale: "ja-JP", dir: "ltr" }
+  const LOCALES = {
+    en: "en-US", de: "de-DE", es: "es-ES", fr: "fr-FR",
+    it: "it-IT", pt: "pt-PT", nl: "nl-NL", ru: "ru-RU",
+    uk: "uk-UA", ar: "ar-SA", zh: "zh-CN", ja: "ja-JP"
   };
 
   let currentLang = "en";
-  let dict = {};
   let clockTimer = null;
 
-  function t(key, fallback = "") {
-    const v = dict && Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : undefined;
-    if (v === undefined || v === null || String(v).trim() === "") return fallback;
-    return String(v);
+  // -----------------------------
+  // helpers
+  // -----------------------------
+  function setText(id, text) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = String(text ?? "");
   }
 
-  async function loadLocale(lang) {
-    const l = LOCALE_MAP[lang] ? lang : "en";
-    try {
-      const r = await fetch(`./locales/${encodeURIComponent(l)}.json`, { cache: "no-store" });
-      if (!r.ok) throw new Error("locale_fetch_failed");
-      const j = await r.json();
-      return (j && typeof j === "object") ? j : {};
-    } catch {
-      if (l !== "en") return loadLocale("en");
-      return {};
-    }
+  function setTextIfEmpty(id, text) {
+    const el = $(id);
+    if (!el) return;
+    if (String(el.textContent || "").trim()) return;
+    el.textContent = String(text ?? "");
   }
 
-  function applyDirAndClockLocale() {
-    const meta = LOCALE_MAP[currentLang] || LOCALE_MAP.en;
-    document.documentElement.setAttribute("dir", meta.dir);
-  }
-
+  // -----------------------------
+  // clock (locale-aware)
+  // -----------------------------
   function updateClock() {
     const el = $("system-clock");
     if (!el) return;
-    const meta = LOCALE_MAP[currentLang] || LOCALE_MAP.en;
+    const locale = LOCALES[currentLang] || "en-US";
     try {
-      el.textContent = new Date().toLocaleString(meta.locale, { dateStyle: "medium", timeStyle: "medium" });
+      el.textContent = new Date().toLocaleString(locale, { dateStyle: "medium", timeStyle: "medium" });
     } catch {
       el.textContent = new Date().toLocaleString();
     }
@@ -74,74 +58,40 @@
     clockTimer = setInterval(updateClock, 1000);
   }
 
-  function setText(id, value) {
-    const el = $(id);
-    if (!el) return;
-    el.textContent = String(value ?? "");
-  }
-
-  function setPH(id, value) {
-    const el = $(id);
-    if (!el) return;
-    el.setAttribute("placeholder", String(value ?? ""));
-  }
-
-  function applyUITexts() {
-    // Main entry
-    setText("btn-login", t("btn.login", "Login"));
-    setText("btn-register", t("btn.register", "Register"));
-    setText("btn-forgot", t("btn.forgot", "Forgot password"));
-    setText("admin-submit", t("btn.admin_enter", "Enter (Admin)"));
-
-    setPH("login-username", t("ph.username", "Username"));
-    setPH("login-password", t("ph.password", "Password"));
-    setPH("admin-code", t("ph.admin_code", "Admin code"));
-
-    // Footer labels (visible words!)
-    setText("link-imprint", t("footer.imprint", "Imprint"));
-    setText("link-terms", t("footer.terms", "Terms"));
-    setText("link-support", t("footer.support", "Support"));
-    setText("link-privacy-footer", t("footer.privacy", "Privacy"));
-
-    // Register modal
-    setText("register-title", t("register.title", "Registration"));
-    setPH("reg-first-name", t("ph.first_name", "First name"));
-    setPH("reg-last-name", t("ph.last_name", "Last name"));
-    setPH("reg-email", t("ph.email", "Email address"));
-    setPH("reg-username", t("ph.username", "Username"));
-    setPH("reg-password", t("ph.password", "Password"));
-    setPH("reg-birthdate", t("ph.birthdate", "Date of birth"));
-
-    setText("reg-rules-username", t("register.rule.username", "Username must be unique."));
-    setText("reg-rules-password", t("register.rule.password", "Min 5, 1 uppercase, 1 special character."));
-
-    setText("reg-submit", t("btn.register_submit", "Complete registration"));
-    setText("reg-close", t("btn.close", "Close"));
-
-    // Forgot modal
-    setText("forgot-title", t("forgot.title", "Reset password"));
-    setPH("forgot-identity", t("ph.email_or_username", "Email or username"));
-    setText("forgot-submit", t("btn.forgot_submit", "Request link"));
-    setText("forgot-close", t("btn.close", "Close"));
-
-    // Legal modal close
-    setText("legal-close", t("btn.close", "Close"));
-  }
-
-  async function setLanguage(lang) {
-    currentLang = LOCALE_MAP[lang] ? lang : "en";
-    dict = await loadLocale(currentLang);
-
-    // push into UI_STATE so UI-Controller can use it
-    window.EPTEC_UI_STATE?.set?.({
-      i18n: { lang: currentLang, dict }
-    });
-
-    applyDirAndClockLocale();
-    applyUITexts();
+  function setLanguage(lang) {
+    const l = String(lang || "en").toLowerCase().trim();
+    currentLang = LOCALES[l] ? l : "en";
+    document.documentElement.setAttribute("dir", currentLang === "ar" ? "rtl" : "ltr");
     updateClock();
   }
 
+  // -----------------------------
+  // UI labels (so it’s not blank)
+  // -----------------------------
+  function applyBaseLabels() {
+    setTextIfEmpty("btn-login", "Login");
+    setTextIfEmpty("btn-register", "Register");
+    setTextIfEmpty("btn-forgot", "Forgot password");
+    setTextIfEmpty("admin-submit", "Enter (Admin)");
+
+    setTextIfEmpty("reg-submit", "Complete registration");
+    setTextIfEmpty("reg-close", "Close");
+
+    setTextIfEmpty("forgot-submit", "Request link");
+    setTextIfEmpty("forgot-close", "Close");
+
+    setTextIfEmpty("legal-close", "Close");
+
+    // footer words as placeholders (until locales/docs)
+    setTextIfEmpty("link-imprint", "Imprint");
+    setTextIfEmpty("link-terms", "Terms");
+    setTextIfEmpty("link-support", "Support");
+    setTextIfEmpty("link-privacy-footer", "Privacy");
+  }
+
+  // -----------------------------
+  // language switcher UI
+  // -----------------------------
   function bindLanguageUI() {
     const sw = $("language-switcher");
     const toggle = $("lang-toggle");
@@ -156,11 +106,11 @@
     });
 
     rail.querySelectorAll(".lang-item").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
+      btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         try { window.SoundEngine?.flagClick?.(); } catch {}
-        await setLanguage(btn.dataset.lang);
+        setLanguage(btn.dataset.lang);
         sw.classList.remove("lang-open");
       });
     });
@@ -169,36 +119,37 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") sw.classList.remove("lang-open"); });
   }
 
+  // -----------------------------
+  // audio unlock (browser policy)
+  // -----------------------------
   function unlockAudioOnce() {
     try { window.SoundEngine?.unlockAudio?.(); } catch {}
     try { window.SoundEngine?.startAmbient?.(); } catch {}
   }
 
-  function bindClicks() {
-    // Start UI renderer
-    window.EPTEC_UI?.init?.();
+  // -----------------------------
+  // click bindings
+  // -----------------------------
+  function bindUI() {
+    // Ensure UI renderer is active
+    try { window.EPTEC_UI?.init?.(); } catch {}
 
-    // baseline view
+    // Ensure baseline state
     window.EPTEC_UI_STATE?.set?.({ view: "meadow", modal: null });
 
-    // Register/Forgot open
+    // Register modal
     $("btn-register")?.addEventListener("click", () => {
       try { window.SoundEngine?.uiConfirm?.(); } catch {}
       window.EPTEC_UI_STATE?.set?.({ modal: "register" });
     });
 
+    // Forgot modal
     $("btn-forgot")?.addEventListener("click", () => {
       try { window.SoundEngine?.uiConfirm?.(); } catch {}
       window.EPTEC_UI_STATE?.set?.({ modal: "forgot" });
     });
 
-    // Footer legal -> placeholder modal (docs later)
-    $("link-imprint")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("imprint"));
-    $("link-terms")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("terms"));
-    $("link-support")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("support"));
-    $("link-privacy-footer")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("privacy"));
-
-    // Login
+    // Login (with visible fail message)
     $("btn-login")?.addEventListener("click", () => {
       try { window.SoundEngine?.uiConfirm?.(); } catch {}
       window.EPTEC_UI?.hideMsg?.("login-message");
@@ -207,20 +158,19 @@
       const p = String($("login-password")?.value || "").trim();
 
       if (!u || !p) {
-        window.EPTEC_UI?.showMsg?.("login-message", t("login.fail", "Login failed."), "error");
+        window.EPTEC_UI?.showMsg?.("login-message", "Login failed.", "error");
         return;
       }
 
       const res = window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p });
       if (!res?.ok) {
-        window.EPTEC_UI?.showMsg?.("login-message", res?.message || t("login.invalid", "Invalid username or password."), "error");
+        window.EPTEC_UI?.showMsg?.("login-message", res?.message || "Invalid username or password.", "error");
         return;
       }
 
-      // hydrate + tunnel
-      window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.();
+      try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch {}
       try { window.SoundEngine?.tunnelFall?.(); } catch {}
-      window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1");
+      try { window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1"); } catch {}
     });
 
     // Admin gate
@@ -234,32 +184,37 @@
         window.EPTEC_BRAIN?.Auth?.verifyAdmin?.(code, 2);
 
       if (!ok) {
-        window.EPTEC_UI?.toast?.(t("admin.denied", "Access denied."), "error", 2000);
+        window.EPTEC_UI?.toast?.("Access denied.", "error", 2000);
         return;
       }
 
-      window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.();
+      try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch {}
       try { window.SoundEngine?.tunnelFall?.(); } catch {}
-      window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1");
+      try { window.EPTEC_BRAIN?.Navigation?.triggerTunnel?.("R1"); } catch {}
     });
+
+    // Footer opens legal placeholder
+    $("link-imprint")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("imprint"));
+    $("link-terms")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("terms"));
+    $("link-support")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("support"));
+    $("link-privacy-footer")?.addEventListener("click", () => window.EPTEC_UI?.openLegal?.("privacy"));
   }
 
-  async function boot() {
-    // hydrate state early
-    window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.();
+  function boot() {
+    applyBaseLabels();
+    setLanguage("en");
+    startClock();
+    bindLanguageUI();
+    bindUI();
 
-    // audio unlock
+    // hydrate state
+    try { window.EPTEC_STATE_MANAGER?.hydrateFromStorage?.(); } catch {}
+
+    // unlock audio on first gesture
     document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
     document.addEventListener("click", unlockAudioOnce, { once: true });
 
-    bindLanguageUI();
-    bindClicks();
-
-    // Default EN (your dramaturgy)
-    await setLanguage("en");
-    startClock();
-
-    console.log("EPTEC MAIN FINAL: i18n + UI labels active");
+    console.log("EPTEC MAIN: labels + clicks active");
   }
 
   document.addEventListener("DOMContentLoaded", boot);
