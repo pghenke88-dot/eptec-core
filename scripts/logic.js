@@ -997,3 +997,39 @@ function applyTranslations() {
 window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
   log: (eventName, meta) => window.EPTEC_BRAIN?.Activity?.log?.(eventName, meta)
 };
+// Update die Zugangsdaten basierend auf den benutzten Produkten
+function updateProductAccess(feed) {
+  const access = deriveAccessFromProducts(feed.products);
+  setAccess(access);
+  DashboardBridge.writeFeed({ access });  // Update feed with the new access state
+  return access;
+}
+
+// Füge eine einfache Funktion zum Abrufen der aktuellen Feed-Daten hinzu
+function getCurrentFeed() {
+  const feed = readFeed();
+  return feed ? feed : {};
+}
+
+// Funktion zum Setzen von Produkten und Verbindungen
+function setProductsAndSync(products) {
+  setProducts(products);
+  const updatedFeed = readFeed();
+  const access = deriveAccessFromProducts(updatedFeed.products);
+  setAccess(access);
+  DashboardBridge.writeFeed({ products, access });
+  return { products, access };
+}
+
+// Beispiel für das Entsperren einer Tür, inklusive UI-Update und Feed-Update
+function unlockAndUpdateDoor(doorId) {
+  const result = unlockDoor(doorId);
+  if (result.ok) {
+    // Update Feed and UI
+    const feed = readFeed();
+    updateProductAccess(feed);
+    $ui()?.set?.({ doorUnlocked: true });
+  } else {
+    console.error("Failed to unlock door:", result.reason);
+  }
+}
