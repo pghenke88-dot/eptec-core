@@ -183,3 +183,40 @@
   }
 
 })();
+(() => {
+  "use strict";
+
+  // Erweiterung von RegistrationEngine: Benutzerstatus im State aktualisieren
+  function setRegistrationStatus(status) {
+    const statusMap = {
+      "valid": { message: "Registrierung erfolgreich", status: "active" },
+      "invalid": { message: "Fehler bei der Registrierung", status: "locked" },
+      "pending": { message: "Verifizierung ausstehend", status: "pending" }
+    };
+
+    const statusData = statusMap[status] || { message: "Unbekannter Fehler", status: "locked" };
+    EPTEC_UI_STATE.set({ registrationStatus: statusData });
+  }
+
+  // Erweiterte Validierung der Benutzerdaten (Username, Passwort)
+  function validateUserData(username, password) {
+    const isUsernameValid = validateUsername(username);
+    const isPasswordValid = validatePassword(password);
+
+    // State-Update basierend auf den Validierungsergebnissen
+    if (isUsernameValid && isPasswordValid) {
+      setRegistrationStatus("valid");
+      EPTEC_UI_STATE.set({ view: "room1" }); // Weiter zur nächsten Ansicht
+    } else {
+      setRegistrationStatus("invalid");
+      EPTEC_UI_STATE.set({ view: "meadow" }); // Zurück zur Eingabeansicht
+    }
+
+    return isUsernameValid && isPasswordValid;
+  }
+
+  // Füge die Funktionen dem globalen Objekt hinzu
+  window.RegistrationEngine.setRegistrationStatus = setRegistrationStatus;
+  window.RegistrationEngine.validateUserData = validateUserData;
+
+})();
