@@ -2384,27 +2384,3 @@ window.addEventListener('load', () => {
       `;
       document.head.appendChild(style);
     }
-
-    // --- REMOVE ALL EXISTING CLICK BEHAVIOR BY OVERRIDING ---
-    toggle.onclick = null;
-    rail.onclick = null;
-    document.onclick = null;
-
-    // --- SINGLE SOURCE OF TRUTH ---
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      sw.classList.toggle("lang-open");
-    }, true);
-
-    rail.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
-
-    document.addEventListener("click", () => {
-      sw.classList.remove("lang-open");
-    }, true);
-
-  
