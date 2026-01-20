@@ -14,182 +14,157 @@
 
 <body>
 
-  <!-- =========================================================
-       GLOBAL HEADER (always visible anchor)
-       ========================================================= -->
-  <header class="app-header" data-ui-layer="fixed">
-    <h1 id="app-title">Contract Office</h1>
-    <div id="app-subtitle">by Johannes Büngener</div>
-    <div id="system-clock"></div>
-  </header>
+<!-- =========================================================
+     GLOBAL HEADER
+========================================================= -->
+<header class="app-header" data-ui-layer="fixed">
+  <h1 id="app-title">Contract Office</h1>
+  <div id="app-subtitle">by Johannes Büngener</div>
+  <div id="system-clock"></div>
+</header>
 
-  <!-- =========================================================
-       LANGUAGE SWITCHER (global tool)
-       ========================================================= -->
-  <div id="language-switcher" class="lang-switcher" data-ui-layer="overlay">
-    <div id="lang-rail">
-      <button class="lang-item" data-lang="en">EN</button>
-      <button class="lang-item" data-lang="de">DE</button>
-      <button class="lang-item" data-lang="es">ES</button>
-      <button class="lang-item" data-lang="fr">FR</button>
-      <button class="lang-item" data-lang="it">IT</button>
-      <button class="lang-item" data-lang="pt">PT</button>
-      <button class="lang-item" data-lang="nl">NL</button>
-      <button class="lang-item" data-lang="ru">RU</button>
-      <button class="lang-item" data-lang="uk">UA</button>
-      <button class="lang-item" data-lang="ar">AR</button>
-      <button class="lang-item" data-lang="zh">ZH</button>
-      <button class="lang-item" data-lang="ja">JA</button>
+<!-- =========================================================
+     LANGUAGE SWITCHER
+========================================================= -->
+<div id="language-switcher" class="lang-switcher">
+  <div id="lang-rail">
+    <button type="button" class="lang-item" data-lang="en">EN</button>
+    <button type="button" class="lang-item" data-lang="de">DE</button>
+    <button type="button" class="lang-item" data-lang="es">ES</button>
+    <button type="button" class="lang-item" data-lang="fr">FR</button>
+    <button type="button" class="lang-item" data-lang="it">IT</button>
+    <button type="button" class="lang-item" data-lang="pt">PT</button>
+    <button type="button" class="lang-item" data-lang="nl">NL</button>
+    <button type="button" class="lang-item" data-lang="ru">RU</button>
+    <button type="button" class="lang-item" data-lang="uk">UA</button>
+    <button type="button" class="lang-item" data-lang="ar">AR</button>
+    <button type="button" class="lang-item" data-lang="zh">ZH</button>
+    <button type="button" class="lang-item" data-lang="ja">JA</button>
+  </div>
+  <button id="lang-toggle" type="button">🌐</button>
+</div>
+
+<!-- =========================================================
+     SCENE 0 – MEADOW / LOGIN
+========================================================= -->
+<section id="meadow-view" class="grassy-meadow" data-scene="meadow" style="display:flex;">
+
+  <div id="entry-ui" class="entry-ui">
+
+    <input id="login-username" class="entry-input" autocomplete="username">
+    <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
+
+    <div class="entry-actions">
+      <button id="btn-login" class="entry-btn" type="button"></button>
+      <button id="btn-register" class="entry-btn" type="button"></button>
+      <button id="btn-forgot" class="entry-btn" type="button"></button>
     </div>
-    <button id="lang-toggle">🌐</button>
+
+    <div id="login-message" class="system-msg"></div>
+
+    <!-- MASTER / ADMIN GATE -->
+    <div id="admin-gate">
+      <input id="admin-code" class="entry-input" autocomplete="off">
+      <button id="admin-submit" class="entry-btn" type="button"></button>
+    </div>
+
   </div>
 
-  <!-- =========================================================
-       SCENE 0 – MEADOW / ENTRY (Startbild)
-       ========================================================= -->
-  <section
-    id="meadow-view"
-    class="grassy-meadow"
-    data-scene="meadow"
-    data-3d-anchor="world-root"
-  >
+  <!-- FOOTER -->
+  <footer id="legal-footer" class="legal-footer">
+    <span id="link-imprint" class="legal-link"></span> |
+    <span id="link-terms" class="legal-link"></span> |
+    <span id="link-support" class="legal-link"></span> |
+    <span id="link-privacy-footer" class="legal-link"></span>
+  </footer>
 
-    <!-- ENTRY UI -->
-    <div id="entry-ui" class="entry-ui" data-ui-block="auth">
+</section>
 
-      <input id="login-username" class="entry-input" autocomplete="username">
-      <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
-
-      <div class="entry-actions">
-        <button id="btn-login" class="entry-btn"></button>
-        <button id="btn-register" class="entry-btn"></button>
-        <button id="btn-forgot" class="entry-btn"></button>
-      </div>
-
-      <div id="login-message" class="system-msg"></div>
-
-      <!-- ADMIN / MASTER GATE (no logic here) -->
-      <div id="admin-gate" data-role="master-gate">
-        <input id="admin-code" class="entry-input" autocomplete="off">
-        <button id="admin-submit" class="entry-btn"></button>
-      </div>
-
-    </div>
-
-    <!-- FOOTER (Legal Anchor Zone) -->
-    <footer id="legal-footer" class="legal-footer" data-ui-block="legal">
-      <span id="link-imprint" class="legal-link"></span>
-      <span>|</span>
-      <span id="link-terms" class="legal-link"></span>
-      <span>|</span>
-      <span id="link-support" class="legal-link"></span>
-      <span>|</span>
-      <span id="link-privacy-footer" class="legal-link"></span>
-    </footer>
-
-  </section>
-
-  <!-- =========================================================
-       SCENE 1 – ROOM 1 (Systemraum / Ampel durch System)
-       ========================================================= -->
-  <section
-    id="room-1-view"
-    class="room-view hidden"
-    data-scene="R1"
-    data-decision-authority="system"
-    data-3d-anchor="room-1"
-  >
-
-    <!-- Hotspots / semantic anchors -->
-    <div class="room-hotspots">
-      <div class="hotspot" data-logic-id="r1.contract.check"></div>
-      <div class="hotspot" data-logic-id="r1.signal.system"></div>
-    </div>
-
-    <!-- Content placeholder -->
-    <div class="engraved-matrix"></div>
-
-  </section>
-
-  <!-- =========================================================
-       SCENE 2 – ROOM 2 (Userraum / Vertragsbruch durch User)
-       ========================================================= -->
-  <section
-    id="room-2-view"
-    class="room-view hidden"
-    data-scene="R2"
-    data-decision-authority="user"
-    data-3d-anchor="room-2"
-  >
-
-    <!-- Hotspots / semantic anchors -->
-    <div class="room-hotspots">
-      <div class="hotspot" data-logic-id="r2.contract.observe"></div>
-      <div class="hotspot" data-logic-id="r2.user.judgement"></div>
-    </div>
-
-    <div class="engraved-matrix"></div>
-
-  </section>
-
-  <!-- =========================================================
-       MODALS (UI only, no logic)
-       ========================================================= -->
-  <section id="register-screen" class="modal modal-hidden" data-ui-layer="modal">
-    <div class="modal-card register-card">
-      <div id="register-title"></div>
-      <input id="reg-first-name" class="entry-input">
-      <input id="reg-last-name" class="entry-input">
-      <input id="reg-birthdate" class="entry-input">
-      <input id="reg-email" class="entry-input">
-      <input id="reg-username" class="entry-input">
-      <input id="reg-password" class="entry-input" type="password">
-      <div id="reg-rules-username"></div>
-      <div id="reg-rules-password"></div>
-      <div id="register-message"></div>
-      <button id="reg-submit" class="entry-btn locked"></button>
-      <button id="reg-close" class="entry-btn secondary"></button>
-    </div>
-  </section>
-
-  <section id="forgot-screen" class="modal modal-hidden" data-ui-layer="modal">
-    <div class="modal-card forgot-card">
-      <div id="forgot-title"></div>
-      <input id="forgot-identity" class="entry-input">
-      <div id="forgot-message"></div>
-      <button id="forgot-submit" class="entry-btn"></button>
-      <button id="forgot-close" class="entry-btn secondary"></button>
-    </div>
-  </section>
-
-  <section id="legal-screen" class="modal modal-hidden" data-ui-layer="modal">
-    <div class="modal-card">
-      <div id="legal-title"></div>
-      <div id="legal-body"></div>
-      <button id="legal-close" class="entry-btn secondary"></button>
-    </div>
-  </section>
-
-  <!-- =========================================================
-       TRANSITION / FX LAYER
-       ========================================================= -->
-  <div id="eptec-white-flash" class="white-flash-hidden" data-fx="whiteout"></div>
-
-  <div id="eptec-tunnel" class="tunnel-hidden" data-fx="tunnel">
-    <div class="tunnel-wall"></div>
+<!-- =========================================================
+     SCENE 1 – ROOM 1 (SYSTEM)
+========================================================= -->
+<section id="room-1-view" class="room-view" data-scene="R1" style="display:none;">
+  <div class="room-hotspots">
+    <div class="hotspot" data-logic-id="r1.contract.check"></div>
+    <div class="hotspot" data-logic-id="r1.signal.system"></div>
   </div>
+  <div class="engraved-matrix"></div>
+</section>
 
-  <!-- =========================================================
-       SCRIPTS (ORDER IS IMPORTANT)
-       ========================================================= -->
-  <script src="scripts/sounds.js"></script>
-  <script src="scripts/ui_state.js"></script>
-  <script src="scripts/ui_controller.js"></script>
-  <script src="scripts/registration_engine.js"></script>
-  <script src="scripts/mock_backend.js"></script>
-  <script src="scripts/state_manager.js"></script>
-  <script src="scripts/logic.js"></script>
-  <script src="scripts/main.js"></script>
+<!-- =========================================================
+     SCENE 2 – ROOM 2 (USER)
+========================================================= -->
+<section id="room-2-view" class="room-view" data-scene="R2" style="display:none;">
+  <div class="room-hotspots">
+    <div class="hotspot" data-logic-id="r2.contract.observe"></div>
+    <div class="hotspot" data-logic-id="r2.user.judgement"></div>
+  </div>
+  <div class="engraved-matrix"></div>
+</section>
+
+<!-- =========================================================
+     REGISTER MODAL
+========================================================= -->
+<section id="register-screen" class="modal modal-hidden">
+  <div class="modal-card register-card">
+    <input id="reg-first-name" class="entry-input">
+    <input id="reg-last-name" class="entry-input">
+    <input id="reg-birthdate" class="entry-input">
+    <input id="reg-email" class="entry-input">
+    <input id="reg-username" class="entry-input">
+    <input id="reg-password" class="entry-input" type="password">
+
+    <div id="reg-rules-username"></div>
+    <div id="reg-rules-password"></div>
+    <div id="register-message"></div>
+
+    <button id="reg-submit" class="entry-btn locked" type="button"></button>
+    <button id="reg-close" class="entry-btn secondary" type="button"></button>
+  </div>
+</section>
+
+<!-- =========================================================
+     FORGOT MODAL
+========================================================= -->
+<section id="forgot-screen" class="modal modal-hidden">
+  <div class="modal-card forgot-card">
+    <input id="forgot-identity" class="entry-input">
+    <div id="forgot-message"></div>
+    <button id="forgot-submit" class="entry-btn" type="button"></button>
+    <button id="forgot-close" class="entry-btn secondary" type="button"></button>
+  </div>
+</section>
+
+<!-- =========================================================
+     LEGAL MODAL
+========================================================= -->
+<section id="legal-screen" class="modal modal-hidden">
+  <div class="modal-card">
+    <div id="legal-title"></div>
+    <div id="legal-body"></div>
+    <button id="legal-close" class="entry-btn secondary" type="button"></button>
+  </div>
+</section>
+
+<!-- =========================================================
+     FX
+========================================================= -->
+<div id="eptec-white-flash" class="white-flash-hidden"></div>
+<div id="eptec-tunnel" class="tunnel-hidden">
+  <div class="tunnel-wall"></div>
+</div>
+
+<!-- =========================================================
+     SCRIPTS
+========================================================= -->
+<script src="scripts/sounds.js" defer></script>
+<script src="scripts/ui_state.js" defer></script>
+<script src="scripts/ui_controller.js" defer></script>
+<script src="scripts/registration_engine.js" defer></script>
+<script src="scripts/mock_backend.js" defer></script>
+<script src="scripts/state_manager.js" defer></script>
+<script src="scripts/logic.js" defer></script>
+<script src="scripts/main.js" defer></script>
 
 </body>
 </html>
