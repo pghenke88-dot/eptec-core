@@ -1,25 +1,30 @@
 /**
  * scripts/state_manager.js
- * EPTEC Dashboard State Manager – FINAL
+ * EPTEC Dashboard State Manager – FINAL (Dramaturgie vollständig für STATE)
  *
- * Purpose:
- * - Single adapter between:
- *   EPTEC_MOCK_BACKEND (truth / rules)  <->  EPTEC_UI_STATE (visual)
- * - Persists demo state to localStorage (EPTEC_FEED) so reloads survive.
+ * Single adapter between:
+ *   EPTEC_MOCK_BACKEND (truth/rules) <-> EPTEC_UI_STATE (visual)
  *
- * Covers:
- * - Products (construction/controlling) + coupling
- * - Door access derived from products (single source of truth)
- * - Codes:
- *   - Referral (user-generated, unlimited)
- *   - Present (admin-generated, 30 days, one-time per user)
- *   - VIP (admin-generated, one-time redemption)
- * - Billing preview (next invoice + discount)
+ * Persisted state: localStorage key "EPTEC_FEED"
+ *
+ * Enthält (STATE-relevant aus deiner Dramaturgie):
+ * - Products + Kopplung (Construction <-> Controlling)
+ * - Door Access (immer aus Products abgeleitet)
+ * - Present (Admin erstellt, User löst ein, 30 Tage, einmal pro User)
+ * - Referral (User-Generierung, Neukunde löst ein, dauerhaft gültig)
+ * - VIP (Admin erstellt, User löst ein, One-Time, Bypass Paywall)
+ * - Billing Preview (nächste Abrechnung + Rabatt)
+ * - Kündigung (nur beide kündigen, Confirm-Flow + Doc-Placeholder)
+ * - Upgrade / Tarifwechsel (BASIS->PREMIUM placeholder + Confirm)
+ * - Raum hinzufügen (Add Room + Kopplungs-Confirm)
+ * - Admin Country Notfall-Switch (3x Confirm + 30 Tage Countdown, jederzeit revert)
+ * - Newsletter / Inbox Container (Admin broadcast placeholder, User inbox placeholder)
+ * - Recording/Kamera Mode Flag (Admin showcase mode placeholder)
  *
  * Rules:
- * - NO DOM access.
- * - NO inline audio.
- * - NO duplicated business rules: access always derived from products.
+ * - NO DOM access
+ * - NO inline audio
+ * - NO duplicated business rules: access is derived from products
  */
 
 (() => {
@@ -30,11 +35,11 @@
   // -----------------------------
   const FEED_KEY = "EPTEC_FEED";
 
+  const $ui = () => window.EPTEC_UI_STATE;
+
   // -----------------------------
   // HELPERS
   // -----------------------------
-  const $ui = () => window.EPTEC_UI_STATE;
-
   function isObj(x) { return x && typeof x === "object" && !Array.isArray(x); }
 
   function loadJson(key) {
@@ -63,6 +68,9 @@
     return a;
   }
 
+  function nowISO() { return new Date().toISOString(); }
+  function nowMs() { return Date.now(); }
+
   function readFeed() { return loadJson(FEED_KEY); }
 
   function writeFeed(patch) {
@@ -85,7 +93,7 @@
   }
 
   // -----------------------------
-  // DOORS / ACCESS (derived from products)
+  // PRODUCTS / ACCESS / DOORS
   // -----------------------------
   const DOORS = Object.freeze({
     CONSTRUCTION: "construction",
@@ -99,9 +107,7 @@
     return null;
   }
 
-  // Access is always derived from products:
-  // - construction unlocked iff construction.active
-  // - controlling unlocked iff controlling.active AND construction.active
+  // Access derived from products (single source of truth)
   function deriveAccessFromProducts(products) {
     const p = isObj(products) ? products : {};
     const c = !!p?.construction?.active;
@@ -114,26 +120,22 @@
 
   function getAccess() {
     const feed = readFeed();
-    const derived = deriveAccessFromProducts(feed.products || {});
-    return derived;
+    return deriveAccessFromProducts(feed.products || {});
   }
 
   function setAccessFromProducts() {
     const feed = readFeed();
     const derived = deriveAccessFromProducts(feed.products || {});
     writeFeed({ access: derived });
-
-    // UI state can ignore unknown keys safely
     $ui()?.set?.({ access: derived });
-
     return derived;
   }
 
   function isDoorUnlocked(door) {
     const d = normalizeDoor(door);
     if (!d) return false;
-    const a = getAccess();
-    return !!a[d];
+    const access = getAccess();
+    return !!access[d];
   }
 
   function canEnterDoor(door) {
@@ -145,7 +147,7 @@
     return { ok: true, door: d, access };
   }
 
-  // For demo filmability, we allow "unlockDoor" to activate baseline products.
+  // demo filmability: unlockDoor activates baseline products safely
   function unlockDoor(door) {
     const d = normalizeDoor(door);
     if (!d) return { ok: false, reason: "INVALID_DOOR" };
@@ -180,7 +182,7 @@
     const p = feed.products || {};
 
     if (d === DOORS.CONSTRUCTION) {
-      // Coupling rule: turning construction off ends controlling too
+      // coupling: construction off -> controlling off
       setProducts({
         construction: { active: false, tier: null },
         controlling:  { active: false, tier: null }
@@ -199,21 +201,17 @@
     return { ok: true, door: d, access: getAccess() };
   }
 
-  // -----------------------------
-  // PRODUCTS (single source of truth)
-  // -----------------------------
   function setProducts(products) {
     const p = isObj(products) ? products : {};
     const construction = p.construction || { active: false, tier: null };
     const controlling  = p.controlling  || { active: false, tier: null };
 
-    // Normalize
     const nextProducts = {
       construction: { active: !!construction.active, tier: construction.tier || null },
       controlling:  { active: !!controlling.active,  tier: controlling.tier  || null }
     };
 
-    // Hard coupling rules (your product logic):
+    // Hard coupling rules (your decided product logic):
     // - If construction off -> controlling off
     // - If controlling on -> construction on (basis)
     if (!nextProducts.construction.active) {
@@ -243,7 +241,7 @@
   }
 
   // -----------------------------
-  // CODES / BILLING (feed + ui_state)
+  // CODES / BILLING (persist + ui)
   // -----------------------------
   function setReferralCode(code) {
     const c = String(code || "").trim() || null;
@@ -277,7 +275,7 @@
   }
 
   // -----------------------------
-  // PRESENT (global): admin create + user apply
+  // PRESENT (global) – admin + user apply
   // -----------------------------
   function adminCreatePresentCampaign(code, discountPercent = 50, daysValid = 30) {
     const mb = backend();
@@ -310,15 +308,15 @@
 
     setPresentStatus({ status: "active", discountPercent: pct, validUntil: until, code: c });
 
-    // Demo billing preview
-    const nextInvoiceDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    // Billing preview: next invoice in 14 days (demo)
+    const nextInvoiceDate = new Date(nowMs() + 14 * 24 * 60 * 60 * 1000).toISOString();
     setBillingPreview({ nextInvoiceDate, nextInvoiceDiscountPercent: pct });
 
     return { ok: true, campaign: res.campaign };
   }
 
   // -----------------------------
-  // REFERRAL (user): generate + redeem
+  // REFERRAL (user) – generate + redeem
   // -----------------------------
   function ensureReferralForLoggedInUser() {
     const mb = backend();
@@ -347,7 +345,7 @@
   }
 
   // -----------------------------
-  // VIP (admin create + user redeem)
+  // VIP / EXTRA-PRESENT – admin + redeem
   // -----------------------------
   function adminCreateVipCode({ freeMonths = 0, freeForever = false } = {}) {
     const mb = backend();
@@ -364,11 +362,306 @@
     if (!mb?.redeemExtraPresentCode) return { ok: false, reason: "NO_BACKEND" };
     if (!code) return { ok: false, reason: "EMPTY" };
 
-    return mb.redeemExtraPresentCode(username, code);
+    const res = mb.redeemExtraPresentCode(username, code);
+    if (res?.ok) {
+      // VIP bypass: unlock both doors (demo)
+      unlockDoor("construction");
+      unlockDoor("controlling");
+    }
+    return res;
   }
 
   // -----------------------------
-  // DEMO TOGGLES (filmable, enforced by setProducts rules)
+  // Kündigung / Upgrade / Room Add (STATE only)
+  // -----------------------------
+  function requestCancelAll(reason = "") {
+    const next = writeFeed({
+      flows: {
+        ...(readFeed().flows || {}),
+        cancelAll: {
+          requestedAt: nowISO(),
+          reason: String(reason || ""),
+          step: 1,
+          confirmed: false
+        }
+      }
+    });
+    $ui()?.set?.({ flows: next.flows });
+    return { ok: true, flow: next.flows?.cancelAll };
+  }
+
+  function confirmCancelAll(step = 1) {
+    const feed = readFeed();
+    const f = feed.flows?.cancelAll;
+    if (!f) return { ok: false, reason: "NO_FLOW" };
+
+    const nextStep = Math.max(1, Math.min(3, Number(step) || 1));
+    const confirmed = nextStep >= 3;
+
+    const next = writeFeed({
+      flows: {
+        ...(feed.flows || {}),
+        cancelAll: {
+          ...f,
+          step: nextStep,
+          confirmed,
+          confirmedAt: confirmed ? nowISO() : null
+        }
+      }
+    });
+
+    if (confirmed) {
+      // effect: products off (coupling)
+      setProducts({ construction: { active: false, tier: null }, controlling: { active: false, tier: null } });
+      setBillingPreview({ nextInvoiceDate: null, nextInvoiceDiscountPercent: null });
+      setPresentStatus({ status: "none", code: null, discountPercent: null, validUntil: null });
+    }
+
+    $ui()?.set?.({ flows: next.flows });
+    return { ok: true, flow: next.flows?.cancelAll };
+  }
+
+  function requestUpgrade(productKey, targetTier) {
+    const p = String(productKey || "").trim().toLowerCase();
+    const tier = String(targetTier || "").trim().toUpperCase();
+
+    const next = writeFeed({
+      flows: {
+        ...(readFeed().flows || {}),
+        upgrade: {
+          requestedAt: nowISO(),
+          product: p,
+          targetTier: tier,
+          step: 1,
+          confirmed: false
+        }
+      }
+    });
+    $ui()?.set?.({ flows: next.flows });
+    return { ok: true, flow: next.flows?.upgrade };
+  }
+
+  function confirmUpgrade(step = 1) {
+    const feed = readFeed();
+    const f = feed.flows?.upgrade;
+    if (!f) return { ok: false, reason: "NO_FLOW" };
+
+    const nextStep = Math.max(1, Math.min(3, Number(step) || 1));
+    const confirmed = nextStep >= 3;
+
+    writeFeed({
+      flows: {
+        ...(feed.flows || {}),
+        upgrade: { ...f, step: nextStep, confirmed, confirmedAt: confirmed ? nowISO() : null }
+      }
+    });
+
+    if (confirmed) {
+      // placeholder effect: set tier only (real billing later)
+      const products = feed.products || {};
+      const nextProducts = deepMerge({ ...products }, {
+        [f.product]: { active: true, tier: f.targetTier || "PREMIUM" }
+      });
+      setProducts(nextProducts);
+    }
+
+    const updated = readFeed();
+    $ui()?.set?.({ flows: updated.flows });
+    return { ok: true, flow: updated.flows?.upgrade };
+  }
+
+  function requestAddRoom(roomKey) {
+    const k = String(roomKey || "").trim().toLowerCase();
+    const next = writeFeed({
+      flows: {
+        ...(readFeed().flows || {}),
+        addRoom: {
+          requestedAt: nowISO(),
+          room: k,
+          step: 1,
+          confirmed: false,
+          couplingConsent: false
+        }
+      }
+    });
+    $ui()?.set?.({ flows: next.flows });
+    return { ok: true, flow: next.flows?.addRoom };
+  }
+
+  function confirmAddRoom(step = 1) {
+    const feed = readFeed();
+    const f = feed.flows?.addRoom;
+    if (!f) return { ok: false, reason: "NO_FLOW" };
+
+    const nextStep = Math.max(1, Math.min(3, Number(step) || 1));
+    const confirmed = nextStep >= 3;
+
+    writeFeed({
+      flows: {
+        ...(feed.flows || {}),
+        addRoom: { ...f, step: nextStep, confirmed, confirmedAt: confirmed ? nowISO() : null, couplingConsent: true }
+      }
+    });
+
+    if (confirmed) {
+      // placeholder: activate controlling if requested, or construction if requested
+      if (f.room === "controlling") unlockDoor("controlling");
+      if (f.room === "construction") unlockDoor("construction");
+    }
+
+    const updated = readFeed();
+    $ui()?.set?.({ flows: updated.flows });
+    return { ok: true, flow: updated.flows?.addRoom };
+  }
+
+  // -----------------------------
+  // Admin Country Notfall-Switch (3x + 30 days)
+  // -----------------------------
+  function requestCountryDisable(countryCode) {
+    const c = String(countryCode || "").trim().toUpperCase();
+    if (!c) return { ok: false, reason: "EMPTY" };
+
+    const effectiveAt = new Date(nowMs() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const feed = readFeed();
+    const curLocks = isObj(feed.countryLocks) ? feed.countryLocks : {};
+
+    const nextLocks = {
+      ...curLocks,
+      [c]: {
+        status: "PENDING",   // PENDING -> ACTIVE
+        step: 1,             // 1..3
+        requestedAt: nowISO(),
+        effectiveAt
+      }
+    };
+
+    writeFeed({ countryLocks: nextLocks });
+    $ui()?.set?.({ admin: { countryLocks: nextLocks } });
+
+    return { ok: true, lock: nextLocks[c] };
+  }
+
+  function confirmCountryDisable(countryCode, step = 1) {
+    const c = String(countryCode || "").trim().toUpperCase();
+    const feed = readFeed();
+    const locks = isObj(feed.countryLocks) ? feed.countryLocks : {};
+    const cur = locks[c];
+    if (!cur) return { ok: false, reason: "NO_LOCK" };
+
+    const nextStep = Math.max(1, Math.min(3, Number(step) || 1));
+    const done = nextStep >= 3;
+
+    const next = {
+      ...locks,
+      [c]: {
+        ...cur,
+        step: nextStep,
+        confirmedAt: done ? nowISO() : null
+      }
+    };
+
+    writeFeed({ countryLocks: next });
+    $ui()?.set?.({ admin: { countryLocks: next } });
+
+    return { ok: true, lock: next[c] };
+  }
+
+  function activateCountryDisableIfDue(countryCode) {
+    const c = String(countryCode || "").trim().toUpperCase();
+    const feed = readFeed();
+    const locks = isObj(feed.countryLocks) ? feed.countryLocks : {};
+    const cur = locks[c];
+    if (!cur) return { ok: false, reason: "NO_LOCK" };
+
+    if (cur.status === "ACTIVE") return { ok: true, lock: cur };
+
+    const due = cur.effectiveAt ? (new Date(cur.effectiveAt).getTime() <= nowMs()) : false;
+    if (!due) return { ok: false, reason: "NOT_DUE", lock: cur };
+
+    const next = {
+      ...locks,
+      [c]: { ...cur, status: "ACTIVE", activatedAt: nowISO() }
+    };
+
+    writeFeed({ countryLocks: next });
+    $ui()?.set?.({ admin: { countryLocks: next } });
+    return { ok: true, lock: next[c] };
+  }
+
+  function cancelCountryDisable(countryCode) {
+    const c = String(countryCode || "").trim().toUpperCase();
+    const feed = readFeed();
+    const locks = isObj(feed.countryLocks) ? feed.countryLocks : {};
+    if (!locks[c]) return { ok: false, reason: "NO_LOCK" };
+
+    const next = { ...locks };
+    delete next[c];
+
+    writeFeed({ countryLocks: next });
+    $ui()?.set?.({ admin: { countryLocks: next } });
+
+    return { ok: true };
+  }
+
+  // -----------------------------
+  // Inbox / Newsletter containers (placeholder)
+  // -----------------------------
+  function adminBroadcast(message, meta = {}) {
+    const msg = String(message || "").trim();
+    if (!msg) return { ok: false, reason: "EMPTY" };
+
+    const feed = readFeed();
+    const broadcasts = Array.isArray(feed.broadcasts) ? feed.broadcasts : [];
+    const entry = {
+      id: "BC-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
+      createdAt: nowISO(),
+      message: msg,
+      meta: isObj(meta) ? meta : {}
+    };
+    broadcasts.unshift(entry);
+    while (broadcasts.length > 50) broadcasts.pop();
+
+    writeFeed({ broadcasts });
+    // UI can read broadcasts and render in admin mailbox later
+    $ui()?.set?.({ admin: { ...(readFeed().admin || {}), broadcasts } });
+    return { ok: true, broadcast: entry };
+  }
+
+  function userInboxAdd(message, meta = {}) {
+    const msg = String(message || "").trim();
+    if (!msg) return { ok: false, reason: "EMPTY" };
+
+    const feed = readFeed();
+    const inbox = Array.isArray(feed.inbox) ? feed.inbox : [];
+    const entry = {
+      id: "MAIL-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
+      createdAt: nowISO(),
+      message: msg,
+      meta: isObj(meta) ? meta : {}
+    };
+    inbox.unshift(entry);
+    while (inbox.length > 100) inbox.pop();
+
+    writeFeed({ inbox });
+    $ui()?.set?.({ inbox });
+    return { ok: true, mail: entry };
+  }
+
+  // -----------------------------
+  // Recording / Kamera Mode (placeholder state)
+  // -----------------------------
+  function setRecordingMode(on) {
+    const feed = readFeed();
+    const modes = isObj(feed.modes) ? feed.modes : {};
+    const nextModes = { ...modes, recording: !!on, updatedAt: nowISO() };
+    writeFeed({ modes: nextModes });
+    $ui()?.set?.({ modes: nextModes });
+    return { ok: true, modes: nextModes };
+  }
+
+  // -----------------------------
+  // DEMO toggles (filmable)
   // -----------------------------
   function demoSetConstruction(active) {
     const feed = readFeed();
@@ -399,18 +692,14 @@
   }
 
   // -----------------------------
-  // HYDRATE (boot / after login)
+  // HYDRATE
   // -----------------------------
   function hydrateFromStorage() {
     const feed = readFeed();
 
+    // products
     if (feed.products) setProducts(feed.products);
-    else {
-      setProducts({
-        construction: { active: false, tier: null },
-        controlling: { active: false, tier: null }
-      });
-    }
+    else setProducts({ construction: { active: false, tier: null }, controlling: { active: false, tier: null } });
 
     // codes
     const ref = feed?.codes?.referral?.code ?? null;
@@ -422,7 +711,15 @@
     // billing
     if (feed.billing) setBillingPreview(feed.billing);
 
-    // after login: ensure referral exists (safe no-op if no session)
+    // country locks into ui_state admin container
+    if (feed.countryLocks) {
+      $ui()?.set?.({ admin: { countryLocks: feed.countryLocks } });
+    }
+
+    // ensure access self-healed
+    setAccessFromProducts();
+
+    // after login: ensure referral exists
     try { ensureReferralForLoggedInUser(); } catch {}
   }
 
@@ -430,11 +727,11 @@
   // PUBLIC API
   // -----------------------------
   window.EPTEC_STATE_MANAGER = {
-    // feed
+    // storage
     readFeed,
     writeFeed,
 
-    // products/access
+    // products / doors
     DOORS,
     setProducts,
     getAccess,
@@ -448,15 +745,38 @@
     setPresentStatus,
     setBillingPreview,
 
-    // present/referral/vip
+    // present
     adminCreatePresentCampaign,
     applyPresentCode,
 
+    // referral
     ensureReferralForLoggedInUser,
     redeemReferralForCurrentUser,
 
+    // vip
     adminCreateVipCode,
     redeemVipForCurrentUser,
+
+    // cancellation / upgrade / add-room
+    requestCancelAll,
+    confirmCancelAll,
+    requestUpgrade,
+    confirmUpgrade,
+    requestAddRoom,
+    confirmAddRoom,
+
+    // country lock emergency switch
+    requestCountryDisable,
+    confirmCountryDisable,
+    activateCountryDisableIfDue,
+    cancelCountryDisable,
+
+    // newsletter/inbox placeholders
+    adminBroadcast,
+    userInboxAdd,
+
+    // recording mode flag
+    setRecordingMode,
 
     // demo toggles
     demoSetConstruction,
