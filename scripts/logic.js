@@ -127,6 +127,8 @@ const EPTEC_BRAIN = (() => {
 
   /* -----------------------------
    * ✅ 2.1) ACTIVITY (CLICK/UX LOG HOOK)
+   * - "wir hören sowieso jeden Klick"
+   * - can be used by UI without coupling into Compliance internals
    * ----------------------------- */
   const Activity = {
     log(eventName, meta = null) {
@@ -136,77 +138,6 @@ const EPTEC_BRAIN = (() => {
       }, "Activity.log");
     }
   };
-
-  /* -----------------------------
-   * ✅ 2.2) DASHBOARD BRIDGE (UI_STATE FEED)
-   * - Translates local storage feed -> EPTEC_STATE_MANAGER -> EPTEC_UI_STATE
-   * - No business logic. Only hydration + visual sync.
-   * ----------------------------- */
-  const DashboardBridge = (() => {
-    const APPSTATE_KEY = "eptec_app_states"; // your StateManager storage
-    const FEED_KEY = Config.STORAGE_KEY_FEED; // "EPTEC_FEED" optional
-
-    function readJson(key) {
-      return Safe.try(() => {
-        if (!("localStorage" in window)) return null;
-        const raw = localStorage.getItem(key);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return Safe.isObj(parsed) ? parsed : null;
-      }, "DashboardBridge.readJson") || null;
-    }
-
-    /**
-     * Expected feed (optional, you can fill later):
-     * {
-     *   products: { construction:{active,tier}, controlling:{active,tier} },
-     *   referralCode: "REF-....",
-     *   present: { status, discountPercent, validUntil },
-     *   billing: { nextInvoiceDate, discountPercent }
-     * }
-     */
-    function syncToUI() {
-      Safe.try(() => {
-        const sm = window.EPTEC_STATE_MANAGER;
-        if (!sm) return;
-
-        // 1) hydrate whatever StateManager already stores
-        sm.hydrateFromStorage?.();
-
-        // 2) optional: read unified feed
-        const feed = readJson(FEED_KEY);
-        if (feed) {
-          if (feed.products) sm.setProducts?.(feed.products);
-          if (feed.referralCode) sm.setReferralCode?.(feed.referralCode);
-          if (feed.present) sm.setPresentStatus?.(feed.present);
-          if (feed.billing) sm.setBillingPreview?.({
-            nextInvoiceDate: feed.billing.nextInvoiceDate,
-            discountPercent: feed.billing.discountPercent
-          });
-        }
-
-        // 3) optional: map legacy app_states lights (kept for compatibility)
-        // We do not interpret "color" into billing rules. That would be business logic.
-        const legacy = readJson(APPSTATE_KEY);
-        if (legacy && Safe.isObj(legacy) && feed == null) {
-          // If you later want: derive some visual hints from existing states
-          // But we intentionally do nothing here to keep it pure.
-        }
-      }, "DashboardBridge.syncToUI");
-    }
-
-    // Optional helper: write a minimal feed (useful until backend is connected)
-    function writeFeed(patch) {
-      Safe.try(() => {
-        if (!("localStorage" in window)) return;
-        const cur = readJson(FEED_KEY) || {};
-        const next = deepMerge({ ...cur }, Safe.isObj(patch) ? patch : {});
-        localStorage.setItem(FEED_KEY, JSON.stringify(next));
-      }, "DashboardBridge.writeFeed");
-    }
-
-    return { syncToUI, writeFeed };
-  })();
 
   /* -----------------------------
    * 3) RESOURCE STORE (docs/.md, locales/.json, assets/.html)
@@ -354,9 +285,12 @@ const EPTEC_BRAIN = (() => {
     }
 
     // AUTO-RESOLVE (your "TISCH" case)
+    // 1) locales key
     if (ctx.locale && token in ctx.locale) return String(ctx.locale[token] ?? "");
+    // 2) docs/<token>.md
     const d = await Store.getDoc(token);
     if (d && !d.startsWith("DOC MISSING:") && !d.startsWith("DOC LOAD ERROR:")) return d;
+    // 3) assets/<token>.html
     const a = await Store.getAssetHtml(token);
     if (a) return a;
 
@@ -498,6 +432,9 @@ const EPTEC_BRAIN = (() => {
       }, "Workshop.render");
     },
 
+    // PartName can be:
+    //  - a label from structure
+    //  - a docId (recommended) -> tries docs/<docId>.md first
     async openDoc(partName) {
       const name = String(partName || "").trim();
       if (!name) return;
@@ -505,8 +442,10 @@ const EPTEC_BRAIN = (() => {
       const container = Safe.qs(".engraved-matrix");
       if (!container) return;
 
+      // 1) Prefer docs/<name>.md (so you just "feed" docs files)
       const rawDoc = await Store.getDoc(name);
 
+      // 2) Fallback: use old inline template if doc missing
       let base = rawDoc;
       if (rawDoc.startsWith("DOC MISSING:") || rawDoc.startsWith("DOC LOAD ERROR:")) {
         const tpl = Assets?.languages?.de?.nf1_template || "";
@@ -520,8 +459,11 @@ const EPTEC_BRAIN = (() => {
       const locale = await Store.getLocale(Config.DEFAULT_LANG);
       const ctx = { user: Config.ACTIVE_USER, locale };
 
+      // 3) Resolve tokens like {{TISCH}} / {{i18n:KEY}} / {{doc:agb}}
       const rendered = await renderTemplate(base, ctx);
 
+      // 4) Render safely as preformatted text by default (0% XSS headaches)
+      // If you intentionally want HTML in docs, set meta.render.mode="html" for that doc action.
       container.innerHTML = `
         <div id="printable-area" class="doc-view"
              style="background:white;color:black;padding:40px;font-family:monospace;white-space:pre-wrap;">
@@ -601,7 +543,7 @@ const EPTEC_BRAIN = (() => {
     "docs.open": async (ctx) => Workshop.openDoc(ctx?.docId || ""),
     "nav.tunnel.R1": () => Navigation.triggerTunnel("R1"),
     "nav.tunnel.R2": () => Navigation.triggerTunnel("R2"),
-    "system.reload": () => { reloadAssets(); Assembler.sync(); DashboardBridge.syncToUI(); },
+    "system.reload": () => { reloadAssets(); Assembler.sync(); },
     "system.dumpLogs": () => console.log(Compliance.exportLogs())
   };
 
@@ -623,12 +565,14 @@ const EPTEC_BRAIN = (() => {
         const id = element.getAttribute("data-logic-id");
         const meta = Assets?.objectMeta?.[id] || {};
 
+        // Backward-compat: meta.action + meta.sound
         if (meta.action === "download") runAction("workshop.exportPDF", { id, meta });
         if (meta.action === "upload") {
           if (Config.ACTIVE_USER?.tariff === "premium") runAction("workshop.upload", { id, meta });
           else alert("PREMIUM ERFORDERLICH");
         }
 
+        // New: meta.on.click.do (preferred)
         const action = meta?.on?.click?.do;
         if (action) {
           if (allowed(meta)) runAction(action, meta?.on?.click || { id, meta });
@@ -660,6 +604,7 @@ const EPTEC_BRAIN = (() => {
             continue;
           }
 
+          // Render
           if (meta.source === "canva") {
             slot.innerHTML = meta.embedCode || "";
           } else {
@@ -667,6 +612,7 @@ const EPTEC_BRAIN = (() => {
             slot.innerHTML = `<div class="semantic-content">${Safe.escHtml(meta.label || id)}</div>`;
           }
 
+          // Bind
           slot.onclick = () => Interaction.trigger(slot);
         }
 
@@ -680,31 +626,11 @@ const EPTEC_BRAIN = (() => {
    * ----------------------------- */
   function bindHotkeys() {
     window.addEventListener("keydown", (e) => {
+      // Ctrl+Alt+E -> reload assets + resync
       if (e.ctrlKey && e.altKey && (e.key === "e" || e.key === "E")) runAction("system.reload");
+      // Ctrl+Alt+L -> dump logs
       if (e.ctrlKey && e.altKey && (e.key === "l" || e.key === "L")) runAction("system.dumpLogs");
     });
-  }
-
-  /* -----------------------------
-   * ✅ 12.1) GLOBAL CLICK LISTENER (optional UX telemetry)
-   * - Logs clicks via EPTEC_ACTIVITY
-   * - Optional click sound if you add <audio id="snd-click" ...>
-   * - Never breaks anything
-   * ----------------------------- */
-  function bindGlobalClickTelemetry() {
-    Safe.try(() => {
-      document.addEventListener("click", (e) => {
-        const t = e?.target;
-        const tag = t?.tagName ? String(t.tagName).toLowerCase() : "";
-        const id = t?.id ? String(t.id) : "";
-        const cls = t?.className ? String(t.className) : "";
-
-        Activity.log("CLICK", { tag, id, cls });
-
-        // optional click sound (only if you add it)
-        // Audio.play("snd-click", 0.15);
-      }, true);
-    }, "bindGlobalClickTelemetry");
   }
 
   /* -----------------------------
@@ -713,11 +639,6 @@ const EPTEC_BRAIN = (() => {
   function init() {
     Safe.try(() => {
       bindHotkeys();
-      bindGlobalClickTelemetry();
-
-      // First sync UI from storage/feed (so dashboard can show states instantly)
-      DashboardBridge.syncToUI();
-
       Assembler.sync();
       Compliance.log("SYSTEM", "INIT_DONE", { session: Config.SESSION_START });
       console.log("EPTEC MASTER LOGIC 2026: ZeroCrash DataFeed aktiv.");
@@ -734,7 +655,7 @@ const EPTEC_BRAIN = (() => {
     get Assets() { return Assets; },
     reloadAssets,
     Compliance,
-    Activity,
+    Activity, // ✅ exported click/event logger
     Audio,
     Auth,
     Navigation,
@@ -743,293 +664,13 @@ const EPTEC_BRAIN = (() => {
     Assembler,
     Store,
     renderTemplate,
-    runAction,
-
-    // NEW: dashboard feed helpers (purely optional)
-    DashboardBridge
+    runAction
   };
 })();
 
 window.EPTEC_BRAIN = EPTEC_BRAIN;
-// 1. Zugang zu Türen und Produkte
-// Berechnung des Zugangs zu den Türen basierend auf den Produkten
-function deriveAccessFromProducts(products) {
-  const p = isObj(products) ? products : {};
-  const c = !!p?.construction?.active;
-  const k = !!p?.controlling?.active;
-  return {
-    construction: c,
-    controlling: (k && c)
-  };
-}
-
-// Setzt den Zugang zu den Türen und synchronisiert die UI
-function setAccess(access) {
-  const a = isObj(access) ? access : {};
-  const next = writeFeed({
-    access: {
-      construction: !!a.construction,
-      controlling: !!a.controlling
-    }
-  });
-
-  // Aktualisierung der Benutzeroberfläche
-  $ui()?.set?.({
-    access: {
-      construction: !!next.access?.construction,
-      controlling: !!next.access?.controlling
-    }
-  });
-
-  return next.access || { construction: false, controlling: false };
-}
-
-// Funktion zum Entsperren der Türen basierend auf den Produkten
-function unlockDoor(door) {
-  const d = normalizeDoor(door);
-  if (!d) return { ok: false, reason: "INVALID_DOOR" };
-
-  const feed = readFeed();
-  const p = feed.products || {};
-  const derived = deriveAccessFromProducts(p);
-
-  if (d === DOORS.CONSTRUCTION) {
-    const nextProducts = {
-      construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
-      controlling:  { active: !!p?.controlling?.active, tier: (p?.controlling?.tier || null) }
-    };
-    setProducts(nextProducts);
-    const acc = deriveAccessFromProducts(readFeed().products || {});
-    setAccess(acc);
-    return { ok: true, door: d, access: acc };
-  }
-
-  if (d === DOORS.CONTROLLING) {
-    const nextProducts = {
-      construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
-      controlling:  { active: true, tier: (p?.controlling?.tier || "BASIS") }
-    };
-    setProducts(nextProducts);
-    const acc = deriveAccessFromProducts(readFeed().products || {});
-    setAccess(acc);
-    return { ok: true, door: d, access: acc };
-  }
-
-  setAccess(derived);
-  return { ok: true, door: d, access: derived };
-}
-
-// Überprüft, ob die Tür entsperrt ist
-function isDoorUnlocked(door) {
-  const d = normalizeDoor(door);
-  if (!d) return false;
-  const a = getAccess();
-  return !!a[d];
-}
-
-// 2. Present-Codes (global) und VIP-Codes (extra)
-
-// Erstellen eines globalen Present-Codes (Rabatt)
-function createPresentCampaign(code, discountPercent = 50, daysValid = 30) {
-  const db = loadDB();
-  const c = Safe.clean(code).toUpperCase();
-  if (!c) return { ok: false, code: "EMPTY" };
-
-  const createdAt = Safe.nowISO();
-  const validUntil = new Date(Safe.nowMs() + daysValid * 24 * 60 * 60 * 1000).toISOString();
-
-  db.codes.present[c] = {
-    code: c,
-    discountPercent: Number(discountPercent) || 50,
-    createdAt,
-    validUntil
-  };
-  saveDB(db);
-  return { ok: true, present: db.codes.present[c] };
-}
-
-// Anwenden eines Present-Codes (global) für den Benutzer
-function applyPresentCode(username, code) {
-  const db = loadDB();
-  const u = findByUsername(db, username);
-  if (!u) return { ok: false, code: "NO_USER" };
-
-  const c = Safe.clean(code).toUpperCase();
-  const campaign = db.codes.present[c];
-  if (!campaign) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
-
-  if (campaign.validUntil && new Date() > new Date(campaign.validUntil)) {
-    return { ok: false, code: "EXPIRED", message: "Code abgelaufen.", campaign };
-  }
-
-  u.usedPresentCodes = u.usedPresentCodes || {};
-  if (u.usedPresentCodes[c]) {
-    return { ok: false, code: "ALREADY_USED", message: "Code bereits verwendet.", campaign };
-  }
-
-  u.usedPresentCodes[c] = Safe.nowISO();
-  u.updatedAt = Safe.nowISO();
-  db.users[u.username] = u;
-  saveDB(db);
-
-  return { ok: true, code: "APPLIED", campaign };
-}
-
-// VIP-Codes (extra) erstellen
-function createExtraPresentCode({ freeMonths = 0, freeForever = false } = {}) {
-  const db = loadDB();
-  const code = ("VIP-" + Safe.randToken(6)).toUpperCase();
-
-  db.codes.extra[code] = {
-    code,
-    freeMonths: Number(freeMonths) || 0,
-    freeForever: !!freeForever,
-    maxRedemptions: 1,
-    redeemedBy: null,
-    redeemedAt: null,
-    createdAt: Safe.nowISO()
-  };
-
-  saveDB(db);
-  return { ok: true, extra: db.codes.extra[code] };
-}
-
-// Anwenden eines VIP-Codes für den Benutzer
-function redeemExtraPresentCode(username, code) {
-  const db = loadDB();
-  const u = findByUsername(db, username);
-  if (!u) return { ok: false, code: "NO_USER" };
-
-  const c = Safe.clean(code).toUpperCase();
-  const x = db.codes.extra[c];
-  if (!x) return { ok: false, code: "INVALID_CODE", message: "Code ungültig." };
-
-  if (x.redeemedBy) return { ok: false, code: "ALREADY_REDEEMED", message: "Code bereits eingelöst." };
-
-  x.redeemedBy = u.username;
-  x.redeemedAt = Safe.nowISO();
-
-  u.vip = u.vip || { freeForever: false, freeMonths: 0 };
-  u.vip.freeForever = u.vip.freeForever || !!x.freeForever;
-  u.vip.freeMonths = Number(u.vip.freeMonths || 0) + Number(x.freeMonths || 0);
-
-  u.updatedAt = Safe.nowISO();
-  db.users[u.username] = u;
-  db.codes.extra[c] = x;
-  saveDB(db);
-
-  return { ok: true, code: "VIP_APPLIED", extra: x, vip: u.vip };
-}
-
-// 3. Referral-Codes (Benutzerreferenzierung)
-
-// Referral-Code für den Benutzer erstellen (wenn dieser noch keinen hat)
-function getOrCreateReferralCode(username) {
-  const db = loadDB();
-  const u = findByUsername(db, username);
-  if (!u) return { ok: false, code: "NO_USER" };
-
-  if (u.referralCode) return { ok: true, referralCode: u.referralCode };
-
-  const ref = ("REF-" + Safe.randToken(6)).toUpperCase();
-  u.referralCode = ref;
-  u.updatedAt = Safe.nowISO();
-  db.users[u.username] = u;
-  saveDB(db);
-
-  return { ok: true, referralCode: ref };
-}
-
-// Anwenden eines Referral-Codes (für Neukunden)
-function redeemReferralCode(newUsername, referralCode) {
-  const db = loadDB();
-  const newU = findByUsername(db, newUsername);
-  if (!newU) return { ok: false, code: "NO_USER" };
-
-  if (newU.billing?.signupFeeWaived) {
-    return { ok: false, code: "NOT_NEW", message: "Nur für Neukunden." };
-  }
-
-  const ref = Safe.clean(referralCode).toUpperCase();
-  if (!ref.startsWith("REF-")) return { ok: false, code: "INVALID_REF" };
-
-  const owner = Object.values(db.users).find(u => (u.referralCode || "").toUpperCase() === ref);
-
-  if (owner && owner.username === newU.username) {
-    return { ok: false, code: "SELF_REFERRAL", message: "Nicht für Eigenwerbung." };
-  }
-
-  newU.billing = newU.billing || {};
-  newU.billing.signupFeeWaived = true;
-  newU.updatedAt = Safe.nowISO();
-  db.users[newU.username] = newU;
-  saveDB(db);
-
-  return { ok: true, code: "REF_APPLIED", message: "Einmalzahlung erlassen (Demo).", owner: owner ? owner.username : null };
-}
-
-// 4. Übersetzungslogik (Mehrsprachigkeit)
-
-// Umstellung der Sprache basierend auf der Auswahl
-function setLanguage(lang) {
-  currentLang = normalizeLang(lang);
-  document.documentElement.setAttribute("dir", dict(currentLang)._dir === "rtl" ? "rtl" : "ltr");
-  applyTranslations();
-  updateClockOnce();
-  syncLegalTitle();
-}
-
-// Übersetzungen anwenden (z.B. für Login, Registrierung)
-function applyTranslations() {
-  setPlaceholder("login-username", t("login_username", "Username"));
-  setPlaceholder("login-password", t("login_password", "Password"));
-  setText("btn-login", t("login_btn", "Login"));
-  setText("btn-register", t("register_btn", "Register"));
-  setText("btn-forgot", t("forgot_btn", "Forgot password"));
-
-  setText("link-imprint", t("legal_imprint", "Imprint"));
-  setText("link-terms", t("legal_terms", "Terms"));
-  setText("link-support", t("legal_support", "Support"));
-  setText("link-privacy-footer", t("legal_privacy", "Privacy Policy"));
-}
 
 // ✅ Global hook for UI (optional, but perfect for "we hear every click")
 window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
   log: (eventName, meta) => window.EPTEC_BRAIN?.Activity?.log?.(eventName, meta)
 };
-// Update die Zugangsdaten basierend auf den benutzten Produkten
-function updateProductAccess(feed) {
-  const access = deriveAccessFromProducts(feed.products);
-  setAccess(access);
-  DashboardBridge.writeFeed({ access });  // Update feed with the new access state
-  return access;
-}
-
-// Füge eine einfache Funktion zum Abrufen der aktuellen Feed-Daten hinzu
-function getCurrentFeed() {
-  const feed = readFeed();
-  return feed ? feed : {};
-}
-
-// Funktion zum Setzen von Produkten und Verbindungen
-function setProductsAndSync(products) {
-  setProducts(products);
-  const updatedFeed = readFeed();
-  const access = deriveAccessFromProducts(updatedFeed.products);
-  setAccess(access);
-  DashboardBridge.writeFeed({ products, access });
-  return { products, access };
-}
-
-// Beispiel für das Entsperren einer Tür, inklusive UI-Update und Feed-Update
-function unlockAndUpdateDoor(doorId) {
-  const result = unlockDoor(doorId);
-  if (result.ok) {
-    // Update Feed and UI
-    const feed = readFeed();
-    updateProductAccess(feed);
-    $ui()?.set?.({ doorUnlocked: true });
-  } else {
-    console.error("Failed to unlock door:", result.reason);
-  }
-}
