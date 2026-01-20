@@ -2308,4 +2308,45 @@ window.addEventListener('load', () => {
   // Also allow manual trigger
   window.__EPTEC_CHECK_LANG_BLOCKER__ = inspect;
 })();
+/* =========================================================
+   EPTEC MEADOW POINTER GUARD (append-only)
+   Fix:
+   - Meadow stays visual
+   - Meadow stops blocking UI clicks
+   - Language switcher becomes clickable again
+   ========================================================= */
+(() => {
+  "use strict";
+
+  function apply() {
+    const meadow = document.getElementById("meadow-view");
+    const lang = document.getElementById("language-switcher");
+
+    if (!meadow || !lang) return false;
+
+    // Meadow must NEVER eat pointer events
+    meadow.style.pointerEvents = "none";
+
+    // But its internal UI MUST stay interactive
+    meadow.querySelectorAll(
+      "#entry-ui, #legal-footer, button, input, a"
+    ).forEach(el => {
+      el.style.pointerEvents = "auto";
+    });
+
+    // Language switcher must be top + clickable
+    lang.style.pointerEvents = "auto";
+    lang.style.zIndex = "2147483647";
+
+    return true;
+  }
+
+  if (apply()) return;
+
+  let tries = 0;
+  const t = setInterval(() => {
+    tries++;
+    if (apply() || tries > 40) clearInterval(t);
+  }, 50);
+})();
 
