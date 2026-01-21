@@ -10,175 +10,330 @@
   <link rel="stylesheet" href="assets/ui_elements.css">
   <link rel="stylesheet" href="assets/imagine.css">
   <link rel="stylesheet" href="assets/hidden.css">
+
+  <!-- Safe Door-Stage backdrop (pure CSS placeholder; replace later with image/video) -->
+  <style>
+    /* Keep it readable even without any room assets loaded yet */
+    #doors-view{
+      min-height: 100vh;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    #doors-view::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(1200px 700px at 50% 10%, rgba(255,255,255,.10), rgba(0,0,0,.80));
+      pointer-events:none;
+    }
+    #doors-view > *{ position: relative; }
+
+    .doors-stage{
+      padding: 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      color: #fff;
+    }
+    .doors-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 16px;
+      align-items:start;
+      margin-top: 14px;
+    }
+    @media (max-width: 880px){
+      .doors-grid{ grid-template-columns: 1fr; }
+    }
+    .door-card{
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(0,0,0,0.28);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .door-title{
+      font-weight: 800;
+      margin: 0 0 10px;
+      color: #fff;
+    }
+    .door-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+    }
+    .door-row .entry-input{ flex: 1 1 220px; }
+    .door-note{
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .door-divider{
+      margin-top:18px;
+      border-top: 1px solid rgba(255,255,255,0.18);
+      padding-top: 14px;
+    }
+  </style>
 </head>
 
 <body>
 
-<!-- =========================================================
-     GLOBAL HEADER
-========================================================= -->
-<header class="app-header" data-ui-layer="fixed">
-  <h1 id="app-title">Contract Office</h1>
-  <div id="app-subtitle">by Johannes Büngener</div>
-  <div id="system-clock"></div>
-</header>
+  <!-- =========================================================
+       GLOBAL HEADER
+       ========================================================= -->
+  <header class="app-header" data-ui-layer="fixed">
+    <h1 id="app-title">Contract Office</h1>
+    <div id="app-subtitle">by Johannes Büngener</div>
+    <div id="system-clock"></div>
+  </header>
 
-<!-- =========================================================
-     LANGUAGE SWITCHER
-========================================================= -->
-<div id="language-switcher" class="lang-switcher">
-  <div id="lang-rail">
-    <button class="lang-item" data-lang="en">EN</button>
-    <button class="lang-item" data-lang="de">DE</button>
-    <button class="lang-item" data-lang="es">ES</button>
-    <button class="lang-item" data-lang="fr">FR</button>
-    <button class="lang-item" data-lang="it">IT</button>
-    <button class="lang-item" data-lang="pt">PT</button>
-    <button class="lang-item" data-lang="nl">NL</button>
-    <button class="lang-item" data-lang="ru">RU</button>
-    <button class="lang-item" data-lang="uk">UA</button>
-    <button class="lang-item" data-lang="ar">AR</button>
-    <button class="lang-item" data-lang="zh">ZH</button>
-    <button class="lang-item" data-lang="ja">JA</button>
+  <!-- =========================================================
+       LANGUAGE SWITCHER (12 languages)
+       NOTE: language labels are UI; term mapping is handled in scripts.
+       ========================================================= -->
+  <div id="language-switcher" class="lang-switcher" data-ui-layer="overlay" aria-label="Language">
+    <div id="lang-rail" aria-hidden="true">
+      <button class="lang-item" type="button" data-lang="en">EN</button>
+      <button class="lang-item" type="button" data-lang="de">DE</button>
+      <button class="lang-item" type="button" data-lang="es">ES</button>
+      <button class="lang-item" type="button" data-lang="fr">FR</button>
+      <button class="lang-item" type="button" data-lang="it">IT</button>
+      <button class="lang-item" type="button" data-lang="pt">PT</button>
+      <button class="lang-item" type="button" data-lang="nl">NL</button>
+      <button class="lang-item" type="button" data-lang="ru">RU</button>
+      <button class="lang-item" type="button" data-lang="uk">UA</button>
+      <button class="lang-item" type="button" data-lang="ar">AR</button>
+      <button class="lang-item" type="button" data-lang="zh">ZH</button>
+      <button class="lang-item" type="button" data-lang="ja">JA</button>
+    </div>
+    <button id="lang-toggle" type="button">🌐</button>
   </div>
-  <button id="lang-toggle" type="button">🌐</button>
-</div>
 
-<!-- =========================================================
-     VIEW: MEADOW (START / LOGIN)
-========================================================= -->
-<section id="meadow-view" class="grassy-meadow" data-view="meadow">
+  <!-- =========================================================
+       LOCATION: WIESE (LOGIC TERM)
+       id required by scripts: meadow-view
+       ========================================================= -->
+  <section id="meadow-view" class="grassy-meadow" data-location="WIESE" style="display:flex;">
+    <div id="entry-ui" class="entry-ui" data-ui-block="auth">
 
-  <div id="entry-ui" class="entry-ui">
+      <input id="login-username" class="entry-input" autocomplete="username">
+      <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
 
-    <input id="login-username" class="entry-input" autocomplete="username">
-    <input id="login-password" class="entry-input" type="password" autocomplete="current-password">
+      <div class="entry-actions">
+        <button id="btn-login" class="entry-btn" type="button"></button>
+        <button id="btn-register" class="entry-btn" type="button"></button>
+        <button id="btn-forgot" class="entry-btn" type="button"></button>
+      </div>
 
-    <div class="entry-actions">
-      <button id="btn-login" class="entry-btn" type="button"></button>
-      <button id="btn-register" class="entry-btn" type="button"></button>
-      <button id="btn-forgot" class="entry-btn" type="button"></button>
+      <div id="login-message" class="system-msg"></div>
+
+      <!-- MASTER START GATE (Level 1) -->
+      <div id="admin-gate" data-role="MASTER_GATE">
+        <input id="admin-code" class="entry-input" autocomplete="off">
+        <button id="admin-submit" class="entry-btn" type="button"></button>
+      </div>
+
     </div>
 
-    <div id="login-message" class="system-msg"></div>
+    <!-- Legal footer anchors (placeholders; docs later) -->
+    <footer id="legal-footer" class="legal-footer" data-ui-block="legal">
+      <span id="link-imprint" class="legal-link"></span>
+      <span>|</span>
+      <span id="link-terms" class="legal-link"></span>
+      <span>|</span>
+      <span id="link-support" class="legal-link"></span>
+      <span>|</span>
+      <span id="link-privacy-footer" class="legal-link"></span>
+    </footer>
+  </section>
 
-    <!-- MASTER START -->
-    <div id="admin-gate">
-      <input id="admin-code" class="entry-input" autocomplete="off">
-      <button id="admin-submit" class="entry-btn" type="button"></button>
+  <!-- =========================================================
+       LOCATION: R1 (LOGIC TERM) – DOOR STAGE (Zwischenraum)
+       IMPORTANT: This is the intermediate hub before entering R1/R2 functionality.
+       id required by scripts: doors-view, door-construction, door-controlling, admin-door-*
+       ========================================================= -->
+  <section id="doors-view" class="room-view" data-location="R1" data-role="DOOR_STAGE" style="display:none;">
+    <div class="doors-stage">
+      <h2 style="margin:0 0 10px;">Zwischenraum (R1)</h2>
+      <div id="doors-status" class="system-msg" style="margin-top:10px;"></div>
+
+      <div class="doors-grid">
+
+        <!-- Door: Construction -> maps to ROOM1 UI view later -->
+        <div class="door-card" aria-label="Door Construction">
+          <div class="door-title">Door: Construction</div>
+          <button id="door-construction" class="entry-btn" type="button" style="width:100%;">Enter Construction</button>
+
+          <div class="door-row">
+            <input id="paywall-referral-input" class="entry-input" type="text" autocomplete="off" placeholder="Gift/Referral code">
+            <button id="paywall-referral-apply" class="entry-btn" type="button">Apply</button>
+          </div>
+
+          <div class="door-row">
+            <input id="paywall-vip-input" class="entry-input" type="text" autocomplete="off" placeholder="VIP code">
+            <button id="paywall-vip-apply" class="entry-btn" type="button">Apply</button>
+          </div>
+
+          <div class="door-note">Neukunden: Geschenkcode / VIP: Bypass. Admin: keine Sperren.</div>
+        </div>
+
+        <!-- Door: Contract Controlling -> maps to ROOM2 UI view later -->
+        <div class="door-card" aria-label="Door Contract Controlling">
+          <div class="door-title">Door: Contract Controlling</div>
+          <button id="door-controlling" class="entry-btn" type="button" style="width:100%;">Enter Contract Controlling</button>
+
+          <div class="door-note">Für User getrennte Räume. Nur Admin kann später „rutschen“.</div>
+        </div>
+
+      </div>
+
+      <!-- Master Door (Level 2) -->
+      <div class="door-card door-divider" aria-label="Master Door (Admin)">
+        <div class="door-title">Master Door (R2 Zugang)</div>
+        <div class="door-row">
+          <input id="admin-door-code" class="entry-input" type="password" autocomplete="off" placeholder="PatrickGeorgHenke6264">
+          <button id="admin-door-submit" class="entry-btn" type="button"></button>
+        </div>
+        <div class="door-note">Nur du. Direkter Eintritt hinter die Tür in R2.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       LOCATION: R1 (LOGIC TERM) – CONTRACT CONSTRUCTION SPACE
+       id required by logic: room-1-view
+       ========================================================= -->
+  <section id="room-1-view" class="room-view" data-location="R1" data-role="CONSTRUCTION" style="display:none;">
+    <!-- semantic hotspots for EPTEC_BRAIN.Assembler -->
+    <div class="room-hotspots">
+      <div class="hotspot" data-logic-id="r1.contract.check"></div>
+      <div class="hotspot" data-logic-id="r1.signal.system"></div>
+      <div class="hotspot" data-logic-id="r1.upload"></div>
+      <div class="hotspot" data-logic-id="r1.download"></div>
     </div>
 
-  </div>
+    <div class="engraved-matrix"></div>
+  </section>
 
-  <footer id="legal-footer" class="legal-footer">
-    <span id="link-imprint" class="legal-link"></span> |
-    <span id="link-terms" class="legal-link"></span> |
-    <span id="link-support" class="legal-link"></span> |
-    <span id="link-privacy-footer" class="legal-link"></span>
-  </footer>
-
-</section>
-
-<!-- =========================================================
-     VIEW: DOORS (ZWISCHENRAUM)
-========================================================= -->
-<section id="doors-view" class="doors-view" data-view="doors" style="display:none;">
-
-  <div class="doors-stage">
-
-    <!-- DOOR: CONSTRUCTION -->
-    <div class="door-block">
-      <div id="door-construction" class="door door-construction"></div>
-      <input class="door-code-input" placeholder="Geschenkcode">
+  <!-- =========================================================
+       LOCATION: R2 (LOGIC TERM) – CONTRACT CONTROLLING SPACE
+       id required by logic: room-2-view
+       ========================================================= -->
+  <section id="room-2-view" class="room-view" data-location="R2" data-role="CONTROLLING" style="display:none;">
+    <div class="room-hotspots">
+      <div class="hotspot" data-logic-id="r2.contract.observe"></div>
+      <div class="hotspot" data-logic-id="r2.user.judgement"></div>
+      <div class="hotspot" data-logic-id="r2.upload"></div>
+      <div class="hotspot" data-logic-id="r2.download"></div>
     </div>
 
-    <!-- DOOR: CONTROLLING -->
-    <div class="door-block">
-      <div id="door-controlling" class="door door-controlling"></div>
-      <input class="door-code-input" placeholder="VIP-Code">
+    <div class="engraved-matrix"></div>
+  </section>
+
+  <!-- =========================================================
+       MODALS (UI only)
+       ========================================================= -->
+  <section id="register-screen" class="modal modal-hidden" data-ui-layer="modal">
+    <div class="modal-card register-card">
+      <div id="register-title"></div>
+
+      <input id="reg-first-name" class="entry-input">
+      <input id="reg-last-name" class="entry-input">
+      <input id="reg-birthdate" class="entry-input">
+      <input id="reg-email" class="entry-input">
+      <input id="reg-username" class="entry-input">
+      <input id="reg-password" class="entry-input" type="password">
+
+      <div id="reg-rules-username"></div>
+      <div id="reg-rules-password"></div>
+      <div id="register-message"></div>
+
+      <button id="reg-submit" class="entry-btn locked" type="button"></button>
+      <button id="reg-close" class="entry-btn secondary" type="button"></button>
     </div>
+  </section>
 
+  <section id="forgot-screen" class="modal modal-hidden" data-ui-layer="modal">
+    <div class="modal-card forgot-card">
+      <div id="forgot-title"></div>
+
+      <input id="forgot-identity" class="entry-input">
+      <div id="forgot-message"></div>
+
+      <button id="forgot-submit" class="entry-btn" type="button"></button>
+      <button id="forgot-close" class="entry-btn secondary" type="button"></button>
+    </div>
+  </section>
+
+  <section id="legal-screen" class="modal modal-hidden" data-ui-layer="modal">
+    <div class="modal-card">
+      <div id="legal-title"></div>
+      <div id="legal-body"></div>
+      <button id="legal-close" class="entry-btn secondary" type="button"></button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       OPTIONAL PAYWALL OVERLAY (keeps ids stable for existing scripts)
+       ========================================================= -->
+  <div id="paywall-screen" class="paywall-hidden" aria-hidden="true">
+    <div class="paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywall-title">
+      <div class="paywall-head">
+        <div id="paywall-title" class="paywall-title">Unlock Access</div>
+        <button id="paywall-close" class="paywall-close" type="button">✕</button>
+      </div>
+
+      <div id="paywall-message" class="paywall-message">
+        Choose plan and redeem optional codes to unlock this door.
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">Room selection</div>
+        <div class="paywall-row">
+          <button id="paywall-construction-btn" type="button" class="paywall-btn">Construction</button>
+          <button id="paywall-controlling-btn" type="button" class="paywall-btn">Contract Controlling</button>
+        </div>
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">Referral code (new customer)</div>
+        <div class="paywall-row">
+          <input class="paywall-input" type="text" autocomplete="off" placeholder="Enter referral code" />
+          <button type="button" class="paywall-btn">Apply</button>
+        </div>
+      </div>
+
+      <div class="paywall-section">
+        <div class="paywall-section-title">VIP code</div>
+        <div class="paywall-row">
+          <input class="paywall-input" type="text" autocomplete="off" placeholder="Enter VIP code" />
+          <button type="button" class="paywall-btn">Apply</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- MASTER DOOR ACCESS -->
-  <div class="door-admin">
-    <input id="admin-door-code" class="entry-input" placeholder="Master-Code">
-    <button id="admin-door-submit" class="entry-btn" type="button"></button>
+  <!-- =========================================================
+       FX LAYERS (Tunnel + Whiteout)
+       ========================================================= -->
+  <div id="eptec-white-flash" class="white-flash-hidden" data-fx="whiteout"></div>
+  <div id="eptec-tunnel" class="tunnel-hidden" data-fx="tunnel">
+    <div class="tunnel-wall"></div>
   </div>
 
-</section>
-
-<!-- =========================================================
-     VIEW: ROOM 1 – VERTRAGSKONSTRUKTION
-========================================================= -->
-<section id="room-1-view" class="room-view" data-view="room1" style="display:none;">
-  <div class="engraved-matrix"></div>
-</section>
-
-<!-- =========================================================
-     VIEW: ROOM 2 – VERTRAGSCONTROLLING
-========================================================= -->
-<section id="room-2-view" class="room-view" data-view="room2" style="display:none;">
-  <div class="engraved-matrix"></div>
-</section>
-
-<!-- =========================================================
-     MODALS
-========================================================= -->
-<section id="register-screen" class="modal modal-hidden">
-  <div class="modal-card register-card">
-    <input id="reg-first-name" class="entry-input">
-    <input id="reg-last-name" class="entry-input">
-    <input id="reg-birthdate" class="entry-input">
-    <input id="reg-email" class="entry-input">
-    <input id="reg-username" class="entry-input">
-    <input id="reg-password" class="entry-input" type="password">
-
-    <div id="reg-rules-username"></div>
-    <div id="reg-rules-password"></div>
-    <div id="register-message"></div>
-
-    <button id="reg-submit" class="entry-btn locked"></button>
-    <button id="reg-close" class="entry-btn secondary"></button>
-  </div>
-</section>
-
-<section id="forgot-screen" class="modal modal-hidden">
-  <div class="modal-card forgot-card">
-    <input id="forgot-identity" class="entry-input">
-    <div id="forgot-message"></div>
-    <button id="forgot-submit" class="entry-btn"></button>
-    <button id="forgot-close" class="entry-btn secondary"></button>
-  </div>
-</section>
-
-<section id="legal-screen" class="modal modal-hidden">
-  <div class="modal-card">
-    <div id="legal-title"></div>
-    <div id="legal-body"></div>
-    <button id="legal-close" class="entry-btn secondary"></button>
-  </div>
-</section>
-
-<!-- =========================================================
-     FX LAYERS
-========================================================= -->
-<div id="eptec-white-flash" class="white-flash-hidden"></div>
-<div id="eptec-tunnel" class="tunnel-hidden">
-  <div class="tunnel-wall"></div>
-</div>
-
-<!-- =========================================================
-     SCRIPTS (ORDER FIXED)
-========================================================= -->
-<script src="scripts/sounds.js" defer></script>
-<script src="scripts/ui_state.js" defer></script>
-<script src="scripts/ui_controller.js" defer></script>
-<script src="scripts/registration_engine.js" defer></script>
-<script src="scripts/mock_backend.js" defer></script>
-<script src="scripts/state_manager.js" defer></script>
-<script src="scripts/logic.js" defer></script>
-<script src="scripts/main.js" defer></script>
+  <!-- =========================================================
+       SCRIPTS (ORDER IS IMPORTANT)
+       ========================================================= -->
+  <script src="scripts/sounds.js" defer></script>
+  <script src="scripts/ui_state.js" defer></script>
+  <script src="scripts/ui_controller.js" defer></script>
+  <script src="scripts/registration_engine.js" defer></script>
+  <script src="scripts/mock_backend.js" defer></script>
+  <script src="scripts/state_manager.js" defer></script>
+  <script src="scripts/logic.js" defer></script>
+  <script src="scripts/main.js" defer></script>
 
 </body>
 </html>
