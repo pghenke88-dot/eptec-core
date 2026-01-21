@@ -1589,4 +1589,1550 @@ PASTE HERE:
   else init();
 
 })();
+/* =========================================================
+   EPTEC APPEND 1 — GLOBAL I18N TOOL (UNBLOCKABLE) + LOCALE + CLOCK
+   - 12 language rail always works, never blocked
+   - updates: html lang/dir, UI_STATE lang/locale, clock formatting
+   - official UI labels: EN DE ES FR IT PT NL RU UK AR CN JP
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  const LANG = Object.freeze({
+    en: { locale: "en-US", dir: "ltr", ui: "EN" },
+    de: { locale: "de-DE", dir: "ltr", ui: "DE" },
+    es: { locale: "es-ES", dir: "ltr", ui: "ES" },
+    fr: { locale: "fr-FR", dir: "ltr", ui: "FR" },
+    it: { locale: "it-IT", dir: "ltr", ui: "IT" },
+    pt: { locale: "pt-PT", dir: "ltr", ui: "PT" }, // ✅ PT (no PL)
+    nl: { locale: "nl-NL", dir: "ltr", ui: "NL" },
+    ru: { locale: "ru-RU", dir: "ltr", ui: "RU" },
+    uk: { locale: "uk-UA", dir: "ltr", ui: "UK" }, // UI label UK (Ukrainisch)
+    ar: { locale: "ar-SA", dir: "rtl", ui: "AR" },
+    cn: { locale: "zh-CN", dir: "ltr", ui: "CN" }, // UI label CN
+    jp: { locale: "ja-JP", dir: "ltr", ui: "JP" }  // UI label JP
+  });
+
+  function norm(code) {
+    const c = String(code || "en").trim().toLowerCase();
+    if (c === "ua") return "uk";
+    if (c === "zh") return "cn";
+    if (c === "ja") return "jp";
+    return LANG[c] ? c : "en";
+  }
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function applyLang(langCode) {
+    const k = norm(langCode);
+    const meta = LANG[k] || LANG.en;
+
+    safe(() => document.documentElement.setAttribute("lang", k));
+    safe(() => document.documentElement.setAttribute("dir", meta.dir));
+
+    setState({ lang: k, locale: meta.locale, i18n: { lang: k, locale: meta.locale } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("i18n.set", { lang: k, locale: meta.locale }));
+
+    // clock render (if exists)
+    const clk = $("system-clock");
+    if (clk) safe(() => {
+      clk.textContent = new Date().toLocaleString(meta.locale, { dateStyle: "medium", timeStyle: "medium" });
+    });
+  }
+
+  // Default language = EN if nothing set yet
+  function ensureDefaultEN() {
+    const st = getState();
+    const already = st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang");
+    if (!already) applyLang("en");
+  }
+
+  // Bind globe rail (never blocks)
+  function bind() {
+    const sw = $("language-switcher");
+    const toggle = $("lang-toggle");
+    const rail = $("lang-rail");
+    if (!sw || !toggle || !rail) return;
+
+    if (sw.__eptec_lang_bound) return;
+    sw.__eptec_lang_bound = true;
+
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      sw.classList.toggle("lang-open");
+    });
+
+    rail.querySelectorAll(".lang-item").forEach((btn) => {
+      if (btn.__eptec_lang_btn) return;
+      btn.__eptec_lang_btn = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        safe(() => window.SoundEngine?.flagClick?.());
+        applyLang(btn.dataset.lang);
+        sw.classList.remove("lang-open");
+      });
+    });
+
+    document.addEventListener("click", () => sw.classList.remove("lang-open"));
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") sw.classList.remove("lang-open"); });
+  }
+
+  // Keep clock alive (safe even if main also does it)
+  function bindClock() {
+    const clk = $("system-clock");
+    if (!clk || clk.__eptec_clock) return;
+    clk.__eptec_clock = true;
+    setInterval(() => {
+      const st = getState();
+      const loc = st?.i18n?.locale || st?.locale || "en-US";
+      safe(() => clk.textContent = new Date().toLocaleString(loc, { dateStyle: "medium", timeStyle: "medium" }));
+    }, 1000);
+  }
+
+  function boot() {
+    ensureDefaultEN();
+    bind();
+    bindClock();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+  window.EPTEC_I18N = window.EPTEC_I18N || {};
+  window.EPTEC_I18N.apply = window.EPTEC_I18N.apply || applyLang;
+  window.EPTEC_I18N.get = window.EPTEC_I18N.get || (() => norm(getState()?.i18n?.lang || getState()?.lang || "en"));
+
+})();
+/* =========================================================
+   EPTEC APPEND 2 — SCENE AUDIO POLICY (SECTION-OWNED)
+   - each dramaturgy section owns audio; switching stops previous
+   - start: wind/birds (ambient) until tunnel
+   - tunnel: tunnel sound
+   - doors: doors ambience
+   - whiteout: short fx
+   - room1/room2: room ambience while inside
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  const AudioPolicy = window.EPTEC_AUDIO_POLICY || {};
+  let lastScene = null;
+
+  function stopAll() {
+    safe(() => window.SoundEngine?.stopAmbient?.());
+  }
+
+  function cue(scene) {
+    const s = String(scene || "");
+    stopAll();
+
+    // Start: wind/birds ambient (you already use startAmbient for wind; birds can be added later)
+    if (s === "start") {
+      safe(() => window.SoundEngine?.startAmbient?.());
+      return;
+    }
+    if (s === "tunnel") {
+      safe(() => window.SoundEngine?.tunnelFall?.());
+      return;
+    }
+    if (s === "viewdoors") {
+      safe(() => window.SoundEngine?.startAmbient?.());
+      return;
+    }
+    if (s === "whiteout") {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      return;
+    }
+    if (s === "room1" || s === "room2") {
+      safe(() => window.SoundEngine?.startAmbient?.());
+      return;
+    }
+  }
+
+  AudioPolicy.cue = AudioPolicy.cue || cue;
+
+  // subscribe to scene changes (never crashes if store differs)
+  function hook() {
+    const s = store();
+    if (!s || s.__eptec_audio_subscribed) return;
+    s.__eptec_audio_subscribed = true;
+
+    const sub = (st) => {
+      const scene = st?.scene || st?.view;
+      if (!scene || scene === lastScene) return;
+      lastScene = scene;
+      cue(scene);
+      safe(() => window.EPTEC_ACTIVITY?.log?.("audio.scene", { scene }));
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(sub);
+    else if (typeof s.onChange === "function") s.onChange(sub);
+    else {
+      // fallback polling (rare)
+      setInterval(() => sub(getState()), 250);
+    }
+
+    // initial cue
+    sub(getState());
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hook);
+  else hook();
+
+  window.EPTEC_AUDIO_POLICY = AudioPolicy;
+})();
+/* =========================================================
+   EPTEC APPEND 3 — SCENE VISUAL ASSETS (2D NOW, 3D LATER)
+   - binds scene -> visual slot keys (no filenames in logic)
+   - UI can load images or 3D later by these stable keys
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  const Visual = window.EPTEC_VISUAL || {};
+  Visual.slotForScene = Visual.slotForScene || ((scene) => {
+    const s = String(scene || "");
+    if (s === "start") return "visual.start";
+    if (s === "viewdoors") return "visual.doors";
+    if (s === "room1") return "visual.room1";
+    if (s === "room2") return "visual.room2";
+    if (s === "tunnel") return "visual.tunnel";
+    if (s === "whiteout") return "visual.whiteout";
+    return "visual.unknown";
+  });
+
+  function apply(scene) {
+    const slot = Visual.slotForScene(scene);
+    setState({ visual: { slot } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("visual.slot", { scene, slot }));
+  }
+
+  function hook() {
+    const s = store();
+    if (!s || s.__eptec_visual_subscribed) return;
+    s.__eptec_visual_subscribed = true;
+
+    let last = null;
+    const sub = (st) => {
+      const scene = st?.scene || st?.view;
+      if (!scene || scene === last) return;
+      last = scene;
+      apply(scene);
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(sub);
+    else if (typeof s.onChange === "function") s.onChange(sub);
+    else setInterval(() => sub(getState()), 250);
+
+    sub(getState());
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hook);
+  else hook();
+
+  window.EPTEC_VISUAL = Visual;
+})();
+/* =========================================================
+   EPTEC APPEND 4 — ROOM1 FRAMEWORK (MODULES) + LIMITS + SAVEPOINT + PREMIUM COMPARE
+   Rules:
+   - BASE: max 5 snippets per module
+   - PREMIUM: max 8 snippets per module
+   - Premium-only: upload proposal contract on table + compare
+   - Ampel thresholds: 0–5 green, 6–50 yellow, 51+ red
+   - Numbers appear ONLY next to yellow (room2 uses yellow stages; room1 can still store score)
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  // tariff resolver (best effort)
+  function tariff() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    const t1 = String(sess?.tariff || sess?.tier || "").trim().toLowerCase();
+    if (t1) return t1;
+    const st = getState();
+    return String(st?.profile?.tariff || st?.auth?.tariff || st?.tariff || "base").trim().toLowerCase();
+  }
+  function isPremium() {
+    const t = tariff();
+    const modes = getState()?.modes || {};
+    return t === "premium" || !!modes.author;
+  }
+
+  // room1 framework state: { frameworks: { <fwId>: { modules: { "I": [snipId,...] } } }, activeFwId }
+  const Room1 = window.EPTEC_ROOM1 || {};
+
+  Room1.maxPerModule = Room1.maxPerModule || (() => (isPremium() ? 8 : 5));
+
+  Room1.ensure = Room1.ensure || (() => {
+    const st = getState();
+    const r1 = st.room1 || st.room?.room1 || {};
+    // we store in UI_STATE.root.room1 for simplicity; does not break existing fields
+    if (!st.room1) setState({ room1: { ...r1, frameworks: r1.frameworks || {}, activeFwId: r1.activeFwId || "FW-1" } });
+  });
+
+  Room1.addSnippet = Room1.addSnippet || ((moduleRoman, snippetId) => {
+    Room1.ensure();
+    const st = getState();
+    const r1 = st.room1 || {};
+    const fwId = r1.activeFwId || "FW-1";
+    const frameworks = { ...(r1.frameworks || {}) };
+    const fw = { ...(frameworks[fwId] || { modules: {} }) };
+    const modules = { ...(fw.modules || {}) };
+
+    const mod = String(moduleRoman || "").trim().toUpperCase();
+    const id = String(snippetId || "").trim();
+    if (!mod || !id) return { ok: false, reason: "EMPTY" };
+
+    const arr = Array.isArray(modules[mod]) ? [...modules[mod]] : [];
+    const cap = Room1.maxPerModule();
+    if (arr.length >= cap) return { ok: false, reason: "LIMIT", cap };
+
+    arr.push(id);
+    modules[mod] = arr;
+    fw.modules = modules;
+    frameworks[fwId] = fw;
+
+    setState({ room1: { ...r1, frameworks, activeFwId: fwId } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("room1.snippet.add", { fwId, mod, id, cap }));
+    return { ok: true, fwId, mod, id };
+  });
+
+  // Savepoint: store latest composed snapshot hash/time (downloadable PDF later)
+  Room1.savepoint = Room1.savepoint || (() => {
+    Room1.ensure();
+    const st = getState();
+    const r1 = st.room1 || {};
+    const fwId = r1.activeFwId || "FW-1";
+    const snapshot = JSON.stringify((r1.frameworks || {})[fwId] || {});
+    const hash = safe(() => window.EPTEC_MASTER?.Safe?.hashMini?.(snapshot)) || String(Date.now());
+    setState({ room1: { ...r1, savepoint: { at: new Date().toISOString(), fwId, hash } } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("room1.savepoint", { fwId, hash }));
+    // backup log (room2 protocol) if available
+    safe(() => window.EPTEC_MASTER?.Compliance?.log?.("BACKUP:DOWNLOAD", "Room1 Savepoint PDF", { fwId, hash }));
+    return { ok: true, fwId, hash };
+  });
+
+  // Premium compare + traffic thresholds (0–5 green, 6–50 yellow, 51+ red)
+  Room1.compare = Room1.compare || ((deviationPercent) => {
+    if (!isPremium()) return { ok: false, reason: "NOT_PREMIUM" };
+    const d = Math.max(0, Math.min(100, Number(deviationPercent) || 0));
+    const color = (d <= 5) ? "green" : (d <= 50) ? "yellow" : "red";
+    const st = getState();
+    const r1 = st.room1 || {};
+    setState({ room1: { ...r1, traffic: { enabled: true, deviation: d, color, at: new Date().toISOString() } } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("room1.traffic", { deviation: d, color }));
+    return { ok: true, deviation: d, color };
+  });
+
+  window.EPTEC_ROOM1 = Room1;
+
+})();
+/* =========================================================
+   EPTEC APPEND 5 — ROOM2 HOTSPOTS + BACKUP PLANT + YELLOW STAGES + CONSENT
+   Rules:
+   - Room2: table uploads/downloads; carts: 2 left + 2 right upload/download
+   - Plant hotspot: download-only backup protocol (file names, timestamps, profile)
+   - Yellow stages: number displayed next to yellow only (green/red no numbers)
+   - First yellow click logs profile + stage into backup
+   - Consent gate (AGB + obligation) for code generate/apply actions
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function username() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    return String(sess?.username || "anonymous").trim().toLowerCase() || "anonymous";
+  }
+
+  const Room2 = window.EPTEC_ROOM2 || {};
+
+  // Backup protocol store (append-only)
+  const KEY = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1";
+  function readLog() {
+    const raw = safe(() => localStorage.getItem(KEY));
+    const arr = raw ? safe(() => JSON.parse(raw)) : null;
+    return Array.isArray(arr) ? arr : [];
+  }
+  function writeLog(arr) { safe(() => localStorage.setItem(KEY, JSON.stringify(arr))); }
+  function addLog(type, detail, meta) {
+    const logs = readLog();
+    logs.unshift({ at: new Date().toISOString(), type: String(type||""), detail: String(detail||""), meta: meta || null });
+    while (logs.length > 500) logs.pop();
+    writeLog(logs);
+    safe(() => window.EPTEC_ACTIVITY?.log?.("backup.log", { type, detail }));
+    safe(() => window.EPTEC_MASTER?.Compliance?.log?.(`BACKUP:${type}`, detail, meta || null));
+    return logs[0];
+  }
+
+  Room2.logUpload = Room2.logUpload || ((where, fileName) => addLog("UPLOAD", `${where}: ${fileName}`, { where, fileName, user: username() }));
+  Room2.logDownload = Room2.logDownload || ((where, fileName) => addLog("DOWNLOAD", `${where}: ${fileName}`, { where, fileName, user: username() }));
+
+  // Yellow stage (number next to yellow only)
+  Room2.yellow = Room2.yellow || {};
+  Room2.yellow.getStage = Room2.yellow.getStage || (() => {
+    const st = getState();
+    return Number(st.room2?.yellowStage || st.room?.room2?.yellowStage || 0) || 0;
+  });
+  Room2.yellow.setStage = Room2.yellow.setStage || ((n) => {
+    const st = getState();
+    const room2 = { ...(st.room2 || {}) };
+    room2.yellowStage = Math.max(0, Number(n) || 0);
+    setState({ room2 });
+  });
+  Room2.yellow.bump = Room2.yellow.bump || (() => {
+    const stage = Room2.yellow.getStage() + 1;
+    Room2.yellow.setStage(stage);
+    // log first yellow only with extra note
+    const first = stage === 1;
+    addLog("YELLOW", `Yellow stage ${stage}`, { stage, first, user: username() });
+    return stage;
+  });
+
+  // Consent gate for “sharing code generate/apply”
+  Room2.consent = Room2.consent || {};
+  Room2.consent.isOk = Room2.consent.isOk || (() => {
+    const st = getState();
+    const c = st.consent || {};
+    return !!(c.agb && c.obligation);
+  });
+  Room2.consent.set = Room2.consent.set || ((patch) => {
+    const st = getState();
+    setState({ consent: { ...(st.consent || {}), ...(patch || {}) } });
+  });
+
+  // Plant backup export (download-only hotspot)
+  Room2.exportBackup = Room2.exportBackup || (() => {
+    const logs = readLog();
+    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), logs }, null, 2);
+    // UI can open a modal; fallback console
+    console.log("ROOM2 BACKUP PROTOCOL:", payload);
+    safe(() => window.EPTEC_UI?.toast?.("Backup-Protokoll exportiert (Konsole).", "ok", 2400));
+    return payload;
+  });
+
+  window.EPTEC_ROOM2 = Room2;
+
+})();
+/* =========================================================
+   EPTEC APPEND 6 — BILLING + PRESENT + REFERRAL + COUPLING/CANCEL POLICY
+   Rules:
+   - Present code (Newsletter): 50% once on next monthly charge; valid 30 days
+     Applies PER ROOM; if user has two rooms -> both monthly charges can be reduced once (each room once)
+   - Referral/Gift codes: unbefristet valid
+   - Upgrade base->premium: no new one-time payment
+   - Two rooms: cancellation only jointly once second room is active (consent required)
+   - Gift code scope: room1-only codes can be generated if user has room1;
+     “both rooms gift code” can only be generated if user has both rooms
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+
+  const FEED_KEY = "EPTEC_FEED";
+  function readFeed() {
+    const raw = safe(() => localStorage.getItem(FEED_KEY));
+    const j = raw ? safe(() => JSON.parse(raw)) : null;
+    return isObj(j) ? j : {};
+  }
+  function writeFeed(feed) { safe(() => localStorage.setItem(FEED_KEY, JSON.stringify(feed))); }
+
+  function nowISO() { return new Date().toISOString(); }
+  function addDaysISO(days) { return new Date(Date.now() + (Number(days)||0)*86400000).toISOString(); }
+  function upper(s) { return String(s||"").trim().toUpperCase(); }
+
+  function username() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    return String(sess?.username || "anonymous").trim().toLowerCase() || "anonymous";
+  }
+
+  // ensure shape
+  function ensure(feed) {
+    const f = isObj(feed) ? feed : {};
+    f.promos = isObj(f.promos) ? f.promos : {};
+    f.promos.presentCampaigns = isObj(f.promos.presentCampaigns) ? f.promos.presentCampaigns : {};
+    f.promos.presentRedeem = isObj(f.promos.presentRedeem) ? f.promos.presentRedeem : {};
+    f.promos.referralPolicy = f.promos.referralPolicy || { validity: "UNLIMITED" };
+    f.billing = isObj(f.billing) ? f.billing : {};
+    f.billing.oneTimeFeeWaived = !!f.billing.oneTimeFeeWaived;
+    f.billing.nextMonthlyDiscountByRoom = isObj(f.billing.nextMonthlyDiscountByRoom) ? f.billing.nextMonthlyDiscountByRoom : { room1: null, room2: null };
+    f.coupling = isObj(f.coupling) ? f.coupling : { jointCancel: false };
+    f.codes = isObj(f.codes) ? f.codes : {};
+    f.codes.gifts = isObj(f.codes.gifts) ? f.codes.gifts : {};
+    return f;
+  }
+
+  // Access helper (rooms owned)
+  function hasRoom(roomKey) {
+    const feed = ensure(readFeed());
+    const r1 = !!feed?.products?.construction?.active;
+    const r2 = !!feed?.products?.controlling?.active;
+    if (roomKey === "room1") return r1;
+    if (roomKey === "room2") return r2;
+    if (roomKey === "both") return r1 && r2;
+    return false;
+  }
+
+  const Billing = window.EPTEC_BILLING || {};
+
+  Billing.waiveOneTimeFee = Billing.waiveOneTimeFee || ((reason) => {
+    const feed = ensure(readFeed());
+    feed.billing.oneTimeFeeWaived = true;
+    feed.billing.oneTimeFeeWaivedReason = String(reason||"").slice(0,200);
+    writeFeed(feed);
+    safe(() => window.EPTEC_ACTIVITY?.log?.("billing.oneTimeFeeWaived", { reason }));
+    return { ok: true };
+  });
+
+  Billing.upgradeToPremium = Billing.upgradeToPremium || (() => {
+    // rule: upgrading removes one-time fee
+    return Billing.waiveOneTimeFee("UPGRADE_TO_PREMIUM");
+  });
+
+  // Coupling rule: once second room active -> only joint cancel
+  Billing.updateCoupling = Billing.updateCoupling || (() => {
+    const feed = ensure(readFeed());
+    const r1 = !!feed?.products?.construction?.active;
+    const r2 = !!feed?.products?.controlling?.active;
+    feed.coupling.jointCancel = !!(r1 && r2);
+    writeFeed(feed);
+/* =========================================================
+   EPTEC APPEND — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE (RECORD UNTIL LOGOUT)
+   - Demo: show placeholder icons (start + doors) without enabling functions
+   - Author camera option: if enabled on entry, record until logout
+   - Logout always stops camera + offers download
+   - No-crash, idempotent
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- state bridge ----------
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  // ---------- 1) DEMO PLACEHOLDER ICONS ----------
+  // You can place ANY element with these attributes; logic just toggles visibility:
+  // data-eptec-demo-placeholder="start"   (start screen)
+  // data-eptec-demo-placeholder="doors"   (before doors)
+  function applyDemoPlaceholders(st) {
+    const demo = !!(st?.modes?.demo);
+    safe(() => {
+      document.querySelectorAll("[data-eptec-demo-placeholder]").forEach((el) => {
+        el.style.display = demo ? "" : "none";
+        el.setAttribute("aria-hidden", demo ? "false" : "true");
+      });
+    });
+  }
+
+  // ---------- 2) CAMERA / RECORDING CONTROLLER ----------
+  const Camera = {
+    stream: null,
+    recorder: null,
+    chunks: [],
+    downloadUrl: null,
+    isRecording: false,
+    lastBlob: null,
+
+    async start() {
+      if (this.isRecording) return { ok: true, already: true };
+      if (!navigator.mediaDevices?.getUserMedia) return { ok: false, reason: "NO_MEDIA" };
+
+      const constraints = { video: true, audio: true }; // you can switch audio later
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      this.stream = stream;
+      this.chunks = [];
+      this.lastBlob = null;
+
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : (MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm");
+
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      this.recorder = rec;
+
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) this.chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(this.chunks, { type: mime });
+        this.lastBlob = blob;
+        this.chunks = [];
+        if (this.downloadUrl) URL.revokeObjectURL(this.downloadUrl);
+        this.downloadUrl = URL.createObjectURL(blob);
+      };
+
+      rec.start(1000); // chunks every second
+      this.isRecording = true;
+      setState({ camera: { ...(getState().camera || {}), active: true, startedAt: new Date().toISOString() } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.start", { mime }));
+      return { ok: true };
+    },
+
+    stop({ offerDownload = true } = {}) {
+      if (!this.isRecording) return { ok: true, already: true };
+
+      safe(() => this.recorder?.stop?.());
+      this.isRecording = false;
+
+      // stop tracks immediately
+      safe(() => this.stream?.getTracks?.().forEach((t) => t.stop()));
+      this.stream = null;
+
+      setState({ camera: { ...(getState().camera || {}), active: false, stoppedAt: new Date().toISOString() } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.stop", {}));
+
+      // Offer download slightly delayed to allow onstop to finalize blob/url
+      if (offerDownload) {
+        setTimeout(() => this.offerDownload(), 250);
+      }
+      return { ok: true };
+    },
+
+    offerDownload() {
+      if (!this.downloadUrl) return;
+      const a = document.createElement("a");
+      a.href = this.downloadUrl;
+      a.download = `EPTEC_RECORDING_${new Date().toISOString().replaceAll(":", "-")}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.download", { ok: true }));
+    }
+  };
+
+  // ---------- 3) AUTHOR CAMERA MODE RULE ----------
+  // Rule: if author enters WITH camera option -> start recording and keep until logout.
+  function shouldCameraRun(st) {
+    const author = !!(st?.modes?.author || st?.modes?.admin);
+    const camOpt = !!(st?.camera?.requested || st?.camera?.enabled || st?.camera === true);
+    // We treat "requested/enabled" as the toggle you set on start screen.
+    return author && camOpt;
+  }
+
+  function syncCamera(st) {
+    const want = shouldCameraRun(st);
+    const active = !!Camera.isRecording;
+
+    if (want && !active) safe(() => Camera.start());
+    if (!want && active) Camera.stop({ offerDownload: false });
+  }
+
+  // ---------- 4) Integrate with existing "camera toggle" input on start screen ----------
+  // If you have: <input id="admin-camera-toggle" type="checkbox">
+  function bindCameraToggle() {
+    const t = $("admin-camera-toggle");
+    if (!t || t.__eptec_bound) return;
+    t.__eptec_bound = true;
+
+    t.addEventListener("change", () => {
+      const on = !!t.checked;
+      // store as camera request in state
+      setState({ camera: { ...(getState().camera || {}), requested: on } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.request", { on }));
+      // If already author, apply immediately
+      syncCamera(getState());
+    });
+  }
+
+  // ---------- 5) Force camera OFF on logout (and download) ----------
+  function patchLogout() {
+    const auth = window.EPTEC_MASTER?.Auth || window.EPTEC_MASTER?.Auth || null;
+    if (!auth || auth.__eptec_logout_camera_patched) return;
+
+    const orig = auth.logout?.bind(auth);
+    if (typeof orig !== "function") return;
+
+    auth.logout = function(...args) {
+      // stop camera + offer download on logout (your requirement)
+      Camera.stop({ offerDownload: true });
+
+      // reset request flag too
+      setState({ camera: { ...(getState().camera || {}), requested: false, enabled: false, active: false } });
+
+      return orig(...args);
+    };
+
+    auth.__eptec_logout_camera_patched = true;
+  }
+
+  // ---------- 6) Subscribe to state changes ----------
+  function subscribe() {
+    const s = store();
+    if (!s || s.__eptec_demo_cam_sub) return;
+    s.__eptec_demo_cam_sub = true;
+
+    const onState = (st) => {
+      applyDemoPlaceholders(st);
+      syncCamera(st);
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(onState);
+    else if (typeof s.onChange === "function") s.onChange(onState);
+    else setInterval(() => onState(getState()), 300);
+
+    onState(getState());
+  }
+
+  function boot() {
+    bindCameraToggle();
+    patchLogout();
+    subscribe();
+    console.log("EPTEC APPEND: Demo placeholders + Author camera mode active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
+/* =========================================================
+   EPTEC APPEND A — CANONICAL ID REGISTRY
+   - single source of truth for required IDs / data-logic-id
+   - non-blocking: logs missing IDs instead of crashing
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const REG = (window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {});
+  REG.required = REG.required || Object.freeze({
+    // Global UI
+    ids: [
+      "language-switcher", "lang-toggle", "lang-rail",
+      "system-clock"
+    ],
+    // Start
+    ids_start: [
+      "btn-login", "btn-demo", "btn-register", "btn-forgot",
+      "login-username", "login-password",
+      "admin-code", "admin-submit"
+    ],
+    // Doors view + under-door inputs (if you use them)
+    ids_doors: [
+      "door1-present", "door1-present-apply",
+      "door1-vip", "door1-vip-apply",
+      "door1-master", "door1-master-apply",
+      "door2-present", "door2-present-apply",
+      "door2-vip", "door2-vip-apply",
+      "door2-master", "door2-master-apply"
+    ],
+    // Password reset window (if present)
+    ids_reset: [
+      "master-reset-token", "master-reset-new", "master-reset-new-confirm", "master-reset-submit"
+    ],
+    // Profile logout
+    ids_profile: ["btn-logout"],
+
+    // data-logic-id (hotspots)
+    logicIds: [
+      "doors.door1", "doors.door2",
+      "r1.savepoint", "r1.table.download", "r1.mirror.download", "r1.traffic.enable",
+      "r2.hotspot.center", "r2.hotspot.left1", "r2.hotspot.left2", "r2.hotspot.right1", "r2.hotspot.right2",
+      "r2.plant.backup"
+    ]
+  });
+
+  REG.check = REG.check || function check() {
+    const missing = { ids: [], logicIds: [] };
+
+    const allIdLists = []
+      .concat(REG.required.ids || [])
+      .concat(REG.required.ids_start || [])
+      .concat(REG.required.ids_doors || [])
+      .concat(REG.required.ids_reset || [])
+      .concat(REG.required.ids_profile || []);
+
+    for (const id of allIdLists) {
+      if (!document.getElementById(id)) missing.ids.push(id);
+    }
+
+    const needLogic = REG.required.logicIds || [];
+    for (const lid of needLogic) {
+      const found = document.querySelector(`[data-logic-id="${lid}"]`);
+      if (!found) missing.logicIds.push(lid);
+    }
+
+    safe(() => window.EPTEC_ACTIVITY?.log?.("id.check", missing));
+    // No crash — only log to console for you during dev
+    if (missing.ids.length || missing.logicIds.length) {
+      console.warn("EPTEC_ID_REGISTRY missing:", missing);
+    }
+    return missing;
+  };
+
+  // run once on DOM ready (idempotent)
+  if (!REG.__ran) {
+    REG.__ran = true;
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => REG.check());
+    else REG.check();
+  }
+})();
+/* =========================================================
+   EPTEC APPEND B — CONSENT GUARD (AGB + OBLIGATION)
+   - central guard that blocks sensitive actions unless consent is true
+   - non-blocking UI: returns reason instead of throwing
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  const Consent = (window.EPTEC_CONSENT = window.EPTEC_CONSENT || {});
+  Consent.get = Consent.get || (() => {
+    const st = getState();
+    const c = st?.consent || {};
+    return { agb: !!c.agb, obligation: !!c.obligation };
+  });
+  Consent.set = Consent.set || ((patch) => {
+    const st = getState();
+    setState({ consent: { ...(st.consent || {}), ...(patch || {}) } });
+    safe(() => window.EPTEC_ACTIVITY?.log?.("consent.set", Consent.get()));
+    return Consent.get();
+  });
+  Consent.ok = Consent.ok || (() => {
+    const c = Consent.get();
+    return !!(c.agb && c.obligation);
+  });
+  Consent.require = Consent.require || ((actionName) => {
+    if (Consent.ok()) return { ok: true };
+    safe(() => window.EPTEC_ACTIVITY?.log?.("consent.block", { action: actionName || "action" }));
+    return { ok: false, reason: "CONSENT_REQUIRED" };
+  });
+
+})();
+/* =========================================================
+   EPTEC APPEND C — CAPABILITIES MATRIX (can(feature))
+   - prevents accidental unlocks across appends
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function tariff() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    const t1 = String(sess?.tariff || sess?.tier || "").trim().toLowerCase();
+    if (t1) return t1;
+    const st = getState();
+    return String(st?.profile?.tariff || st?.auth?.tariff || st?.tariff || "base").trim().toLowerCase();
+  }
+  function mode() {
+    const st = getState();
+    const m = st?.modes || {};
+    if (m.author || m.admin) return "author";
+    if (m.vip) return "vip";
+    if (m.user) return "user";
+    if (m.demo) return "demo";
+    return "user";
+  }
+
+  const Cap = (window.EPTEC_CAP = window.EPTEC_CAP || {});
+  Cap.can = Cap.can || ((feature) => {
+    const f = String(feature || "").trim();
+    const m = mode();
+    const t = tariff();
+
+    // Demo: nothing functional
+    if (m === "demo") return false;
+
+    // Author: everything
+    if (m === "author") return true;
+
+    // Feature rules
+    if (f === "room1.traffic") return (t === "premium");              // Ampel only premium (non-author)
+    if (f === "room1.uploadProposal") return (t === "premium");       // Proposal upload only premium
+    if (f === "room2.upload") return (m === "vip");                   // Room2 uploads: VIP (and author handled above)
+    if (f === "codes.generate") return true;                          // gating by consent/ownership elsewhere
+    if (f === "codes.apply") return true;
+    if (f === "logout") return true;
+
+    // default allow
+    return true;
+  });
+
+  safe(() => window.EPTEC_ACTIVITY?.log?.("cap.ready", { ok: true }));
+})();
+/* =========================================================
+   EPTEC APPEND D — PERSISTENCE SEMANTICS (session/device/account)
+   - defines where each piece of state must live
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const Persist = (window.EPTEC_PERSIST = window.EPTEC_PERSIST || {});
+  Persist.keys = Persist.keys || Object.freeze({
+    deviceLang: "EPTEC_DEVICE_LANG",
+    deviceUI: "EPTEC_DEVICE_UI",
+    session: "EPTEC_SESSION_STATE",
+    account: "EPTEC_ACCOUNT_STATE"
+  });
+
+  Persist.saveDeviceLang = Persist.saveDeviceLang || ((lang) => {
+    safe(() => localStorage.setItem(Persist.keys.deviceLang, String(lang || "en")));
+  });
+  Persist.loadDeviceLang = Persist.loadDeviceLang || (() => {
+    return safe(() => localStorage.getItem(Persist.keys.deviceLang)) || "";
+  });
+
+  Persist.saveSession = Persist.saveSession || ((obj) => {
+    safe(() => sessionStorage.setItem(Persist.keys.session, JSON.stringify(obj || {})));
+  });
+  Persist.loadSession = Persist.loadSession || (() => {
+    const raw = safe(() => sessionStorage.getItem(Persist.keys.session));
+    return raw ? safe(() => JSON.parse(raw)) : {};
+  });
+
+  Persist.saveAccount = Persist.saveAccount || ((obj) => {
+    safe(() => localStorage.setItem(Persist.keys.account, JSON.stringify(obj || {})));
+  });
+  Persist.loadAccount = Persist.loadAccount || (() => {
+    const raw = safe(() => localStorage.getItem(Persist.keys.account));
+    return raw ? safe(() => JSON.parse(raw)) : {};
+  });
+
+  // rule helpers (not enforcing, just canonical semantics)
+  Persist.semantics = Persist.semantics || Object.freeze({
+    language: "device",       // language persists per device
+    cameraRequested: "session",
+    masterResetToken: "session",
+    backupProtocol: "account",
+    roomFrameworks: "account"
+  });
+
+})();
+/* =========================================================
+   EPTEC APPEND E — AUDIT EXPORT STANDARD
+   - stable export format for backup/protocol and court usage
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function username() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    return String(sess?.username || "anonymous").trim().toLowerCase() || "anonymous";
+  }
+
+  const Audit = (window.EPTEC_AUDIT = window.EPTEC_AUDIT || {});
+  Audit.event = Audit.event || ((room, action, meta) => {
+    return {
+      timestamp: new Date().toISOString(),
+      actor: username(),
+      room: String(room || ""),
+      action: String(action || ""),
+      meta: meta || null,
+      consent: safe(() => window.EPTEC_CONSENT?.get?.()) || null,
+      lang: document.documentElement.getAttribute("lang") || null,
+      locale: safe(() => (window.EPTEC_MASTER?.UI_STATE?.get?.()?.locale)) || null
+    };
+  });
+
+  Audit.exportJSON = Audit.exportJSON || ((events) => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      actor: username(),
+      events: Array.isArray(events) ? events : []
+    };
+    return JSON.stringify(payload, null, 2);
+  });
+
+  // Convenience: export from your Room2 backup protocol store if present
+  Audit.exportRoom2Backup = Audit.exportRoom2Backup || (() => {
+    const key = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1";
+    const raw = safe(() => localStorage.getItem(key));
+    const logs = raw ? safe(() => JSON.parse(raw)) : [];
+    return Audit.exportJSON(Array.isArray(logs) ? logs : []);
+  });
+
+})();
+/* =========================================================
+   EPTEC APPEND F — SINGLE SCENE AUTHORITY
+   - ensures only EPTEC_MASTER.Dramaturgy changes scenes
+   - if other code sets UI_STATE.scene/view directly, we log it
+   - non-destructive: does not block, but makes drift visible immediately
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  let last = null;
+
+  function watch() {
+    const s = store();
+    if (!s || s.__eptec_scene_watch) return;
+    s.__eptec_scene_watch = true;
+
+    const sub = (st) => {
+      const scene = st?.scene || st?.view;
+      if (!scene) return;
+      if (last === null) { last = scene; return; }
+      if (scene !== last) {
+        // If Dramaturgy exists, any scene change should have been via it
+        const hasDram = !!window.EPTEC_MASTER?.Dramaturgy;
+        safe(() => window.EPTEC_ACTIVITY?.log?.("scene.change", { from: last, to: scene, viaDramaturgy: hasDram }));
+        last = scene;
+      }
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(sub);
+    else if (typeof s.onChange === "function") s.onChange(sub);
+    else setInterval(() => sub(getState()), 250);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
+  else watch();
+})();
+/* =========================================================
+   EPTEC APPEND G — PROFILE / ACCOUNT MANAGER
+   Scope:
+   - User Profile: email change, payment method change, cancel subscription
+   - Cancellation: immediate rights loss (enforced in logic)
+   - Texts: can be fed from Docs/Locals via EPTEC_I18N.t(key) if present
+   - No-crash, idempotent, append-only
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  const KEY = Object.freeze({
+    account: "EPTEC_ACCOUNT_STATE_V1",      // localStorage: per device (phase 1)
+    cancel:  "EPTEC_CANCEL_STATE_V1"        // localStorage: cancellation + rights state
+  });
+
+  function readJSON(k, fallback) {
+    const raw = safe(() => localStorage.getItem(k));
+    if (!raw) return fallback;
+    const obj = safe(() => JSON.parse(raw));
+    return (obj && typeof obj === "object") ? obj : fallback;
+  }
+  function writeJSON(k, v) { safe(() => localStorage.setItem(k, JSON.stringify(v))); }
+
+  function uiState() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = uiState();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = uiState();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function toast(msg, type = "info", ms = 2400) {
+    const bridged = safe(() => window.EPTEC_UI?.toast?.(String(msg), String(type), ms));
+    if (bridged !== undefined) return bridged;
+    console.log(`[TOAST:${type}]`, msg);
+  }
+
+  // i18n text hook (optional)
+  function t(key, fallback) {
+    const fn = safe(() => window.EPTEC_I18N?.t);
+    if (typeof fn === "function") {
+      const out = safe(() => fn(String(key)));
+      if (out) return out;
+    }
+    return String(fallback || key);
+  }
+
+  function audit(room, action, meta) {
+    safe(() => window.EPTEC_ACTIVITY?.log?.(action, { room, ...(meta || {}) }));
+    const ev = safe(() => window.EPTEC_AUDIT?.event?.(room, action, meta));
+    if (ev) safe(() => {
+      const k = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1"; // reuse your protocol channel
+      const arr = readJSON(k, []);
+      arr.push(ev);
+      writeJSON(k, arr);
+    });
+  }
+
+  // ---------------------------------------------------------
+  // ACCOUNT MODEL (phase 1: localStorage; later replace w backend)
+  // ---------------------------------------------------------
+  function loadAccount() {
+    const acc = readJSON(KEY.account, {
+      email: "",
+      payment: { method: "", ibanMasked: "", confirmed: false, updatedAt: null },
+      profile: { name: "", company: "", address: "" },
+      // rights & subscription
+      subscription: { active: true, rooms: { room1: true, room2: false }, tier: "base" }
+    });
+    return acc;
+  }
+  function saveAccount(next) {
+    writeJSON(KEY.account, next);
+    return next;
+  }
+
+  // Rights state (enforced at logic level)
+  function loadCancel() {
+    return readJSON(KEY.cancel, {
+      canceledAt: null,
+      rightsLostAt: null,     // immediate rights loss moment
+      reason: "",
+      tripleConfirm: 0
+    });
+  }
+  function saveCancel(next) { writeJSON(KEY.cancel, next); return next; }
+
+  function currentActor() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    return String(sess?.username || getState()?.auth?.userId || "anonymous");
+  }
+
+  function ensureConsent(actionName) {
+    const ok = safe(() => window.EPTEC_CONSENT?.require?.(actionName));
+    if (ok && ok.ok === false) {
+      toast(t("consent.required", "Bitte AGB + Verpflichtung bestätigen."), "error", 2600);
+      audit("profile", "consent.block", { action: actionName });
+      return false;
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------
+  // PUBLIC API (for other appends / UI)
+  // ---------------------------------------------------------
+  const Profile = (window.EPTEC_PROFILE = window.EPTEC_PROFILE || {});
+
+  Profile.get = Profile.get || (() => loadAccount());
+
+  Profile.setEmail = Profile.setEmail || ((newEmail) => {
+    if (!ensureConsent("profile.email.change")) return { ok: false, reason: "CONSENT_REQUIRED" };
+    const email = String(newEmail || "").trim();
+    if (!email || !email.includes("@")) {
+      toast(t("profile.email.invalid", "E-Mail ungültig."), "error", 2400);
+      return { ok: false, reason: "EMAIL_INVALID" };
+    }
+    const acc = loadAccount();
+    acc.email = email;
+    saveAccount(acc);
+    audit("profile", "email.change", { actor: currentActor(), email });
+    toast(t("profile.email.changed", "E-Mail geändert."), "ok", 2200);
+    return { ok: true };
+  });
+
+  Profile.setPayment = Profile.setPayment || ((patch) => {
+    if (!ensureConsent("profile.payment.change")) return { ok: false, reason: "CONSENT_REQUIRED" };
+    const acc = loadAccount();
+    const p = acc.payment || {};
+    const next = { ...p, ...(patch || {}), updatedAt: new Date().toISOString() };
+    acc.payment = next;
+    saveAccount(acc);
+    audit("profile", "payment.change", { actor: currentActor(), payment: { method: next.method, confirmed: !!next.confirmed } });
+    toast(t("profile.payment.changed", "Zahlungsmittel aktualisiert."), "ok", 2200);
+    return { ok: true };
+  });
+
+  Profile.cancel = Profile.cancel || ((reason) => {
+    if (!ensureConsent("profile.cancel")) return { ok: false, reason: "CONSENT_REQUIRED" };
+
+    // triple-confirm gate lives in logic:
+    const c = loadCancel();
+    c.tripleConfirm = Math.min(3, (c.tripleConfirm || 0) + 1);
+    c.reason = String(reason || "");
+    saveCancel(c);
+
+    if (c.tripleConfirm < 3) {
+      toast(t("profile.cancel.confirmagain", `Kündigung: Bitte ${3 - c.tripleConfirm}× bestätigen.`), "info", 2600);
+      audit("profile", "cancel.confirm.step", { step: c.tripleConfirm });
+      return { ok: false, reason: "NEEDS_TRIPLE_CONFIRM", step: c.tripleConfirm };
+    }
+
+    // third confirm => CANCEL NOW + RIGHTS LOST NOW
+    const nowIso = new Date().toISOString();
+    c.canceledAt = nowIso;
+    c.rightsLostAt = nowIso;
+    saveCancel(c);
+
+    const acc = loadAccount();
+    acc.subscription = acc.subscription || {};
+    acc.subscription.active = false;
+    saveAccount(acc);
+
+    // enforce rights in UI_STATE too (so guards can see it)
+    const st = getState();
+    setState({ rights: { ...(st.rights || {}), canUse: false, lostAt: nowIso } });
+
+    audit("profile", "cancel.final", { actor: currentActor(), rightsLostAt: nowIso });
+    toast(t("profile.cancel.done", "Gekündigt. Nutzungsrechte sofort verloren."), "error", 4200);
+    return { ok: true, rightsLostAt: nowIso };
+  });
+
+  Profile.rightsOk = Profile.rightsOk || (() => {
+    const c = loadCancel();
+    if (c && c.rightsLostAt) return false;
+    const st = getState();
+    if (st?.rights?.canUse === false) return false;
+    return true;
+  });
+
+  // ---------------------------------------------------------
+  // OPTIONAL UI BINDINGS (only if IDs exist)
+  // ---------------------------------------------------------
+  function bindOnce(btn, fn, key) {
+    if (!btn) return;
+    const k = `__eptec_bind_${key}`;
+    if (btn[k]) return;
+    btn.addEventListener("click", fn);
+    btn[k] = true;
+  }
+
+  function initBindings() {
+    // Email change
+    bindOnce($("profile-email-change-submit"), () => {
+      const v = $("profile-email")?.value;
+      Profile.setEmail(v);
+    }, "email");
+
+    // Payment change (simple: method + ibanMasked + confirmed)
+    bindOnce($("profile-payment-change-submit"), () => {
+      const method = $("profile-payment-method")?.value || "";
+      const ibanMasked = $("profile-iban-masked")?.value || "";
+      const confirmed = !!$("profile-payment-confirmed")?.checked;
+      Profile.setPayment({ method, ibanMasked, confirmed });
+    }, "payment");
+
+    // Cancel triple confirm button
+    bindOnce($("profile-cancel-submit"), () => {
+      const reason = $("profile-cancel-reason")?.value || "";
+      Profile.cancel(reason);
+    }, "cancel");
+  }
+
+  // Expose required IDs for harmony checks (non-blocking)
+  window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {};
+  const prev = window.EPTEC_ID_REGISTRY.required || {};
+  window.EPTEC_ID_REGISTRY.required = Object.freeze({
+    ...prev,
+    ids_profile_ext: [
+      "profile-email", "profile-email-change-submit",
+      "profile-payment-method", "profile-iban-masked", "profile-payment-confirmed", "profile-payment-change-submit",
+      "profile-cancel-reason", "profile-cancel-submit"
+    ]
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBindings);
+  else initBindings();
+
+  console.log("EPTEC APPEND G active: Profile/Account Manager");
+})();
+/* =========================================================
+   EPTEC APPEND H — ADMIN LANGUAGE EMERGENCY SWITCH
+   Scope:
+   - Admin selects language(s) and schedules deactivation after 30 days
+   - Requires 3 confirmations (logic-level)
+   - Button state: green "Deactivate" -> after 3rd confirm it becomes red "Activate"
+   - Activation is immediate and cancels pending deactivation
+   - Stores affected language codes list (e.g., EN, DE, ES, UK, AR, PT, CN, JP ...)
+   - No-crash, idempotent, append-only
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  const KEY = "EPTEC_LANG_EMERGENCY_V1";
+
+  function readJSON(k, fallback) {
+    const raw = safe(() => localStorage.getItem(k));
+    if (!raw) return fallback;
+    const obj = safe(() => JSON.parse(raw));
+    return (obj && typeof obj === "object") ? obj : fallback;
+  }
+  function writeJSON(k, v) { safe(() => localStorage.setItem(k, JSON.stringify(v))); }
+
+  function toast(msg, type = "info", ms = 2600) {
+    const bridged = safe(() => window.EPTEC_UI?.toast?.(String(msg), String(type), ms));
+    if (bridged !== undefined) return bridged;
+    console.log(`[TOAST:${type}]`, msg);
+  }
+
+  function isAuthorAdmin() {
+    const st = safe(() => window.EPTEC_MASTER?.UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.get?.()) || {};
+    return !!(st?.modes?.author || st?.modes?.admin);
+  }
+
+  // Canonical language codes list (you: PT not PL; CN and JP are custom and valid)
+  const LANG = Object.freeze(["EN","DE","ES","UK","AR","PT","CN","JP","FR","IT","TR","RU"]); // adjust if your 12 differ
+  // Note: UK here means Ukrainian per your use; if you prefer UA later, we can alias it without breaking UI.
+
+  const Emergency = (window.EPTEC_LANG_EMERGENCY = window.EPTEC_LANG_EMERGENCY || {});
+
+  Emergency.get = Emergency.get || (() => {
+    return readJSON(KEY, {
+      disabled: [],                // array of codes currently disabled
+      pending: {},                 // code -> { scheduledAt, effectiveAt }
+      confirm: {},                 // code -> confirmCount (0..3)
+      lastActionAt: null
+    });
+  });
+
+  Emergency.save = Emergency.save || ((next) => {
+    next.lastActionAt = new Date().toISOString();
+    writeJSON(KEY, next);
+    safe(() => window.EPTEC_ACTIVITY?.log?.("lang.emergency.save", next));
+    return next;
+  });
+
+  Emergency.isDisabled = Emergency.isDisabled || ((code) => {
+    const st = Emergency.get();
+    const c = String(code || "").toUpperCase();
+    return Array.isArray(st.disabled) && st.disabled.includes(c);
+  });
+
+  // Called by i18n/router before switching
+  Emergency.canUse = Emergency.canUse || ((code) => {
+    const c = String(code || "").toUpperCase();
+    if (!c) return true;
+    const st = Emergency.get();
+
+    // Apply pending deactivation if effectiveAt passed
+    const p = st.pending && st.pending[c];
+    if (p && p.effectiveAt && Date.now() >= new Date(p.effectiveAt).getTime()) {
+      if (!st.disabled.includes(c)) st.disabled.push(c);
+      delete st.pending[c];
+      delete st.confirm[c];
+      Emergency.save(st);
+    }
+
+    return !Emergency.isDisabled(c);
+  });
+
+  // Schedule deactivation with triple confirm
+  Emergency.deactivate = Emergency.deactivate || ((codes) => {
+    if (!isAuthorAdmin()) return { ok: false, reason: "NOT_ADMIN" };
+
+    const list = (Array.isArray(codes) ? codes : [codes])
+      .map(x => String(x || "").toUpperCase().trim())
+      .filter(x => x && LANG.includes(x));
+
+    if (!list.length) return { ok: false, reason: "NO_LANG_SELECTED" };
+
+    const st = Emergency.get();
+
+    for (const c of list) {
+      st.confirm[c] = Math.min(3, (st.confirm[c] || 0) + 1);
+
+      if (st.confirm[c] < 3) {
+        toast(`Not-Schalter ${c}: bitte ${3 - st.confirm[c]}× bestätigen.`, "info", 2600);
+        continue;
+      }
+
+      // third confirm -> schedule after 30 days
+      const now = Date.now();
+      const effective = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      st.pending[c] = { scheduledAt: new Date(now).toISOString(), effectiveAt: effective };
+      // button becomes "activate" (red) because it's now pending/disabled logic-wise
+      toast(`Not-Schalter ${c}: Deaktivierung geplant (wirksam ab ${effective}).`, "error", 5200);
+    }
+
+    Emergency.save(st);
+    return { ok: true, state: st };
+  });
+
+  // Immediate activation: removes disable and cancels pending
+  Emergency.activate = Emergency.activate || ((codes) => {
+    if (!isAuthorAdmin()) return { ok: false, reason: "NOT_ADMIN" };
+
+    const list = (Array.isArray(codes) ? codes : [codes])
+      .map(x => String(x || "").toUpperCase().trim())
+      .filter(x => x && LANG.includes(x));
+
+    if (!list.length) return { ok: false, reason: "NO_LANG_SELECTED" };
+
+    const st = Emergency.get();
+    for (const c of list) {
+      st.disabled = (st.disabled || []).filter(x => x !== c);
+      if (st.pending && st.pending[c]) delete st.pending[c];
+      if (st.confirm && st.confirm[c]) delete st.confirm[c];
+      toast(`Not-Schalter ${c}: sofort aktiviert.`, "ok", 2200);
+    }
+    Emergency.save(st);
+    return { ok: true, state: st };
+  });
+
+  // Helper for UI: what should the button show right now?
+  Emergency.uiStatus = Emergency.uiStatus || ((code) => {
+    const c = String(code || "").toUpperCase();
+    const st = Emergency.get();
+    const disabled = (st.disabled || []).includes(c);
+    const pending = !!(st.pending && st.pending[c]);
+    const conf = (st.confirm && st.confirm[c]) || 0;
+    return {
+      code: c,
+      disabled,
+      pending,
+      confirmCount: conf,
+      label: (disabled || pending) ? "ACTIVATE" : "DEACTIVATE",
+      color: (disabled || pending) ? "red" : "green",
+      effectiveAt: st.pending?.[c]?.effectiveAt || null
+    };
+  });
+
+  // ---------------------------------------------------------
+  // OPTIONAL UI BINDINGS (IDs must match your UI, otherwise harmless)
+  // - admin-lang-select: multi-select or comma input
+  // - admin-lang-action: the green/red button
+  // ---------------------------------------------------------
+  function parseSelection() {
+    const el = $("admin-lang-select");
+    if (!el) return [];
+    // supports: select multiple OR comma-separated input
+    if (el.tagName === "SELECT") {
+      const opts = Array.from(el.selectedOptions || []);
+      return opts.map(o => String(o.value || o.text || "").toUpperCase().trim());
+    }
+    return String(el.value || "")
+      .split(/[,\s]+/g)
+      .map(x => x.toUpperCase().trim())
+      .filter(Boolean);
+  }
+
+  function bindOnce(btn, fn, key) {
+    if (!btn) return;
+    const k = `__eptec_bind_${key}`;
+    if (btn[k]) return;
+    btn.addEventListener("click", fn);
+    btn[k] = true;
+  }
+
+  function updateButtonVisual() {
+    const btn = $("admin-lang-action");
+    if (!btn) return;
+    const sel = parseSelection();
+    const first = sel[0] || "EN";
+    const s = Emergency.uiStatus(first);
+    // You style it in CSS; we only expose attributes
+    btn.setAttribute("data-state", s.color);
+    btn.textContent = (s.label === "ACTIVATE") ? "Aktivieren" : "Deaktivieren";
+    const out = $("admin-lang-status");
+    if (out) {
+      out.textContent = s.pending
+        ? `Pending ${s.code} → wirksam ab ${s.effectiveAt}`
+        : s.disabled
+          ? `${s.code} ist deaktiviert`
+          : `${s.code} ist aktiv`;
+    }
+  }
+
+  function initBindings() {
+    bindOnce($("admin-lang-action"), () => {
+      if (!isAuthorAdmin()) return toast("Nur Admin/Author.", "error", 2200);
+
+      const sel = parseSelection();
+      if (!sel.length) return toast("Bitte Sprache wählen.", "error", 2200);
+
+      // Decide action from status of first selected language
+      const first = sel[0];
+      const st = Emergency.uiStatus(first);
+      if (st.label === "ACTIVATE") Emergency.activate(sel);
+      else Emergency.deactivate(sel);
+
+      updateButtonVisual();
+    }, "admin_lang_action");
+
+    bindOnce($("admin-lang-select"), () => updateButtonVisual(), "admin_lang_select");
+    updateButtonVisual();
+  }
+
+  // Expose required IDs (for your harmony check)
+  window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {};
+  const prev = window.EPTEC_ID_REGISTRY.required || {};
+  window.EPTEC_ID_REGISTRY.required = Object.freeze({
+    ...prev,
+    ids_admin_lang_emergency: ["admin-lang-select", "admin-lang-action", "admin-lang-status"]
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBindings);
+  else initBindings();
+
+  console.log("EPTEC APPEND H active: Admin Language Emergency Switch");
+})();
 
