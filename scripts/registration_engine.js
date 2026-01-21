@@ -1,6 +1,6 @@
 /**
  * scripts/registration_engine.js
- * EPTEC REGISTRATION ENGINE – FINAL (Index-ID harmonisiert)
+ * EPTEC REGISTRATION ENGINE – FINAL (HARMONY + NO PASSWORD PLACEHOLDERS EVER)
  *
  * ✅ Nutzt ausschließlich IDs, die im Index existieren
  * ✅ Keine Doppel-Listener mit main.js (bindet NICHT admin-submit)
@@ -19,10 +19,14 @@
  * ✅ 👁 Eye-Toggle (Login + Register) wird minimal injiziert, falls nicht im HTML
  * ✅ Forgot: Identity required + requestPasswordReset
  *
+ * 🔒 HARD RULE (FINAL):
+ * - Password inputs (type="password") MUST NEVER have placeholders.
+ *   Not in login, not in register, not anywhere.
+ *
  * ❌ Nicht Aufgabe:
- * - Admin Start Gate (200288) -> macht main.js
- * - Tür-Gate (6264) -> kommt erst, wenn du DOOR-UI im Index hast (andocken später)
- * - Paywall / Türen / Dashboard -> später separat (IDs fehlen aktuell)
+ * - Admin Start Gate (200288) -> macht main.js / logic.js
+ * - Tür-Gate (6264) -> separat
+ * - Paywall / Türen / Dashboard -> separat
  */
 
 (() => {
@@ -40,7 +44,7 @@
     btnForgot: "btn-forgot",
     loginMsg: "login-message",
 
-    // Admin gate on start (exists in Index, but MAIN binds it)
+    // Admin gate on start (exists in Index, but MAIN/LOGIC binds it)
     adminCode: "admin-code",
     adminSubmit: "admin-submit",
 
@@ -63,7 +67,7 @@
     forgotSubmit: "forgot-submit",
     forgotClose: "forgot-close",
 
-    // Legal
+    // Legal (links only; open handled elsewhere)
     imprint: "link-imprint",
     terms: "link-terms",
     support: "link-support",
@@ -76,17 +80,19 @@
   function safeOn(id, event, fn, opts) {
     const el = $(id);
     if (!el) return false;
+    const k = `__eptec_reg_bound_${event}`;
+    if (el[k]) return true;
     el.addEventListener(event, fn, opts);
+    el[k] = true;
     return true;
   }
 
   // -----------------------------
-  // Minimal texts (EN/DE) — erweitert später via locales
+  // Minimal texts (EN/DE)
   // -----------------------------
   const TXT = {
     en: {
       ph_user: "Username",
-      ph_pass: "Password",
       ph_first: "First name",
       ph_last: "Last name",
       ph_email: "Email address",
@@ -107,7 +113,6 @@
     },
     de: {
       ph_user: "Benutzername",
-      ph_pass: "Passwort",
       ph_first: "Vorname",
       ph_last: "Nachname",
       ph_email: "E-Mail-Adresse",
@@ -128,8 +133,18 @@
     }
   };
 
+  function getStoreSnapshot() {
+    // supports both store styles
+    const S = window.EPTEC_UI_STATE;
+    const snap =
+      safe(() => (typeof S?.get === "function" ? S.get() : null)) ||
+      safe(() => S?.state) ||
+      null;
+    return snap && typeof snap === "object" ? snap : {};
+  }
+
   function getLang() {
-    const s = safe(() => window.EPTEC_UI_STATE?.state);
+    const s = getStoreSnapshot();
     const raw = String(
       s?.i18n?.lang ||
       s?.lang ||
@@ -149,12 +164,42 @@
   }
 
   // -----------------------------
+  // 🔒 GLOBAL RULE: no placeholders in password inputs
+  // -----------------------------
+  function killPasswordPlaceholders(root = document) {
+    safe(() => {
+      const list = Array.from(root.querySelectorAll("input[type='password']"));
+      for (const inp of list) {
+        if (inp.hasAttribute("placeholder")) inp.removeAttribute("placeholder");
+      }
+    });
+  }
+
+  // Keep it enforced even if something later sets it
+  function observePasswordPlaceholders() {
+    safe(() => {
+      const mo = new MutationObserver(() => killPasswordPlaceholders(document));
+      mo.observe(document.documentElement || document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["placeholder", "type"]
+      });
+    });
+  }
+
+  // -----------------------------
   // UI helpers (rot + lock)
   // -----------------------------
   function setPH(id, v) {
     const el = $(id);
     if (!el) return;
     const cur = el.getAttribute("placeholder");
+
+    // Only set placeholders for NON-password inputs
+    if (String(el.type || "").toLowerCase() === "password") return;
+
+    // Only overwrite empties or DOB hints
     if (!cur || cur === "DD.MM.YYYY" || cur === "MM/DD/YYYY") {
       el.setAttribute("placeholder", String(v ?? ""));
     }
@@ -163,7 +208,6 @@
   function setInvalid(el, on) {
     if (!el) return;
     el.classList.toggle("eptec-invalid", !!on);
-    // fallback visibility even if CSS missing
     el.style.outline = on ? "2px solid rgba(255,60,60,.95)" : "";
     el.style.boxShadow = on ? "0 0 0 2px rgba(255,60,60,.25)" : "";
   }
@@ -208,6 +252,9 @@
     const inp = $(inputId);
     if (!inp) return;
 
+    // Ensure no placeholder on password inputs
+    if (String(inp.type || "").toLowerCase() === "password") inp.removeAttribute("placeholder");
+
     let btn = $(toggleId);
 
     if (!btn) {
@@ -238,10 +285,15 @@
 
     if (!btn) return;
 
+    if (btn.__eptec_eye_bound) return;
+    btn.__eptec_eye_bound = true;
+
     btn.addEventListener("click", () => {
       safe(() => window.SoundEngine?.uiConfirm?.());
       inp.type = (inp.type === "password") ? "text" : "password";
       btn.style.opacity = (inp.type === "password") ? "0.65" : "1";
+      // When toggling back to password, keep placeholder removed
+      if (inp.type === "password") inp.removeAttribute("placeholder");
     });
   }
 
@@ -251,10 +303,10 @@
   const USER_MIN = 6;
   const PASS_MIN = 5;
 
-  const RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i; // ✅ correct (escaped dot)
+  const RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
   const RX_UPPER = /[A-Z]/;
-  const RX_USER_SPECIAL = /[._-]/;        // username special
-  const RX_PASS_SPECIAL = /[^A-Za-z0-9]/; // password special
+  const RX_USER_SPECIAL = /[._-]/;
+  const RX_PASS_SPECIAL = /[^A-Za-z0-9]/;
 
   function isRealDate(yy, mm, dd) {
     if (!(yy >= 1900 && yy <= 2100)) return false;
@@ -336,19 +388,25 @@
 
   // -----------------------------
   // Apply placeholders (grey hints)
+  // NOTE: Password placeholders are NOT set (hard rule).
   // -----------------------------
   function applyPlaceholders() {
     setPH(IDS.loginUser, t("ph_user"));
-    setPH(IDS.loginPass, t("ph_pass"));
+    // NO password placeholder
+    $(IDS.loginPass)?.removeAttribute("placeholder");
 
     setPH(IDS.regFirst, t("ph_first"));
     setPH(IDS.regLast, t("ph_last"));
     setPH(IDS.regEmail, t("ph_email"));
     setPH(IDS.regUser, t("ph_user"));
-    setPH(IDS.regPass, t("ph_pass"));
     setPH(IDS.regDob, dobHint());
+    // NO password placeholder
+    $(IDS.regPass)?.removeAttribute("placeholder");
 
     setPH(IDS.forgotIdentity, t("ph_forgot"));
+
+    // enforce globally
+    killPasswordPlaceholders(document);
   }
 
   // -----------------------------
@@ -367,6 +425,9 @@
     const rp = $(IDS.regRulePass);
 
     if (!f1 || !f2 || !dob || !em || !un || !pw || !submit) return;
+
+    // hard enforce: no placeholder on password
+    pw.removeAttribute("placeholder");
 
     function refresh() {
       hideMsg(IDS.regMsg);
@@ -426,38 +487,47 @@
       else if (!uFree) showMsg(IDS.regMsg, t("user_taken"), "error");
       else if (!pRes.ok) showMsg(IDS.regMsg, pRes.msg, "warn");
 
+      // hard enforce again
+      pw.removeAttribute("placeholder");
       return allOk;
     }
 
-    [f1,f2,dob,em,un,pw].forEach((el) => {
+    [f1, f2, dob, em, un, pw].forEach((el) => {
+      const k = "__eptec_reg_inputs_bound";
+      if (el[k]) return;
+      el[k] = true;
+
       el.addEventListener("input", refresh);
       el.addEventListener("blur", refresh);
       el.addEventListener("focus", () => safe(() => window.SoundEngine?.uiFocus?.()));
     });
 
-    submit.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      if (!refresh()) return;
+    if (!submit.__eptec_reg_submit_bound) {
+      submit.__eptec_reg_submit_bound = true;
+      submit.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        if (!refresh()) return;
 
-      const payload = {
-        firstName: String(f1.value || "").trim(),
-        lastName:  String(f2.value || "").trim(),
-        birthdate: String(dob.value || "").trim(),
-        email:     String(em.value || "").trim(),
-        username:  String(un.value || "").trim(),
-        password:  String(pw.value || "")
-      };
+        const payload = {
+          firstName: String(f1.value || "").trim(),
+          lastName:  String(f2.value || "").trim(),
+          birthdate: String(dob.value || "").trim(),
+          email:     String(em.value || "").trim(),
+          username:  String(un.value || "").trim(),
+          password:  String(pw.value || "")
+        };
 
-      const mb = window.EPTEC_MOCK_BACKEND;
-      const res = mb?.register ? mb.register(payload) : { ok:false, message:"Backend missing." };
-      if (!res?.ok) {
-        showMsg(IDS.regMsg, res?.message || "Registration failed.", "error");
-        return;
-      }
+        const mb = window.EPTEC_MOCK_BACKEND;
+        const res = mb?.register ? mb.register(payload) : { ok: false, message: "Backend missing." };
+        if (!res?.ok) {
+          showMsg(IDS.regMsg, res?.message || "Registration failed.", "error");
+          return;
+        }
 
-      toast(res?.message || "Registration created (simulation).", "ok", 2600);
-      safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
-    });
+        toast(res?.message || "Registration created (simulation).", "ok", 2600);
+        safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
+      });
+    }
 
     safeOn(IDS.regClose, "click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
 
@@ -482,20 +552,28 @@
       return ok;
     }
 
-    inp.addEventListener("input", refresh);
-    inp.addEventListener("blur", refresh);
+    if (!inp.__eptec_forgot_bound) {
+      inp.__eptec_forgot_bound = true;
+      inp.addEventListener("input", refresh);
+      inp.addEventListener("blur", refresh);
+    }
 
-    btn.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      if (!refresh()) return;
+    if (!btn.__eptec_forgot_bound) {
+      btn.__eptec_forgot_bound = true;
+      btn.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        if (!refresh()) return;
 
-      const mb = window.EPTEC_MOCK_BACKEND;
-      const identity = String(inp.value || "").trim();
-      const res = mb?.requestPasswordReset ? mb.requestPasswordReset({ identity }) : { ok:true, message:"Reset requested (simulation)." };
+        const mb = window.EPTEC_MOCK_BACKEND;
+        const identity = String(inp.value || "").trim();
+        const res = mb?.requestPasswordReset
+          ? mb.requestPasswordReset({ identity })
+          : { ok: true, message: "Reset requested (simulation)." };
 
-      showMsg(IDS.forgotMsg, res?.message || "Reset requested.", "ok");
-      setTimeout(() => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })), 650);
-    });
+        showMsg(IDS.forgotMsg, res?.message || "Reset requested.", "ok");
+        setTimeout(() => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })), 650);
+      });
+    }
 
     safeOn(IDS.forgotClose, "click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })));
 
@@ -506,26 +584,37 @@
   // React to language changes
   // -----------------------------
   function bindLangReactivity() {
-    if (typeof window.EPTEC_UI_STATE?.onChange !== "function") return;
-    let last = getLang();
-    window.EPTEC_UI_STATE.onChange(() => {
-      const now = getLang();
-      if (now === last) return;
-      last = now;
+    const S = window.EPTEC_UI_STATE;
+    const cb = () => {
       applyPlaceholders();
       const dob = $(IDS.regDob);
       if (dob) dob.setAttribute("placeholder", dobHint());
-    });
+      // enforce no placeholders for passwords again
+      killPasswordPlaceholders(document);
+    };
+
+    if (typeof S?.subscribe === "function") {
+      S.subscribe(() => cb());
+      return;
+    }
+    if (typeof S?.onChange === "function") {
+      S.onChange(() => cb());
+      return;
+    }
   }
 
   // -----------------------------
   // INIT (single entry)
   // -----------------------------
   function init() {
-    // No admin-submit binding here (MAIN owns it)
+    // enforce rule immediately
+    killPasswordPlaceholders(document);
+    observePasswordPlaceholders();
+
+    // Placeholders (non-password only)
     applyPlaceholders();
 
-    // eye toggles for both login + register
+    // Eye toggles for both login + register
     ensureEyeToggle(IDS.loginPass, "pw-toggle-login");
     ensureEyeToggle(IDS.regPass, "pw-toggle-register");
 
@@ -537,9 +626,8 @@
     window.RegistrationEngine = window.RegistrationEngine || {};
     window.RegistrationEngine.dobFormatHint = () => dobHint();
 
-    console.log("EPTEC registration_engine: FINAL (Index IDs) active");
+    console.log("EPTEC registration_engine: FINAL (no password placeholders) active");
   }
 
   document.addEventListener("DOMContentLoaded", init);
 })();
-
