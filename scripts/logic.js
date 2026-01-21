@@ -96,20 +96,33 @@
    * Any logic that attempts to do so is automatically
    * considered invalid and ignored by definition.
    */
-
-  /**
-   * AXIOM 6 — DRAMATURGY & STATE INTEGRATION
-   * ---------------------------------------
-   * Appends automatically apply to:
-   * - dramaturgical flow (start → tunnel → doors → rooms)
-   * - audio transitions
-   * - visual transitions
-   * - UI_STATE
-   * - scene state
-   * - transition state
-   *
-   * No explicit wiring is required.
-   */
+/**
+ * AXIOM 6 — DRAMATURGY & STATE INTEGRATION (CLARIFIED)
+ * ---------------------------------------------------
+ * Appends apply system-wide to:
+ * - dramaturgical flow (start → tunnel → doors → rooms)
+ * - audio transitions
+ * - visual transitions
+ * - UI_STATE presence/availability
+ * - scene state
+ * - transition state
+ *
+ * CLARIFICATION (EXECUTION-SAFE):
+ * - Integration means: availability + coherence of state and routing.
+ * - Integration does NOT mean: automatic cross-room side effects.
+ *
+ * HARD RULE:
+ * - No action, result, or evaluation in one room may automatically
+ *   increment, trigger, or mutate escalation stages, counters,
+ *   backup protocols, or manual indicators in another room.
+ *
+ * ROOM RULES:
+ * - Room1 analysis (e.g., traffic light evaluation) is self-contained.
+ * - Room2 escalation/staging/numbering is MANUAL Room2 activation only.
+ *
+ * Therefore:
+ * - Cross-room effects require explicit, intentional wiring in the target room.
+ */
 
   /**
    * AXIOM 7 — ROLE-AWARE BUT ROLE-AGNOSTIC
