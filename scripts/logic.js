@@ -1236,3 +1236,357 @@
 PASTE HERE:
 
 ========================================================= */
+/* =========================================================
+   EPTEC APPEND — MASTER PASSWORDS + NO PLACEHOLDERS (SECURITY)
+   Scope:
+   - Start: Master START (change + forgot)
+   - Doors: Master DOOR (same secret, separate UI under each door)
+   - Reset window: token -> new pass (no old pass)
+   - Universal rule: NO placeholders in any password field
+   - Universal rule: NO autofill leaks (best effort)
+   - No-crash, idempotent, works in any file, any load order
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  /* -----------------------------
+     A) UNIVERSAL SECURITY RULES
+     ----------------------------- */
+
+  // Remove placeholders from ALL password inputs (global, permanent)
+  function stripPasswordPlaceholders(root = document) {
+    safe(() => {
+      const list = Array.from(root.querySelectorAll("input[type='password']"));
+      for (const inp of list) {
+        // no placeholder
+        if (inp.hasAttribute("placeholder")) inp.setAttribute("placeholder", "");
+        // optionally reduce browser hints
+        if (!inp.hasAttribute("autocomplete")) inp.setAttribute("autocomplete", "off");
+        // never prefill
+        if (typeof inp.value === "string" && inp.value.length && inp.value !== "") {
+          // do not wipe user-entered while focused
+          if (document.activeElement !== inp) inp.value = "";
+        }
+      }
+    });
+  }
+
+  // Enforce the rule on DOM changes too (so newly added fields are also cleaned)
+  function observePasswordFields() {
+    const mo = new MutationObserver(() => stripPasswordPlaceholders(document));
+    safe(() => mo.observe(document.documentElement || document.body, { childList: true, subtree: true }));
+  }
+
+  /* -----------------------------
+     B) MASTER SECRETS (ROTATABLE)
+     ----------------------------- */
+
+  const KEY = {
+    secrets: "EPTEC_MASTER_SECRETS_V1",
+    forgot:  "EPTEC_MASTER_FORGOT_V1"
+  };
+
+  const DEFAULTS = {
+    start: "PatrickGeorgHenke200288",
+    door:  "PatrickGeorgHenke6264",
+    email: "" // must be stored by user
+  };
+
+  function readJSON(k) {
+    const raw = safe(() => localStorage.getItem(k));
+    if (!raw) return null;
+    const obj = safe(() => JSON.parse(raw));
+    return (obj && typeof obj === "object") ? obj : null;
+  }
+  function writeJSON(k, v) {
+    safe(() => localStorage.setItem(k, JSON.stringify(v)));
+  }
+
+  // minimal deterministic hash (placeholder for backend; no crash; no deps)
+  function hashMini(s) {
+    const str = String(s ?? "");
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16);
+  }
+
+  function getSecrets() {
+    let s = readJSON(KEY.secrets);
+    if (!s) {
+      s = {
+        startHash: hashMini(DEFAULTS.start),
+        doorHash:  hashMini(DEFAULTS.door),
+        email: DEFAULTS.email
+      };
+      writeJSON(KEY.secrets, s);
+    }
+    s.startHash = String(s.startHash || hashMini(DEFAULTS.start));
+    s.doorHash  = String(s.doorHash  || hashMini(DEFAULTS.door));
+    s.email     = String(s.email || "");
+    return s;
+  }
+
+  function setEmailIfMissing(typedEmail) {
+    const email = String(typedEmail || "").trim();
+    if (!email) return { ok: false, reason: "EMAIL_EMPTY" };
+    const s = getSecrets();
+    if (!s.email) {
+      s.email = email;
+      writeJSON(KEY.secrets, s);
+      return { ok: true, stored: true, email };
+    }
+    return { ok: true, stored: false, email: s.email };
+  }
+
+  function verify(kind /* "start"|"door" */, code) {
+    const s = getSecrets();
+    const c = String(code || "").trim();
+    if (!c) return false;
+    const h = hashMini(c);
+    return kind === "door" ? (h === s.doorHash) : (h === s.startHash);
+  }
+
+  function toast(msg, type = "info", ms = 2200) {
+    const m = String(msg || "");
+    const t = String(type || "info");
+    const bridged = safe(() => window.EPTEC_UI?.toast?.(m, t, ms));
+    if (bridged !== undefined) return bridged;
+    console.log(`[TOAST:${t}]`, m);
+  }
+
+  function changeSecret(kind /* "start"|"door" */, oldPass, newPass, confirmPass) {
+    const s = getSecrets();
+    const o = String(oldPass || "").trim();
+    const n = String(newPass || "").trim();
+    const c = String(confirmPass || "").trim();
+
+    if (!o || !n || !c) return { ok: false, reason: "EMPTY_FIELDS" };
+    if (n !== c) return { ok: false, reason: "MISMATCH" };
+    if (n.length < 8) return { ok: false, reason: "TOO_SHORT" };
+
+    const okOld = (kind === "door") ? (hashMini(o) === s.doorHash) : (hashMini(o) === s.startHash);
+    if (!okOld) return { ok: false, reason: "OLD_WRONG" };
+
+    if (kind === "door") s.doorHash = hashMini(n);
+    else s.startHash = hashMini(n);
+
+    writeJSON(KEY.secrets, s);
+    return { ok: true };
+  }
+
+  /* -----------------------------
+     C) FORGOT FLOW (EMAIL -> TOKEN -> RESET)
+     ----------------------------- */
+
+  function requestReset(target /* "start"|"door" */, email) {
+    const s = getSecrets();
+    const e = String(email || "").trim();
+    if (!e) return { ok: false, reason: "EMAIL_EMPTY" };
+    if (!s.email) return { ok: false, reason: "NO_EMAIL_STORED" };
+    if (e.toLowerCase() !== s.email.toLowerCase()) return { ok: false, reason: "EMAIL_MISMATCH" };
+
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`.toUpperCase();
+    const entry = {
+      token,
+      email: s.email,
+      target: String(target || "start"),
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    };
+    writeJSON(KEY.forgot, entry);
+    return { ok: true, token, entry };
+  }
+
+  function consumeReset(token, newPass, confirmPass) {
+    const entry = readJSON(KEY.forgot);
+    if (!entry || !entry.token) return { ok: false, reason: "NO_REQUEST" };
+
+    const t = String(token || "").trim().toUpperCase();
+    if (!t || t !== String(entry.token).toUpperCase()) return { ok: false, reason: "TOKEN_BAD" };
+
+    const exp = entry.expiresAt ? (new Date(entry.expiresAt).getTime()) : 0;
+    if (exp && Date.now() > exp) return { ok: false, reason: "TOKEN_EXPIRED" };
+
+    const n = String(newPass || "").trim();
+    const c = String(confirmPass || "").trim();
+    if (!n || !c) return { ok: false, reason: "EMPTY_FIELDS" };
+    if (n !== c) return { ok: false, reason: "MISMATCH" };
+    if (n.length < 8) return { ok: false, reason: "TOO_SHORT" };
+
+    const s = getSecrets();
+    const target = String(entry.target || "start");
+    if (target === "door") s.doorHash = hashMini(n);
+    else s.startHash = hashMini(n);
+    writeJSON(KEY.secrets, s);
+
+    safe(() => localStorage.removeItem(KEY.forgot));
+    return { ok: true, target };
+  }
+
+  /* -----------------------------
+     D) KERNEL HOOKS (EXTEND, NOT REWRITE)
+     ----------------------------- */
+
+  // Patch EPTEC_MASTER.Auth verifiers if present (append-only)
+  function patchKernelAuth() {
+    const master = window.EPTEC_MASTER;
+    const auth = master?.Auth;
+    if (!auth || auth.__eptec_master_secret_patched) return;
+
+    const origVerifyStart = typeof auth.verifyStartMaster === "function" ? auth.verifyStartMaster.bind(auth) : null;
+    const origVerifyDoor  = typeof auth.verifyDoorMaster  === "function" ? auth.verifyDoorMaster.bind(auth)  : null;
+
+    auth.verifyStartMaster = function(code) {
+      if (verify("start", code)) return true;
+      return !!safe(() => origVerifyStart?.(code));
+    };
+
+    auth.verifyDoorMaster = function(code) {
+      if (verify("door", code)) return true;
+      return !!safe(() => origVerifyDoor?.(code));
+    };
+
+    auth.__eptec_master_secret_patched = true;
+  }
+
+  /* -----------------------------
+     E) UI BINDINGS (IDEMPOTENT)
+     Required IDs (no placeholders in password inputs):
+       Start change:
+         master-start-old
+         master-start-new
+         master-start-new-confirm
+         master-start-change-submit
+       Start forgot:
+         master-start-forgot-email
+         master-start-forgot-submit
+
+       Door1 change:
+         master-door1-old
+         master-door1-new
+         master-door1-new-confirm
+         master-door1-change-submit
+       Door1 forgot:
+         master-door1-forgot-email
+         master-door1-forgot-submit
+
+       Door2 change:
+         master-door2-old
+         master-door2-new
+         master-door2-new-confirm
+         master-door2-change-submit
+       Door2 forgot:
+         master-door2-forgot-email
+         master-door2-forgot-submit
+
+       Reset window (one global):
+         master-reset-token
+         master-reset-new
+         master-reset-new-confirm
+         master-reset-submit
+     ----------------------------- */
+
+  function bindChange(kind, prefix) {
+    const oldI = $(`${prefix}-old`);
+    const newI = $(`${prefix}-new`);
+    const conI = $(`${prefix}-new-confirm`);
+    const btn  = $(`${prefix}-change-submit`);
+    if (!oldI || !newI || !conI || !btn) return;
+
+    if (btn.__eptec_bound) return;
+    btn.__eptec_bound = true;
+
+    btn.addEventListener("click", () => {
+      const res = changeSecret(kind, oldI.value, newI.value, conI.value);
+      if (!res.ok) return toast(`Passwortänderung fehlgeschlagen: ${res.reason}`, "error", 2400);
+      toast("Passwort geändert.", "ok", 2200);
+      oldI.value = ""; newI.value = ""; conI.value = "";
+    });
+  }
+
+  function bindForgot(target, emailId, submitId) {
+    const emailI = $(emailId);
+    const btn = $(submitId);
+    if (!emailI || !btn) return;
+
+    if (btn.__eptec_bound) return;
+    btn.__eptec_bound = true;
+
+    btn.addEventListener("click", () => {
+      const typed = String(emailI.value || "").trim();
+
+      // ensure email stored (requirement)
+      const stored = setEmailIfMissing(typed);
+      if (!stored.ok) return toast("Bitte zuerst eine E-Mail hinterlegen.", "error", 2400);
+
+      const s = getSecrets();
+      const r = requestReset(target, typed);
+      if (!r.ok) return toast(`Reset nicht möglich: ${r.reason}`, "error", 2400);
+
+      // phase1 simulation: token printed (real email later)
+      console.log("EPTEC RESET TOKEN:", r.token);
+      toast(`Reset-Link erstellt. Token: ${r.token}`, "ok", 4500);
+
+      // optional auto-fill token field
+      const t = $("master-reset-token");
+      if (t) t.value = r.token;
+    });
+  }
+
+  function bindResetWindow() {
+    const tok = $("master-reset-token");
+    const n = $("master-reset-new");
+    const c = $("master-reset-new-confirm");
+    const btn = $("master-reset-submit");
+    if (!tok || !n || !c || !btn) return;
+
+    if (btn.__eptec_bound) return;
+    btn.__eptec_bound = true;
+
+    btn.addEventListener("click", () => {
+      const r = consumeReset(tok.value, n.value, c.value);
+      if (!r.ok) return toast(`Reset fehlgeschlagen: ${r.reason}`, "error", 2400);
+      toast(`Neues Passwort gesetzt (${r.target}).`, "ok", 2400);
+      tok.value = ""; n.value = ""; c.value = "";
+    });
+  }
+
+  function init() {
+    // ensure secrets exist
+    getSecrets();
+
+    // enforce security rule: no placeholders in password fields
+    stripPasswordPlaceholders(document);
+    observePasswordFields();
+
+    // patch kernel auth verifiers if present
+    patchKernelAuth();
+
+    // start master change + forgot
+    bindChange("start", "master-start");
+    bindForgot("start", "master-start-forgot-email", "master-start-forgot-submit");
+
+    // door master change + forgot (same secret for both doors, separate UI blocks)
+    bindChange("door", "master-door1");
+    bindForgot("door", "master-door1-forgot-email", "master-door1-forgot-submit");
+
+    bindChange("door", "master-door2");
+    bindForgot("door", "master-door2-forgot-email", "master-door2-forgot-submit");
+
+    // reset window
+    bindResetWindow();
+
+    console.log("EPTEC APPEND: MasterPasswords + NoPlaceholders active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+
+})();
+
