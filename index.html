@@ -5,22 +5,26 @@
   <title>EPTEC</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Styles -->
+  <!-- ======================
+       Styles
+       ====================== -->
   <link rel="stylesheet" href="assets/style.css" />
   <link rel="stylesheet" href="assets/ui_elements.css" />
   <link rel="stylesheet" href="assets/hidden.css" />
 
   <!-- =====================================================
-       SCRIPT ORDER — CANONICAL
-       =====================================================
-       ui_state        -> zentraler Store
-       ui_controller   -> reines Rendering
-       logic           -> Autorität (Flow, Auth, Dramaturgie)
-       state_manager   -> Persistenz / Produkte / Codes
-       main            -> UI-Orchestrierung (leicht)
-  ====================================================== -->
+       SCRIPT ORDER — FINAL / CANONICAL
+       -----------------------------------------------------
+       1) ui_state        → zentraler Store
+       2) ui_controller   → reines Rendering
+       3) mock_backend    → Phase-1 Backend (Session, Codes)
+       4) logic           → Autorität (Flow, Master, Rooms)
+       5) state_manager   → Produkte, Codes, Persistenz
+       6) main            → UI-Orchestrierung (leicht)
+       ===================================================== -->
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
+  <script src="scripts/mock_backend.js" defer></script>
   <script src="scripts/logic.js" defer></script>
   <script src="scripts/state_manager.js" defer></script>
   <script src="scripts/main.js" defer></script>
@@ -73,7 +77,6 @@ TUNNEL / WHITEOUT
 DOORS
 ========================================================= -->
 <section id="doors-view" class="scene modal-hidden">
-
   <div class="doors-wrapper">
 
     <!-- DOOR 1 — CONSTRUCTION -->
