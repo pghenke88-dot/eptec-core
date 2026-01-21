@@ -1,105 +1,106 @@
-<footer style="margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
-    <p>&copy; 2024 EPTEC Business-Guard</p>
-    <a href="javascript:void(0)" 
-       onclick="showAgb()" 
-       id="footer-agb-link" 
-       style="color: #004a99; text-decoration: none;">
-       {{i18n:agb_btn}} <!-- Dynamisch übersetzt je nach Sprache -->
-    </a>
+<!-- =========================================================
+EPTEC FOOTER — HARMONY FINAL
+========================================================= -->
+<footer id="eptec-footer" class="eptec-footer">
+
+  <div class="footer-inner">
+    <span class="footer-brand">
+      © <span id="footer-year"></span> EPTEC Business-Guard
+    </span>
+
+    <nav class="footer-links">
+      <a id="link-imprint" href="javascript:void(0)">Imprint</a>
+      <a id="link-terms" href="javascript:void(0)">Terms</a>
+      <a id="link-support" href="javascript:void(0)">Support</a>
+      <a id="link-privacy-footer" href="javascript:void(0)">Privacy</a>
+    </nav>
+  </div>
+
 </footer>
 
-<script type="application/json" id="multi-lang-assets">
-{
-  "brand": "EPTEC",
-  "system": "Business-Guard",
-  "last_update": "2024-05-22",
-  "languages": {
-    "de": {
-      "lang": "Deutsch",
-      "agb_btn": "Allgemeine Geschäftsbedingungen (AGB)",
-      "status_msg": "System-Status: Aktiv",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const safe = (fn) => { try { return fn(); } catch {} };
+
+  // -----------------------------
+  // Static year
+  // -----------------------------
+  const y = $("footer-year");
+  if (y) y.textContent = new Date().getFullYear();
+
+  // -----------------------------
+  // Texts (aligned with i18n keys)
+  // -----------------------------
+  const TXT = {
+    en: {
+      imprint: "Imprint",
+      terms: "Terms",
+      support: "Support",
+      privacy: "Privacy"
     },
-    "en": {
-      "lang": "English",
-      "agb_btn": "Terms and Conditions (T&C)",
-      "status_msg": "System Status: Active",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "it": {
-      "lang": "Italiano",
-      "agb_btn": "Termini e Condizioni",
-      "status_msg": "Verifica stato",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "es": {
-      "lang": "Español",
-      "agb_btn": "Términos y Condiciones",
-      "status_msg": "Estado del sistema",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "fr": {
-      "lang": "Français",
-      "agb_btn": "Conditions Générales",
-      "status_msg": "État du système",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "ar": {
-      "lang": "العربية",
-      "agb_btn": "الشروط والأحكام",
-      "status_msg": "حالة النظام",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "cn": {
-      "lang": "中文",
-      "agb_btn": "条款和条件",
-      "status_msg": "系统状态",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "jp": {
-      "lang": "日本語",
-      "agb_btn": "利用規約と法的情報",
-      "status_msg": "システムステータスを確認",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "nl": {
-      "lang": "Nederlands",
-      "agb_btn": "Algemene Voorwaarden",
-      "status_msg": "Systeemstatus controleren",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "pt": {
-      "lang": "Português",
-      "agb_btn": "Termos e Condições",
-      "status_msg": "Verificar status",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "ru": {
-      "lang": "Русский",
-      "agb_btn": "Условия и положения",
-      "status_msg": "Проверить статус",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
-    },
-    "uk": {
-      "lang": "Українська",
-      "agb_btn": "Правила та юридична інформація",
-      "status_msg": "Перевірити статус системи",
-      "plans": { "f1": { "price_basis": "19.90", "price_premium": "34.90" }, "f2": { "price_basis": "24.90", "price_premium": "49.90" } }
+    de: {
+      imprint: "Impressum",
+      terms: "AGB",
+      support: "Support",
+      privacy: "Datenschutz"
     }
-  },
-  "framework_logic": {
-    "MOD_I": {
-      "title": "Vertragsgrundlagen",
-      "content_ref": "doc/verlage/modul_I_{lang}.md",
-      "checkpoints": [
-        {
-          "id": "CP1_URHEBER",
-          "label": "Urheberrechtsklausel",
-          "ideal_text": "Der Urheber überträgt dem Verlag...",
-          "law_ref": "doc/rechtsprechung/{COUNTRY}/urhg_1.md"
-        }
-      ]
+  };
+
+  function getLang() {
+    const S = window.EPTEC_UI_STATE;
+    const s =
+      safe(() => (typeof S?.get === "function" ? S.get() : null)) ||
+      safe(() => S?.state) ||
+      {};
+    return String(s?.i18n?.lang || s?.lang || "en").toLowerCase() === "de"
+      ? "de"
+      : "en";
+  }
+
+  function applyText() {
+    const l = getLang();
+    const t = TXT[l] || TXT.en;
+
+    if ($("link-imprint")) $("link-imprint").textContent = t.imprint;
+    if ($("link-terms")) $("link-terms").textContent = t.terms;
+    if ($("link-support")) $("link-support").textContent = t.support;
+    if ($("link-privacy-footer")) $("link-privacy-footer").textContent = t.privacy;
+  }
+
+  // -----------------------------
+  // Legal open (NO routing here)
+  // -----------------------------
+  function bindLegalLinks() {
+    const open = (key) =>
+      safe(() => window.EPTEC_UI?.openLegal?.(key));
+
+    $("link-imprint")?.addEventListener("click", () => open("imprint"));
+    $("link-terms")?.addEventListener("click", () => open("terms"));
+    $("link-support")?.addEventListener("click", () => open("support"));
+    $("link-privacy-footer")?.addEventListener("click", () => open("privacy"));
+  }
+
+  // -----------------------------
+  // React to language change
+  // -----------------------------
+  function bindLangReactive() {
+    const S = window.EPTEC_UI_STATE;
+    if (typeof S?.subscribe === "function") {
+      S.subscribe(applyText);
+    } else if (typeof S?.onChange === "function") {
+      S.onChange(applyText);
     }
   }
-}
+
+  // -----------------------------
+  // Init
+  // -----------------------------
+  applyText();
+  bindLegalLinks();
+  bindLangReactive();
+
+})();
 </script>
