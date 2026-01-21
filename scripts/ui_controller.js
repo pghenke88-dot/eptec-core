@@ -1,30 +1,44 @@
 /**
  * scripts/ui_controller.js
- * EPTEC UI-Control (renders DOM from UI-State)
+ * EPTEC UI-Control (renders DOM from UI-State) — HARMONY FINAL
  *
  * Verantwortlich für:
- * - DOM-Rendering strikt aus EPTEC_UI_STATE
+ * - DOM-Rendering strikt aus EPTEC_UI_STATE (get/set/subscribe)
  * - Modal open/close
  * - Footer / Legal Klicks
  * - UI-Messages & Toasts
+ * - Tunnel/Whiteout CSS anhand transition (optional, safe)
  *
  * WICHTIG:
  * - KEINE Business-Logik
  * - KEIN Backend
- * - KEIN Platzhalter für Admin-/Master-Felder (ABSICHTLICH)
+ * - KEIN Gatekeeping / keine Navigation (das macht logic.js)
+ * - Admin-/Master-Felder: NIE Placeholder (ABSICHTLICH)
  */
 
 (() => {
   "use strict";
 
   const $ = (id) => document.getElementById(id);
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
   // ------------------------------------------------------------
-  // Basic helpers
+  // Helpers
   // ------------------------------------------------------------
-  function show(el) { el?.classList?.remove("modal-hidden"); }
-  function hide(el) { el?.classList?.add("modal-hidden"); }
+  function showByDisplay(el, value) {
+    if (!el) return;
+    el.style.display = value;
+  }
 
+  function addClass(el, cls) { el?.classList?.add(cls); }
+  function removeClass(el, cls) { el?.classList?.remove(cls); }
+
+  function hideModal(el) { addClass(el, "modal-hidden"); }
+  function showModal(el) { removeClass(el, "modal-hidden"); }
+
+  // ------------------------------------------------------------
+  // Messages & Toasts
+  // ------------------------------------------------------------
   function showMsg(id, text, type = "warn") {
     const el = $(id);
     if (!el) return;
@@ -54,136 +68,210 @@
   }
 
   // ------------------------------------------------------------
-  // 🔒 KRITISCHER FIX
-  // Admin-/Master-Felder dürfen NIE Placeholder haben
+  // Store bridge (logic.js style)
   // ------------------------------------------------------------
-  function stripAdminPlaceholders() {
-    [
-      "admin-code",        // Start (Master Start)
-      "admin-door-code",   // Zwischenraum / Doors
-      "admin-room1-code"   // falls separat vorhanden
-    ].forEach((id) => {
-      const el = $(id);
-      if (el) el.removeAttribute("placeholder");
+  function store() {
+    return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
+  }
+
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+
+    // fallback: polling (should be rare)
+    let lastJSON = "";
+    const t = setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== lastJSON) { lastJSON = j; safe(() => fn(st)); }
+    }, 250);
+    return () => clearInterval(t);
+  }
+
+  // ------------------------------------------------------------
+  // 🔒 KRITISCH: Password/Admin/Master Inputs dürfen NIE Placeholder haben
+  // (global rule: all password inputs => placeholder removed)
+  // ------------------------------------------------------------
+  function stripPasswordPlaceholders() {
+    safe(() => {
+      const list = Array.from(document.querySelectorAll("input[type='password']"));
+      for (const inp of list) {
+        inp.removeAttribute("placeholder");
+      }
     });
   }
 
   // ------------------------------------------------------------
   // Legal placeholder (Text kommt später aus Docs)
   // ------------------------------------------------------------
-  function legalPlaceholderText() {
+  function legalPlaceholderText(kind) {
     const stand = new Date().toLocaleDateString();
+    const k = String(kind || "").trim();
     return (
       "Inhalt vorbereitet.\n" +
       "Wird später aus Docs geladen.\n\n" +
       "Backend ist dafür NICHT erforderlich.\n\n" +
+      (k ? ("Bereich: " + k + "\n\n") : "") +
       "Stand: " + stand
     );
   }
 
   // ------------------------------------------------------------
-  // Dashboard / Room Rendering (nur visuell)
+  // Central rendering
+  // Supports BOTH:
+  // - logic.js scenes: start/tunnel/viewdoors/whiteout/room1/room2
+  // - legacy view strings: meadow/doors/room1/room2
   // ------------------------------------------------------------
-  function renderDashboard(state) {
-    // bewusst leer / vorbereitet
-    // Hotspots, Upload/Download, Paywall etc. kommen später
+  function resolveScene(st) {
+    const s = String(st?.scene || "").trim();
+    const v = String(st?.view || "").trim();
+
+    if (s) return s;
+
+    // legacy alias mapping
+    if (v === "meadow") return "start";
+    if (v === "doors") return "viewdoors";
+    if (v === "room1") return "room1";
+    if (v === "room2") return "room2";
+    if (v === "tunnel") return "tunnel";
+    if (v === "whiteout") return "whiteout";
+
+    return "start";
   }
 
-  // ------------------------------------------------------------
-  // ZENTRALES RENDERING
-  // ------------------------------------------------------------
-  function render(state) {
-    // ----- Modals -----
-    hide($("register-screen"));
-    hide($("forgot-screen"));
-    hide($("legal-screen"));
+  function renderModals(st) {
+    const reg = $("register-screen");
+    const forgot = $("forgot-screen");
+    const legal = $("legal-screen");
 
-    if (state?.modal === "register") show($("register-screen"));
-    if (state?.modal === "forgot") show($("forgot-screen"));
-    if (state?.modal === "legal")  show($("legal-screen"));
+    if (reg) hideModal(reg);
+    if (forgot) hideModal(forgot);
+    if (legal) hideModal(legal);
 
-    if (state?.modal === "legal") {
-      const title = $("legal-title");
-      const body  = $("legal-body");
-      if (title) title.textContent = "";
-      if (body)  body.textContent  = legalPlaceholderText();
+    if (st?.modal === "register" && reg) showModal(reg);
+    if (st?.modal === "forgot" && forgot) showModal(forgot);
+    if (st?.modal === "legal" && legal) showModal(legal);
+
+    if (st?.modal === "legal") {
+      const body = $("legal-body");
+      const kind = st?.legalKind || st?.legal?.key || "";
+      if (body) body.textContent = legalPlaceholderText(kind);
+    }
+  }
+
+  function renderScenes(st) {
+    const scene = resolveScene(st);
+
+    const meadow = $("meadow-view");     // start
+    const tunnel = $("tunnel-view") || $("eptec-tunnel");
+    const doors  = $("doors-view");      // viewdoors
+    const r1     = $("room-1-view");     // room1
+    const r2     = $("room-2-view");     // room2
+
+    // Start/meadow
+    showByDisplay(meadow, (scene === "start") ? "flex" : "none");
+
+    // Doors
+    showByDisplay(doors, (scene === "viewdoors") ? "flex" : "none");
+
+    // Rooms
+    showByDisplay(r1, (scene === "room1") ? "block" : "none");
+    showByDisplay(r2, (scene === "room2") ? "block" : "none");
+
+    // Tunnel view (if you render it as a section/div)
+    if (tunnel) {
+      const on = (scene === "tunnel");
+      // Support both style systems:
+      tunnel.classList.toggle("tunnel-active", on);
+      tunnel.classList.toggle("tunnel-hidden", !on);
+
+      // If it's a <section class="scene">, also align display
+      if (tunnel.tagName === "SECTION") {
+        showByDisplay(tunnel, on ? "block" : "none");
+      }
     }
 
-    // ----- Views -----
-    const meadow = $("meadow-view");
-    const doors  = $("doors-view");   // Zwischenraum
-    const r1     = $("room-1-view");  // Construction
-    const r2     = $("room-2-view");  // Controlling
+    // Whiteout is overlay driven by transition; scene may pass through
+  }
 
-    if (meadow) meadow.style.display = state?.view === "meadow" ? "flex" : "none";
-    if (doors)  doors.style.display  = state?.view === "doors"  ? "flex" : "none";
-    if (r1)     r1.style.display     = state?.view === "room1"  ? "block" : "none";
-    if (r2)     r2.style.display     = state?.view === "room2"  ? "block" : "none";
+  function renderTransitionFX(st) {
+    const flash = $("eptec-white-flash");
+    if (!flash) return;
 
-    try { renderDashboard(state); } catch {}
+    const tr = st?.transition || {};
+    const whiteOn = !!tr.whiteout;
 
-    // 🔒 HIER DER ENTSCHEIDENDE FIX
-    stripAdminPlaceholders();
+    flash.classList.toggle("white-flash-active", whiteOn);
+    flash.classList.toggle("whiteout-hidden", !whiteOn);
+  }
+
+  function render(st) {
+    renderModals(st);
+    renderScenes(st);
+    renderTransitionFX(st);
+
+    // enforce placeholder rule always
+    stripPasswordPlaceholders();
   }
 
   // ------------------------------------------------------------
-  // UI-only bindings
+  // UI-only bindings (closers + legal)
   // ------------------------------------------------------------
   function bindModalClosers() {
-    $("reg-close")?.addEventListener("click", () =>
-      window.EPTEC_UI_STATE?.set({ modal: null })
-    );
-    $("forgot-close")?.addEventListener("click", () =>
-      window.EPTEC_UI_STATE?.set({ modal: null })
-    );
-    $("legal-close")?.addEventListener("click", () =>
-      window.EPTEC_UI_STATE?.set({ modal: null })
-    );
+    $("reg-close")?.addEventListener("click", () => setState({ modal: null }));
+    $("forgot-close")?.addEventListener("click", () => setState({ modal: null }));
+    $("legal-close")?.addEventListener("click", () => setState({ modal: null }));
   }
 
   function bindFooterLegalClicks() {
-    $("link-imprint")?.addEventListener("click", () =>
-      window.EPTEC_UI?.openLegal?.("imprint")
-    );
-    $("link-terms")?.addEventListener("click", () =>
-      window.EPTEC_UI?.openLegal?.("terms")
-    );
-    $("link-support")?.addEventListener("click", () =>
-      window.EPTEC_UI?.openLegal?.("support")
-    );
-    $("link-privacy-footer")?.addEventListener("click", () =>
-      window.EPTEC_UI?.openLegal?.("privacy")
-    );
+    const open = (kind) => {
+      // If EPTEC_UI.openLegal is used by other code, keep it consistent:
+      setState({ modal: "legal", legalKind: String(kind || "") });
+    };
+
+    $("link-imprint")?.addEventListener("click", () => open("imprint"));
+    $("link-terms")?.addEventListener("click", () => open("terms"));
+    $("link-support")?.addEventListener("click", () => open("support"));
+    $("link-privacy-footer")?.addEventListener("click", () => open("privacy"));
   }
 
   // ------------------------------------------------------------
   // Init
   // ------------------------------------------------------------
   function init() {
-    window.EPTEC_UI_STATE?.onChange?.(render);
+    // subscribe to store changes
+    subscribe(render);
 
-    // Initial render (failsafe)
-    try {
-      render(window.EPTEC_UI_STATE?.state || { view: "meadow", modal: null });
-    } catch {}
+    // initial render
+    render(getState());
 
     bindModalClosers();
     bindFooterLegalClicks();
   }
 
   // ------------------------------------------------------------
-  // Public API (von Main / Logic genutzt)
+  // Public API (used by main/logic)
   // ------------------------------------------------------------
   window.EPTEC_UI = {
     init,
-    openRegister: () => window.EPTEC_UI_STATE?.set({ modal: "register", legalKind: null }),
-    openForgot:   () => window.EPTEC_UI_STATE?.set({ modal: "forgot",   legalKind: null }),
-    openLegal:    (kind) => window.EPTEC_UI_STATE?.set({ modal: "legal", legalKind: kind || "" }),
-    closeModal:   () => window.EPTEC_UI_STATE?.set({ modal: null }),
+    openRegister: () => setState({ modal: "register", legalKind: null }),
+    openForgot:   () => setState({ modal: "forgot",   legalKind: null }),
+    openLegal:    (kind) => setState({ modal: "legal", legalKind: String(kind || "") }),
+    closeModal:   () => setState({ modal: null }),
     showMsg,
     hideMsg,
     toast
   };
 
 })();
-
