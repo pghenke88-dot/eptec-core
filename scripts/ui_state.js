@@ -1,34 +1,25 @@
 /**
  * scripts/ui_state.js
- * EPTEC UI-STATE – FINAL (NO CUT, dual-terminology, index+logic compatible)
+ * EPTEC UI-STATE – FINAL (stable language + stable views)
  *
- * Ziel:
- * - Pure state only (kein DOM, kein Backend, kein Audio)
- * - Kanonische Views (für Main + UI-Control + Index):
- *     "meadow" | "tunnel" | "doors" | "room1" | "room2"
- * - Zusätzlich: Alias-Termini akzeptieren (für Logik/alte Begriffe), ohne Logik zu ändern:
- *     "Wiese" -> meadow
- *     "R1"    -> room1
- *     "R2"    -> room2
- *     "viewDOS"/"Zwischenraum"/"DOORS" -> doors
+ * - Pure state only (no DOM, no backend, no audio)
+ * - Canonical views:
+ *   "meadow" | "tunnel" | "doors" | "room1" | "room2"
+ * - Accepts minimal aliases for safety (does NOT rename your term system):
+ *   Wiese/start -> meadow
+ *   viewDOS/zwischenraum -> doors
+ *   R1 -> room1
+ *   R2 -> room2
  *
- * - i18n bleibt stabil:
- *     state.i18n.lang: en,de,es,fr,it,pt,nl,ru,uk,ar,zh,ja
- *     state.i18n.dir:  ltr/rtl
- *
- * - Transition/Fx state:
- *     transition.tunnelActive / transition.whiteout
- *
- * - Modes:
- *     modes.demo / modes.admin / modes.vip
+ * - Language is persisted (prevents “verstellt”):
+ *   localStorage key: EPTEC_LANG
  */
 
 (() => {
   "use strict";
 
-  // -----------------------------
-  // helpers
-  // -----------------------------
+  const STORAGE_LANG = "EPTEC_LANG";
+
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 
   function deepMerge(base, patch) {
@@ -42,7 +33,7 @@
     return base;
   }
 
-  function normalizeLang(raw) {
+  function normLang(raw) {
     const s = String(raw || "en").toLowerCase().trim();
     if (s === "ua") return "uk";
     if (s === "jp") return "ja";
@@ -50,86 +41,49 @@
     return s || "en";
   }
 
-  function normalizeView(raw) {
-    const v = String(raw ?? "").trim();
-    const x = v.toLowerCase();
+  function loadLang() {
+    try {
+      const v = localStorage.getItem(STORAGE_LANG);
+      if (v) return normLang(v);
+    } catch {}
+    return null;
+  }
 
-    // canonical (UI/Main)
+  function saveLang(lang) {
+    try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
+  }
+
+  function normView(raw) {
+    const x = String(raw || "meadow").trim().toLowerCase();
+
     if (x === "meadow") return "meadow";
     if (x === "tunnel") return "tunnel";
     if (x === "doors") return "doors";
     if (x === "room1") return "room1";
     if (x === "room2") return "room2";
 
-    // aliases (logic / legacy / german)
+    // safe aliases
     if (x === "wiese" || x === "start" || x === "entry") return "meadow";
-    if (x === "viewdos" || x === "zwischenraum" || x === "doorhub" || x === "doors-view" || x === "doorrange") return "doors";
-
-    // logic terms commonly used
+    if (x === "viewdos" || x === "zwischenraum" || x === "doors-view") return "doors";
     if (x === "r1") return "room1";
     if (x === "r2") return "room2";
 
-    // other old naming
-    if (x === "room-1" || x === "construction" || x === "contractconstruction") return "room1";
-    if (x === "room-2" || x === "controlling" || x === "contractcontrolling") return "room2";
-
-    // fallback
     return "meadow";
   }
 
-  // -----------------------------
-  // defaults (NO CUT)
-  // -----------------------------
   const DEFAULTS = {
-    // View is the single truth for what is visible
-    view: "meadow",                 // meadow | tunnel | doors | room1 | room2
+    view: "meadow",
+    modal: null,
+    legalKind: null,
 
-    // Modal overlay
-    modal: null,                    // null | register | forgot | legal
-    legalKind: null,                // imprint | terms | support | privacy | null
-
-    // Language context
     i18n: {
       lang: "en",
       dir: "ltr"
     },
 
-    // Roles / modes
-    modes: {
-      demo: false,
-      admin: false,
-      vip: false
-    },
+    modes: { demo: false, admin: false, vip: false },
 
-    // Transition / FX
-    transition: {
-      tunnelActive: false,
-      whiteout: false,
-      last: null
-    },
-
-    // Doors stage helpers (optional)
-    doors: {
-      selectedDoor: null,           // "construction" | "controlling" | null
-      lastAttempt: null,
-      lastCodeType: null            // "gift" | "vip" | "master" | null
-    },
-
-    // Optional paywall overlay state (if used)
-    paywall: {
-      open: false,
-      door: null,                   // "construction" | "controlling" | null
-      message: "",
-      referral: { input: "", lastResult: null },
-      vip: { input: "", lastResult: null }
-    },
-
-    // Optional UI notices
-    notice: {
-      type: null,                   // "ok" | "warn" | "error" | null
-      text: "",
-      ts: null
-    }
+    transition: { tunnelActive: false, whiteout: false, last: null }
   };
 
   let state = deepMerge({}, DEFAULTS);
@@ -139,35 +93,32 @@
     return JSON.parse(JSON.stringify(state));
   }
 
-  function normalize(nextState) {
-    const n = deepMerge(deepMerge({}, DEFAULTS), isObj(nextState) ? nextState : {});
+  function normalize(next) {
+    const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
 
-    // normalize view (accept aliases)
-    n.view = normalizeView(n.view);
+    // view
+    n.view = normView(n.view);
 
-    // normalize i18n
+    // language (persisted wins)
     n.i18n = n.i18n || {};
-    const lang = normalizeLang(n.i18n.lang || n.lang || "en");
+    const persisted = loadLang();
+    const lang = normLang(n.i18n.lang || n.lang || persisted || "en");
     n.i18n.lang = lang;
     n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
+    n.lang = lang;
 
-    // keep a legacy mirror for older scripts that read flat "lang"
-    n.lang = n.i18n.lang;
+    // keep persistence stable
+    saveLang(lang);
 
-    // ensure nested containers exist
+    // nested safety
     n.modes = isObj(n.modes) ? n.modes : { demo:false, admin:false, vip:false };
     n.transition = isObj(n.transition) ? n.transition : { tunnelActive:false, whiteout:false, last:null };
-    n.doors = isObj(n.doors) ? n.doors : { selectedDoor:null, lastAttempt:null, lastCodeType:null };
-    n.paywall = isObj(n.paywall) ? n.paywall : { open:false, door:null, message:"", referral:{input:"",lastResult:null}, vip:{input:"",lastResult:null} };
-    n.notice = isObj(n.notice) ? n.notice : { type:null, text:"", ts:null };
 
     return n;
   }
 
   function set(patch = {}) {
-    // deep merge patch into current state, then normalize
     state = normalize(deepMerge(snapshot(), isObj(patch) ? patch : {}));
-
     const snap = snapshot();
     for (const fn of listeners) {
       try { fn(snap); } catch {}
@@ -182,26 +133,8 @@
     return () => listeners.delete(fn);
   }
 
-  // convenience helpers (optional)
-  function setView(view) { return set({ view }); }
-  function setLang(lang) { return set({ i18n: { ...state.i18n, lang } }); }
-  function openModal(modal) { return set({ modal }); }
-  function closeModal() { return set({ modal: null }); }
+  // init with persisted lang immediately (prevents “verstellt” on load)
+  state = normalize(state);
 
-  window.EPTEC_UI_STATE = {
-    get state() { return state; },
-    set,
-    onChange,
-    snapshot,
-
-    // exported normalizers for other scripts if needed
-    normalizeView,
-    normalizeLang,
-
-    // convenience
-    setView,
-    setLang,
-    openModal,
-    closeModal
-  };
+  window.EPTEC_UI_STATE = { get state(){ return state; }, set, onChange, snapshot };
 })();
