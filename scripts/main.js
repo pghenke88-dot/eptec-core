@@ -122,15 +122,106 @@
   // ------------------------------------------------------------
   // HARD scene switch fallback (guarantees you "get in")
   // ------------------------------------------------------------
-  function showOnly(viewId) {
-    const meadow = $("meadow-view");
-    const r1 = $("room-1-view");
-    const r2 = $("room-2-view");
+  (() => {
+  "use strict";
 
-    if (meadow) meadow.style.display = (viewId === "meadow") ? "flex" : "none";
-    if (r1) r1.style.display = (viewId === "room1") ? "block" : "none";
-    if (r2) r2.style.display = (viewId === "room2") ? "block" : "none";
+  const $ = (id) => document.getElementById(id);
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const MASTER_START = "PatrickGeorgHenke200288";
+  const MASTER_DOOR  = "PatrickGeorgHenke6264";
+
+  function setView(view){ safe(() => window.EPTEC_UI_STATE?.set?.({ view })); }
+  function setTransition(patch){ safe(() => window.EPTEC_UI_STATE?.set?.({ transition: patch })); }
+
+  function unlockAudioOnce(){
+    safe(() => window.SoundEngine?.unlockAudio?.());
+    safe(() => window.SoundEngine?.startAmbient?.());
   }
+
+  function tunnelToDoors(){
+    setView("tunnel");
+    setTransition({ tunnelActive:true, whiteout:false, last:"to_doors" });
+    safe(() => window.SoundEngine?.tunnelFall?.());
+
+    setTimeout(() => {
+      setTransition({ tunnelActive:false, whiteout:false, last:"doors" });
+      setView("doors");
+    }, 650);
+  }
+
+  function whiteoutToRoom(view){
+    setTransition({ tunnelActive:false, whiteout:true, last:"whiteout" });
+    setTimeout(() => {
+      setTransition({ tunnelActive:false, whiteout:false, last:"arrive" });
+      setView(view);
+    }, 380);
+  }
+
+  function bindDoors(){
+    $("door-construction")?.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      whiteoutToRoom("room1");
+    });
+    $("door-controlling")?.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      whiteoutToRoom("room2");
+    });
+
+    // Master door 6264 under doors -> ROOM2
+    $("admin-door-submit")?.addEventListener("click", () => {
+      const code = String($("admin-door-code")?.value || "").trim();
+      if (code === MASTER_DOOR) {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        whiteoutToRoom("room2");
+      } else if (code) {
+        safe(() => window.EPTEC_UI?.toast?.("Access denied.", "error", 2000));
+      }
+    });
+  }
+
+  function bindEntry(){
+    safe(() => window.EPTEC_UI?.init?.());
+    setView("meadow");
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal:null }));
+
+    $("btn-register")?.addEventListener("click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal:"register" })));
+    $("btn-forgot")?.addEventListener("click", () => safe(() => window.EPTEC_UI_STATE?.set?.({ modal:"forgot" })));
+
+    // Admin start master -> DOORS
+    $("admin-submit")?.addEventListener("click", () => {
+      const code = String($("admin-code")?.value || "").trim();
+      if (!code) return;
+      if (code === MASTER_START || code === MASTER_DOOR) {
+        safe(() => window.EPTEC_UI_STATE?.set?.({ modes:{ admin:true } }));
+        tunnelToDoors();
+      } else {
+        safe(() => window.EPTEC_UI?.toast?.("Access denied.", "error", 2000));
+      }
+    });
+
+    // Login success -> DOORS (mock backend used elsewhere; keep simple here)
+    $("btn-login")?.addEventListener("click", () => {
+      const u = String($("login-username")?.value || "").trim();
+      const p = String($("login-password")?.value || "").trim();
+      if (!u || !p) return safe(() => window.EPTEC_UI?.showMsg?.("login-message","Login failed.","error"));
+
+      const res = safe(() => window.EPTEC_MOCK_BACKEND?.login?.({ username:u, password:p }));
+      if (!res?.ok) return safe(() => window.EPTEC_UI?.showMsg?.("login-message", res?.message || "Invalid username or password.", "error"));
+
+      tunnelToDoors();
+    });
+  }
+
+  function boot(){
+    bindEntry();
+    bindDoors();
+    document.addEventListener("pointerdown", unlockAudioOnce, { once:true });
+    document.addEventListener("click", unlockAudioOnce, { once:true });
+  }
+
+  document.addEventListener("DOMContentLoaded", boot);
+})();
 
   function tunnelFxOn() {
     safe(() => $("eptec-white-flash")?.classList.add("white-flash-active"));
