@@ -3286,7 +3286,7 @@ PASTE HERE:
   }
 
   // Canonical language codes list (you: PT not PL; CN and JP are custom and valid)
-  const LANG = Object.freeze(["EN","DE","ES","UK","AR","PT","CN","JP","FR","IT","TR","RU"]); // adjust if your 12 differ
+  const LANG = Object.freeze(["EN","DE","ES","UK","AR","PT","CN","JP","FR","IT","NL","RU"]); // adjust if your 12 differ
   // Note: UK here means Ukrainian per your use; if you prefer UA later, we can alias it without breaking UI.
 
   const Emergency = (window.EPTEC_LANG_EMERGENCY = window.EPTEC_LANG_EMERGENCY || {});
