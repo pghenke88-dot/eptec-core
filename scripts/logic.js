@@ -1,3 +1,8 @@
+window.EPTEC_BRAIN = EPTEC_BRAIN;
+
+// ✅ Global hook for UI (optional, but perfect for "we hear every click")
+window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
+  log: (eventName, meta) => window.EPTEC_BRAIN?.Activity?.log?.(eventName, meta)
 /**
  * EPTEC ULTIMATE MASTER LOGIC (The "Brain")
  * Architecture: Patrick Georg Henke Core
@@ -126,7 +131,9 @@ const EPTEC_BRAIN = (() => {
   }
 
   /* -----------------------------
-   * 2.1) ACTIVITY (CLICK/UX LOG HOOK)
+   * ✅ 2.1) ACTIVITY (CLICK/UX LOG HOOK)
+   * - "wir hören sowieso jeden Klick"
+   * - can be used by UI without coupling into Compliance internals
    * ----------------------------- */
   const Activity = {
     log(eventName, meta = null) {
@@ -141,9 +148,9 @@ const EPTEC_BRAIN = (() => {
    * 3) RESOURCE STORE (docs/.md, locales/.json, assets/.html)
    * ----------------------------- */
   const Store = (() => {
-    const docs = new Map();
-    const locales = new Map();
-    const html = new Map();
+    const docs = new Map();      // id -> text
+    const locales = new Map();   // lang -> json
+    const html = new Map();      // assetId -> html string
 
     const pending = {
       docs: new Map(),
@@ -153,6 +160,8 @@ const EPTEC_BRAIN = (() => {
 
     async function singleFlight(map, key, loader) {
       if (map.has(key)) return map.get(key);
+      if (loader === null) return null;
+
       const pend = pending[map === docs ? "docs" : map === locales ? "locales" : "html"];
       if (pend.has(key)) return pend.get(key);
 
@@ -227,11 +236,18 @@ const EPTEC_BRAIN = (() => {
       return String(res || "");
     }
 
-    return { getDoc, getLocale, getAssetHtml };
+    function clear(kind, key) {
+      if (!kind) { docs.clear(); locales.clear(); html.clear(); return; }
+      if (kind === "docs") key ? docs.delete(key) : docs.clear();
+      if (kind === "locales") key ? locales.delete(key) : locales.clear();
+      if (kind === "html") key ? html.delete(key) : html.clear();
+    }
+
+    return { getDoc, getLocale, getAssetHtml, clear };
   })();
 
   /* -----------------------------
-   * 4) TEMPLATE RESOLVER
+   * 4) TEMPLATE RESOLVER (READING CODES)
    * ----------------------------- */
   function getPath(obj, path) {
     return Safe.try(() => {
@@ -249,22 +265,37 @@ const EPTEC_BRAIN = (() => {
     token = String(token || "").trim();
     if (!token) return "";
 
+    // explicit namespaces
     if (token.startsWith("i18n:")) {
       const key = token.slice(5).trim();
       return (ctx.locale && key in ctx.locale) ? String(ctx.locale[key] ?? "") : "";
     }
-    if (token.startsWith("doc:")) return await Store.getDoc(token.slice(4).trim());
-    if (token.startsWith("asset:")) return await Store.getAssetHtml(token.slice(6).trim());
-    if (token.startsWith("user.")) return getPath(ctx.user, token.slice(5));
+    if (token.startsWith("doc:")) {
+      return await Store.getDoc(token.slice(4).trim());
+    }
+    if (token.startsWith("asset:")) {
+      return await Store.getAssetHtml(token.slice(6).trim());
+    }
+    if (token.startsWith("user.")) {
+      return getPath(ctx.user, token.slice(5));
+    }
     if (token.startsWith("session.")) {
       const k = token.slice(8);
-      const session = { id: Config.ACTIVE_USER.sessionID, start: Config.SESSION_START, now: Safe.iso() };
+      const session = {
+        id: Config.ACTIVE_USER.sessionID,
+        start: Config.SESSION_START,
+        now: Safe.iso()
+      };
       return getPath(session, k);
     }
 
+    // AUTO-RESOLVE (your "TISCH" case)
+    // 1) locales key
     if (ctx.locale && token in ctx.locale) return String(ctx.locale[token] ?? "");
+    // 2) docs/<token>.md
     const d = await Store.getDoc(token);
     if (d && !d.startsWith("DOC MISSING:") && !d.startsWith("DOC LOAD ERROR:")) return d;
+    // 3) assets/<token>.html
     const a = await Store.getAssetHtml(token);
     if (a) return a;
 
@@ -273,20 +304,23 @@ const EPTEC_BRAIN = (() => {
 
   async function renderTemplate(text, ctx) {
     const src = String(text ?? "");
-    const re = /\{\{([^}]+)\}\}/g;
+    const re = /\{\{([^}]+)\}\}/g; // {{ ... }}
     const matches = [...src.matchAll(re)];
     if (!matches.length) return src;
 
     const tokens = [...new Set(matches.map(m => String(m[1]).trim()).filter(Boolean))];
     const map = new Map();
-    for (const t of tokens) map.set(t, await resolveToken(t, ctx));
+
+    for (const t of tokens) {
+      const v = await resolveToken(t, ctx);
+      map.set(t, v);
+    }
 
     return src.replace(re, (_, inner) => map.get(String(inner).trim()) ?? "");
   }
 
   /* -----------------------------
-   * 5) AUDIO (legacy ID based)
-   * NOTE: We bridge this to SoundEngine via appendix below.
+   * 5) AUDIO ENGINE
    * ----------------------------- */
   const Audio = {
     interval: null,
@@ -295,7 +329,7 @@ const EPTEC_BRAIN = (() => {
         const snd = Safe.byId(soundID);
         if (!snd) return;
         snd.volume = Safe.clamp01(volume);
-        snd.play().catch(() => {});
+        snd.play().catch(() => {}); // autoplay policies -> no-crash
       }, "Audio.play");
     },
     startRandomDielenKnacken() {
@@ -331,11 +365,11 @@ const EPTEC_BRAIN = (() => {
   };
 
   /* -----------------------------
-   * 7) NAVIGATION
+   * 7) NAVIGATION (STATE-GATED)
    * ----------------------------- */
   const Navigation = {
     currentLocation: "Wiese",
-    state: "IDLE",
+    state: "IDLE", // IDLE | TRANSITION
 
     triggerTunnel(targetRoom) {
       Safe.try(() => {
@@ -379,7 +413,7 @@ const EPTEC_BRAIN = (() => {
   };
 
   /* -----------------------------
-   * 8) WORKSHOP
+   * 8) WORKSHOP (DOCS FIRST, TEMPLATE RESOLVER)
    * ----------------------------- */
   const Workshop = {
     render() {
@@ -403,6 +437,9 @@ const EPTEC_BRAIN = (() => {
       }, "Workshop.render");
     },
 
+    // PartName can be:
+    //  - a label from structure
+    //  - a docId (recommended) -> tries docs/<docId>.md first
     async openDoc(partName) {
       const name = String(partName || "").trim();
       if (!name) return;
@@ -410,8 +447,10 @@ const EPTEC_BRAIN = (() => {
       const container = Safe.qs(".engraved-matrix");
       if (!container) return;
 
+      // 1) Prefer docs/<name>.md (so you just "feed" docs files)
       const rawDoc = await Store.getDoc(name);
 
+      // 2) Fallback: use old inline template if doc missing
       let base = rawDoc;
       if (rawDoc.startsWith("DOC MISSING:") || rawDoc.startsWith("DOC LOAD ERROR:")) {
         const tpl = Assets?.languages?.de?.nf1_template || "";
@@ -425,8 +464,11 @@ const EPTEC_BRAIN = (() => {
       const locale = await Store.getLocale(Config.DEFAULT_LANG);
       const ctx = { user: Config.ACTIVE_USER, locale };
 
+      // 3) Resolve tokens like {{TISCH}} / {{i18n:KEY}} / {{doc:agb}}
       const rendered = await renderTemplate(base, ctx);
 
+      // 4) Render safely as preformatted text by default (0% XSS headaches)
+      // If you intentionally want HTML in docs, set meta.render.mode="html" for that doc action.
       container.innerHTML = `
         <div id="printable-area" class="doc-view"
              style="background:white;color:black;padding:40px;font-family:monospace;white-space:pre-wrap;">
@@ -485,7 +527,7 @@ const EPTEC_BRAIN = (() => {
   };
 
   /* -----------------------------
-   * 9) ACTIONS / INTERACTION / ASSEMBLER
+   * 9) ACTION REGISTRY (NO IF CHAINS)
    * ----------------------------- */
   const Features = {
     upload: (u) => u?.tariff === "premium",
@@ -517,6 +559,9 @@ const EPTEC_BRAIN = (() => {
     return Safe.try(() => fn(ctx), `Action:${actionKey}`);
   }
 
+  /* -----------------------------
+   * 10) INTERACTION (READS META)
+   * ----------------------------- */
   const Interaction = {
     trigger(element) {
       Safe.try(() => {
@@ -525,12 +570,14 @@ const EPTEC_BRAIN = (() => {
         const id = element.getAttribute("data-logic-id");
         const meta = Assets?.objectMeta?.[id] || {};
 
+        // Backward-compat: meta.action + meta.sound
         if (meta.action === "download") runAction("workshop.exportPDF", { id, meta });
         if (meta.action === "upload") {
           if (Config.ACTIVE_USER?.tariff === "premium") runAction("workshop.upload", { id, meta });
           else alert("PREMIUM ERFORDERLICH");
         }
 
+        // New: meta.on.click.do (preferred)
         const action = meta?.on?.click?.do;
         if (action) {
           if (allowed(meta)) runAction(action, meta?.on?.click || { id, meta });
@@ -544,6 +591,9 @@ const EPTEC_BRAIN = (() => {
     }
   };
 
+  /* -----------------------------
+   * 11) ASSEMBLER (READS & RENDERS)
+   * ----------------------------- */
   const Assembler = {
     sync() {
       Safe.try(() => {
@@ -559,6 +609,7 @@ const EPTEC_BRAIN = (() => {
             continue;
           }
 
+          // Render
           if (meta.source === "canva") {
             slot.innerHTML = meta.embedCode || "";
           } else {
@@ -566,6 +617,7 @@ const EPTEC_BRAIN = (() => {
             slot.innerHTML = `<div class="semantic-content">${Safe.escHtml(meta.label || id)}</div>`;
           }
 
+          // Bind
           slot.onclick = () => Interaction.trigger(slot);
         }
 
@@ -574,13 +626,21 @@ const EPTEC_BRAIN = (() => {
     }
   };
 
+  /* -----------------------------
+   * 12) HOTKEYS (OPTIONAL)
+   * ----------------------------- */
   function bindHotkeys() {
     window.addEventListener("keydown", (e) => {
+      // Ctrl+Alt+E -> reload assets + resync
       if (e.ctrlKey && e.altKey && (e.key === "e" || e.key === "E")) runAction("system.reload");
+      // Ctrl+Alt+L -> dump logs
       if (e.ctrlKey && e.altKey && (e.key === "l" || e.key === "L")) runAction("system.dumpLogs");
     });
   }
 
+  /* -----------------------------
+   * 13) INIT
+   * ----------------------------- */
   function init() {
     Safe.try(() => {
       bindHotkeys();
@@ -592,12 +652,15 @@ const EPTEC_BRAIN = (() => {
 
   window.addEventListener("load", init);
 
+  /* -----------------------------
+   * PUBLIC API
+   * ----------------------------- */
   return {
     Config,
     get Assets() { return Assets; },
     reloadAssets,
     Compliance,
-    Activity,
+    Activity, // ✅ exported click/event logger
     Audio,
     Auth,
     Navigation,
@@ -612,56 +675,110 @@ const EPTEC_BRAIN = (() => {
 
 window.EPTEC_BRAIN = EPTEC_BRAIN;
 
-// Global click/UX logger hook
+// ✅ Global hook for UI (optional, but perfect for "we hear every click")
 window.EPTEC_ACTIVITY = window.EPTEC_ACTIVITY || {
   log: (eventName, meta) => window.EPTEC_BRAIN?.Activity?.log?.(eventName, meta)
 };
-
 /* =========================================================
    EPTEC APPEND-ONLY SCENE + SOUND HOOK
-   - Bridges EPTEC_BRAIN.Audio.play("snd-*") => SoundEngine (your real MP3s)
+   Goal:
+   - Scenewechsel => Soundwechsel (Wiese Wind -> Tunnel Fall -> Türen/Raum Wind)
+   - Zero-crash, no imports, does not remove existing logic
+   - Optional: sync UI_STATE.scene/transition if available
    ========================================================= */
 (() => {
   "use strict";
 
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
+  // Map "logic sound ids" -> SoundEngine calls (since you currently only have 3 real MP3s)
   function soundBridge(soundID) {
     const id = String(soundID || "");
-    if (!window.SoundEngine) return false;
-
-    // tunnel family
-    if (id === "snd-wurmloch" || id === "snd-tunnel" || id === "snd-tunnelfall") {
-      safe(() => window.SoundEngine.tunnelFall?.());
-      return true;
+    // If SoundEngine exists, use it as the real audio player
+    if (window.SoundEngine) {
+      if (id === "snd-wurmloch" || id === "snd-tunnel" || id === "snd-tunnelfall") {
+        safe(() => window.SoundEngine.tunnelFall?.());
+        return true;
+      }
+      if (id === "snd-wind") {
+        // meadow / doors / rooms = ambient wind (loop)
+        safe(() => window.SoundEngine.startAmbient?.());
+        return true;
+      }
+      // placeholders for sounds you don't have yet:
+      if (id === "snd-feder" || id === "snd-dielen-knacken") {
+        safe(() => window.SoundEngine.uiConfirm?.());
+        return true;
+      }
     }
-
-    // wind
-    if (id === "snd-wind") {
-      safe(() => window.SoundEngine.startAmbient?.());
-      return true;
-    }
-
-    // placeholders (until you add those mp3s)
-    if (id === "snd-feder" || id === "snd-dielen-knacken") {
-      safe(() => window.SoundEngine.uiConfirm?.());
-      return true;
-    }
-
     return false;
   }
 
+  // Patch EPTEC_BRAIN.Audio.play: keep original behavior, but bridge to SoundEngine if possible
   const brain = window.EPTEC_BRAIN;
-  if (!brain || !brain.Audio) return;
+  if (!brain || !brain.Audio || !brain.Navigation) return;
 
   if (!brain.Audio.__eptec_sound_bridge) {
     const origPlay = brain.Audio.play?.bind(brain.Audio);
 
     brain.Audio.play = function(soundID, volume = 1.0) {
+      // Prefer SoundEngine bridge if possible (prevents missing-audio dead ends)
       if (soundBridge(soundID)) return;
+      // fallback to original audio-tag-based play (if audio tags exist)
       return safe(() => origPlay?.(soundID, volume));
     };
 
     brain.Audio.__eptec_sound_bridge = true;
+  }
+
+  // Scene helpers (optional UI_STATE sync)
+  function setScene(scene) {
+    const s = String(scene || "");
+    safe(() => window.EPTEC_UI_STATE?.set?.({ scene: s }));
+  }
+  function setTransition(patch) {
+    safe(() => window.EPTEC_UI_STATE?.set?.({ transition: patch }));
+  }
+
+  // Wrap Navigation.triggerTunnel: set tunnel scene + play tunnel sound via bridge
+  if (!brain.Navigation.__eptec_scene_hook) {
+    const nav = brain.Navigation;
+    const origTrigger = nav.triggerTunnel?.bind(nav);
+    const origEnter = nav.onRoomEnter?.bind(nav);
+
+    nav.triggerTunnel = function(targetRoom) {
+      // Scene: tunnel
+      setScene("tunnel");
+      setTransition({ tunnelActive: true, whiteout: false });
+
+      // Sound: tunnel fall
+      safe(() => window.SoundEngine?.stopAmbient?.());
+      safe(() => window.SoundEngine?.tunnelFall?.());
+
+      return safe(() => origTrigger?.(targetRoom));
+    };
+
+    nav.onRoomEnter = function(room) {
+      const r = String(room || "").toUpperCase();
+
+      // Scene after tunnel
+      if (r === "R1") setScene("doors");
+      else if (r === "R2") setScene("room2");
+      else setScene("meadow");
+
+      // End tunnel transition
+      setTransition({ tunnelActive: false });
+
+      // Resume ambient (wind) for now (until more room ambients exist)
+      safe(() => window.SoundEngine?.startAmbient?.());
+
+      return safe(() => origEnter?.(room));
+    };
+
+    nav.__eptec_scene_hook = true;
+
+    // Initial scene
+    setScene("meadow");
+    setTransition({ tunnelActive: false, whiteout: false });
   }
 })();
