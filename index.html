@@ -28,26 +28,26 @@
 ========================================================= -->
 <div id="language-switcher" class="lang-switcher">
   <div id="lang-rail">
-    <button type="button" class="lang-item" data-lang="en">EN</button>
-    <button type="button" class="lang-item" data-lang="de">DE</button>
-    <button type="button" class="lang-item" data-lang="es">ES</button>
-    <button type="button" class="lang-item" data-lang="fr">FR</button>
-    <button type="button" class="lang-item" data-lang="it">IT</button>
-    <button type="button" class="lang-item" data-lang="pt">PT</button>
-    <button type="button" class="lang-item" data-lang="nl">NL</button>
-    <button type="button" class="lang-item" data-lang="ru">RU</button>
-    <button type="button" class="lang-item" data-lang="uk">UA</button>
-    <button type="button" class="lang-item" data-lang="ar">AR</button>
-    <button type="button" class="lang-item" data-lang="zh">ZH</button>
-    <button type="button" class="lang-item" data-lang="ja">JA</button>
+    <button class="lang-item" data-lang="en">EN</button>
+    <button class="lang-item" data-lang="de">DE</button>
+    <button class="lang-item" data-lang="es">ES</button>
+    <button class="lang-item" data-lang="fr">FR</button>
+    <button class="lang-item" data-lang="it">IT</button>
+    <button class="lang-item" data-lang="pt">PT</button>
+    <button class="lang-item" data-lang="nl">NL</button>
+    <button class="lang-item" data-lang="ru">RU</button>
+    <button class="lang-item" data-lang="uk">UA</button>
+    <button class="lang-item" data-lang="ar">AR</button>
+    <button class="lang-item" data-lang="zh">ZH</button>
+    <button class="lang-item" data-lang="ja">JA</button>
   </div>
   <button id="lang-toggle" type="button">🌐</button>
 </div>
 
 <!-- =========================================================
-     SCENE 0 – MEADOW / LOGIN
+     VIEW: MEADOW (START / LOGIN)
 ========================================================= -->
-<section id="meadow-view" class="grassy-meadow" data-scene="meadow" style="display:flex;">
+<section id="meadow-view" class="grassy-meadow" data-view="meadow">
 
   <div id="entry-ui" class="entry-ui">
 
@@ -62,7 +62,7 @@
 
     <div id="login-message" class="system-msg"></div>
 
-    <!-- MASTER / ADMIN GATE -->
+    <!-- MASTER START -->
     <div id="admin-gate">
       <input id="admin-code" class="entry-input" autocomplete="off">
       <button id="admin-submit" class="entry-btn" type="button"></button>
@@ -70,7 +70,6 @@
 
   </div>
 
-  <!-- FOOTER -->
   <footer id="legal-footer" class="legal-footer">
     <span id="link-imprint" class="legal-link"></span> |
     <span id="link-terms" class="legal-link"></span> |
@@ -81,29 +80,50 @@
 </section>
 
 <!-- =========================================================
-     SCENE 1 – ROOM 1 (SYSTEM)
+     VIEW: DOORS (ZWISCHENRAUM)
 ========================================================= -->
-<section id="room-1-view" class="room-view" data-scene="R1" style="display:none;">
-  <div class="room-hotspots">
-    <div class="hotspot" data-logic-id="r1.contract.check"></div>
-    <div class="hotspot" data-logic-id="r1.signal.system"></div>
+<section id="doors-view" class="doors-view" data-view="doors" style="display:none;">
+
+  <div class="doors-stage">
+
+    <!-- DOOR: CONSTRUCTION -->
+    <div class="door-block">
+      <div id="door-construction" class="door door-construction"></div>
+      <input class="door-code-input" placeholder="Geschenkcode">
+    </div>
+
+    <!-- DOOR: CONTROLLING -->
+    <div class="door-block">
+      <div id="door-controlling" class="door door-controlling"></div>
+      <input class="door-code-input" placeholder="VIP-Code">
+    </div>
+
   </div>
+
+  <!-- MASTER DOOR ACCESS -->
+  <div class="door-admin">
+    <input id="admin-door-code" class="entry-input" placeholder="Master-Code">
+    <button id="admin-door-submit" class="entry-btn" type="button"></button>
+  </div>
+
+</section>
+
+<!-- =========================================================
+     VIEW: ROOM 1 – VERTRAGSKONSTRUKTION
+========================================================= -->
+<section id="room-1-view" class="room-view" data-view="room1" style="display:none;">
   <div class="engraved-matrix"></div>
 </section>
 
 <!-- =========================================================
-     SCENE 2 – ROOM 2 (USER)
+     VIEW: ROOM 2 – VERTRAGSCONTROLLING
 ========================================================= -->
-<section id="room-2-view" class="room-view" data-scene="R2" style="display:none;">
-  <div class="room-hotspots">
-    <div class="hotspot" data-logic-id="r2.contract.observe"></div>
-    <div class="hotspot" data-logic-id="r2.user.judgement"></div>
-  </div>
+<section id="room-2-view" class="room-view" data-view="room2" style="display:none;">
   <div class="engraved-matrix"></div>
 </section>
 
 <!-- =========================================================
-     REGISTER MODAL
+     MODALS
 ========================================================= -->
 <section id="register-screen" class="modal modal-hidden">
   <div class="modal-card register-card">
@@ -118,36 +138,30 @@
     <div id="reg-rules-password"></div>
     <div id="register-message"></div>
 
-    <button id="reg-submit" class="entry-btn locked" type="button"></button>
-    <button id="reg-close" class="entry-btn secondary" type="button"></button>
+    <button id="reg-submit" class="entry-btn locked"></button>
+    <button id="reg-close" class="entry-btn secondary"></button>
   </div>
 </section>
 
-<!-- =========================================================
-     FORGOT MODAL
-========================================================= -->
 <section id="forgot-screen" class="modal modal-hidden">
   <div class="modal-card forgot-card">
     <input id="forgot-identity" class="entry-input">
     <div id="forgot-message"></div>
-    <button id="forgot-submit" class="entry-btn" type="button"></button>
-    <button id="forgot-close" class="entry-btn secondary" type="button"></button>
+    <button id="forgot-submit" class="entry-btn"></button>
+    <button id="forgot-close" class="entry-btn secondary"></button>
   </div>
 </section>
 
-<!-- =========================================================
-     LEGAL MODAL
-========================================================= -->
 <section id="legal-screen" class="modal modal-hidden">
   <div class="modal-card">
     <div id="legal-title"></div>
     <div id="legal-body"></div>
-    <button id="legal-close" class="entry-btn secondary" type="button"></button>
+    <button id="legal-close" class="entry-btn secondary"></button>
   </div>
 </section>
 
 <!-- =========================================================
-     FX
+     FX LAYERS
 ========================================================= -->
 <div id="eptec-white-flash" class="white-flash-hidden"></div>
 <div id="eptec-tunnel" class="tunnel-hidden">
@@ -155,7 +169,7 @@
 </div>
 
 <!-- =========================================================
-     SCRIPTS
+     SCRIPTS (ORDER FIXED)
 ========================================================= -->
 <script src="scripts/sounds.js" defer></script>
 <script src="scripts/ui_state.js" defer></script>
