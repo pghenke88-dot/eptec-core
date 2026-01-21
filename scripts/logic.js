@@ -2069,90 +2069,433 @@ PASTE HERE:
 
 })();
 /* =========================================================
-   EPTEC APPEND 6 — BILLING + PRESENT + REFERRAL + COUPLING/CANCEL POLICY
-   Rules:
-   - Present code (Newsletter): 50% once on next monthly charge; valid 30 days
-     Applies PER ROOM; if user has two rooms -> both monthly charges can be reduced once (each room once)
-   - Referral/Gift codes: unbefristet valid
-   - Upgrade base->premium: no new one-time payment
-   - Two rooms: cancellation only jointly once second room is active (consent required)
-   - Gift code scope: room1-only codes can be generated if user has room1;
-     “both rooms gift code” can only be generated if user has both rooms
+   EPTEC APPENDIX 6 — BILLING, PRESENT, REFERRAL & COUPLING CORE
+   Status: CANONICAL LOGIC EXTENSION
+   Scope: GLOBAL · PERMANENT · AGB-RELEVANT
+   ---------------------------------------------------------
+   RULES (BINDING):
+   1) Present Codes (Newsletter)
+      - 50% Rabatt EINMALIG auf die NÄCHSTE Monatszahlung
+      - Gültigkeit: 30 Tage ab Ausstellung
+      - Gilt PRO RAUM separat
+        → Hat ein Nutzer Raum 1 + Raum 2,
+          kann BEIDE Monatszahlungen je einmal reduziert werden
+
+   2) Referral / Geschenkcodes (User / Admin)
+      - Unbefristet gültig
+      - Raumgebunden
+      - Codes für BEIDE Räume dürfen NUR generiert werden,
+        wenn der Ersteller beide Räume aktiv besitzt
+
+   3) Upgrade Base → Premium
+      - KEINE erneute Einmalzahlung
+      - Bereits gezahlte Fees gelten als verrechnet
+
+   4) Raum-Kopplung / Kündigung
+      - Sobald ZWEI Räume aktiv sind:
+        → Kündigung NUR GEMEINSAM möglich
+      - Zustimmung gilt als Teil der AGB-Bestätigung
    ========================================================= */
 (() => {
   "use strict";
+
+  /* -----------------------------
+     SAFE HELPERS
+     ----------------------------- */
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+  const nowISO = () => new Date().toISOString();
+  const addDaysISO = (d) => new Date(Date.now() + (Number(d) || 0) * 86400000).toISOString();
 
+  /* -----------------------------
+     FEED ACCESS (SINGLE SOURCE)
+     ----------------------------- */
   const FEED_KEY = "EPTEC_FEED";
+
   function readFeed() {
     const raw = safe(() => localStorage.getItem(FEED_KEY));
-    const j = raw ? safe(() => JSON.parse(raw)) : null;
-    return isObj(j) ? j : {};
-  }
-  function writeFeed(feed) { safe(() => localStorage.setItem(FEED_KEY, JSON.stringify(feed))); }
-
-  function nowISO() { return new Date().toISOString(); }
-  function addDaysISO(days) { return new Date(Date.now() + (Number(days)||0)*86400000).toISOString(); }
-  function upper(s) { return String(s||"").trim().toUpperCase(); }
-
-  function username() {
-    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
-    return String(sess?.username || "anonymous").trim().toLowerCase() || "anonymous";
+    const json = raw ? safe(() => JSON.parse(raw)) : null;
+    return isObj(json) ? json : {};
   }
 
-  // ensure shape
-  function ensure(feed) {
-    const f = isObj(feed) ? feed : {};
-    f.promos = isObj(f.promos) ? f.promos : {};
-    f.promos.presentCampaigns = isObj(f.promos.presentCampaigns) ? f.promos.presentCampaigns : {};
-    f.promos.presentRedeem = isObj(f.promos.presentRedeem) ? f.promos.presentRedeem : {};
-    f.promos.referralPolicy = f.promos.referralPolicy || { validity: "UNLIMITED" };
+  function writeFeed(feed) {
+    safe(() => localStorage.setItem(FEED_KEY, JSON.stringify(feed)));
+  }
+
+  function ensureFeed() {
+    const f = readFeed();
+
+    f.products = isObj(f.products) ? f.products : {};
+    f.products.room1 = isObj(f.products.room1) ? f.products.room1 : { active: false };
+    f.products.room2 = isObj(f.products.room2) ? f.products.room2 : { active: false };
+
     f.billing = isObj(f.billing) ? f.billing : {};
     f.billing.oneTimeFeeWaived = !!f.billing.oneTimeFeeWaived;
-    f.billing.nextMonthlyDiscountByRoom = isObj(f.billing.nextMonthlyDiscountByRoom) ? f.billing.nextMonthlyDiscountByRoom : { room1: null, room2: null };
+    f.billing.nextDiscount = isObj(f.billing.nextDiscount)
+      ? f.billing.nextDiscount
+      : { room1: null, room2: null };
+
+    f.promos = isObj(f.promos) ? f.promos : {};
+    f.promos.present = isObj(f.promos.present) ? f.promos.present : {};
+    f.promos.referral = isObj(f.promos.referral) ? f.promos.referral : {};
+
     f.coupling = isObj(f.coupling) ? f.coupling : { jointCancel: false };
-    f.codes = isObj(f.codes) ? f.codes : {};
-    f.codes.gifts = isObj(f.codes.gifts) ? f.codes.gifts : {};
+
     return f;
   }
 
-  // Access helper (rooms owned)
-  function hasRoom(roomKey) {
-    const feed = ensure(readFeed());
-    const r1 = !!feed?.products?.construction?.active;
-    const r2 = !!feed?.products?.controlling?.active;
-    if (roomKey === "room1") return r1;
-    if (roomKey === "room2") return r2;
-    if (roomKey === "both") return r1 && r2;
-    return false;
+  /* -----------------------------
+     BILLING CORE API
+     ----------------------------- */
+  const Billing = {};
+
+  Billing.waiveOneTimeFee = (reason = "SYSTEM") => {
+    const feed = ensureFeed();
+    feed.billing.oneTimeFeeWaived = true;
+    feed.billing.oneTimeFeeReason = String(reason).slice(0, 120);
+    writeFeed(feed);
+    return { ok: true };
+  };
+
+  Billing.upgradeToPremium = () => {
+    // Regel: Upgrade entfernt jede weitere Einmalzahlung
+    return Billing.waiveOneTimeFee("UPGRADE_BASE_TO_PREMIUM");
+  };
+
+  Billing.applyPresentCode = (roomKey) => {
+    const feed = ensureFeed();
+    if (!["room1", "room2"].includes(roomKey)) return { ok: false };
+
+    feed.billing.nextDiscount[roomKey] = {
+      percent: 50,
+      expiresAt: addDaysISO(30),
+      appliedAt: nowISO(),
+      type: "PRESENT"
+    };
+
+    writeFeed(feed);
+    return { ok: true };
+  };
+
+  Billing.updateCoupling = () => {
+    const feed = ensureFeed();
+    const r1 = !!feed.products.room1.active;
+    const r2 = !!feed.products.room2.active;
+
+    feed.coupling.jointCancel = r1 && r2;
+    writeFeed(feed);
+
+    return { ok: true, jointCancel: feed.coupling.jointCancel };
+  };
+
+  /* -----------------------------
+     GLOBAL REGISTRATION
+     ----------------------------- */
+  window.EPTEC_BILLING = Billing;
+
+  safe(() => window.EPTEC_ACTIVITY?.log?.(
+    "appendix6.loaded",
+    { ts: nowISO() }
+  ));
+
+})();
+
+/* =========================================================
+   EPTEC ADDEND 7 — LANGUAGE GOVERNANCE CORE (UNBLOCKABLE · GLOBAL · DETERMINISTIC)
+   Purpose:
+   - Canonical 12 language codes (UI): EN DE ES FR IT PT NL RU UK AR CN JP
+   - Internal keys: en de es fr it pt nl ru uk ar cn jp
+   - Locale/dir mapping, date/time formatting, global clock updates
+   - Unblockable language rail: capture-phase click handler
+   - Docs/Locals readiness: provides EPTEC_I18N.t(key) loading locales/<lang>.json
+   - Persist device language: localStorage EPTEC_DEVICE_LANG
+   - Integrates (optional) Admin Emergency Switch: EPTEC_LANG_EMERGENCY.canUse(code)
+   - Append-only, no-crash, idempotent
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+  const $ = (id) => document.getElementById(id);
+
+  /* -----------------------------
+     1) CANONICAL LANGUAGE MAP
+     ----------------------------- */
+  const MAP = Object.freeze({
+    // UI label -> internal key -> locale/dir
+    EN: { key: "en", locale: "en-US", dir: "ltr" },
+    DE: { key: "de", locale: "de-DE", dir: "ltr" },
+    ES: { key: "es", locale: "es-ES", dir: "ltr" },
+    FR: { key: "fr", locale: "fr-FR", dir: "ltr" },
+    IT: { key: "it", locale: "it-IT", dir: "ltr" },
+    PT: { key: "pt", locale: "pt-PT", dir: "ltr" }, // ✅ PT (not PL)
+    NL: { key: "nl", locale: "nl-NL", dir: "ltr" },
+    RU: { key: "ru", locale: "ru-RU", dir: "ltr" },
+    UK: { key: "uk", locale: "uk-UA", dir: "ltr" }, // UI label UK = Ukrainian
+    AR: { key: "ar", locale: "ar-SA", dir: "rtl" },
+    CN: { key: "cn", locale: "zh-CN", dir: "ltr" }, // UI label CN
+    JP: { key: "jp", locale: "ja-JP", dir: "ltr" }  // UI label JP
+  });
+
+  const KEY_TO_UI = Object.freeze({
+    en: "EN", de: "DE", es: "ES", fr: "FR", it: "IT", pt: "PT", nl: "NL",
+    ru: "RU", uk: "UK", ar: "AR", cn: "CN", jp: "JP"
+  });
+
+  function normToUI(x) {
+    const raw = String(x || "").trim().toUpperCase();
+    // Accept common aliases
+    if (raw === "UA") return "UK";
+    if (raw === "ZH") return "CN";
+    if (raw === "JA") return "JP";
+    if (MAP[raw]) return raw;
+    return "EN";
   }
 
-  const Billing = window.EPTEC_BILLING || {};
+  function normToKey(x) {
+    const ui = normToUI(x);
+    return MAP[ui].key;
+  }
 
-  Billing.waiveOneTimeFee = Billing.waiveOneTimeFee || ((reason) => {
-    const feed = ensure(readFeed());
-    feed.billing.oneTimeFeeWaived = true;
-    feed.billing.oneTimeFeeWaivedReason = String(reason||"").slice(0,200);
-    writeFeed(feed);
-    safe(() => window.EPTEC_ACTIVITY?.log?.("billing.oneTimeFeeWaived", { reason }));
-    return { ok: true };
-  });
+  function getMetaFromKey(key) {
+    const k = String(key || "").trim().toLowerCase();
+    const ui = KEY_TO_UI[k] || "EN";
+    return MAP[ui] || MAP.EN;
+  }
 
-  Billing.upgradeToPremium = Billing.upgradeToPremium || (() => {
-    // rule: upgrading removes one-time fee
-    return Billing.waiveOneTimeFee("UPGRADE_TO_PREMIUM");
-  });
+  /* -----------------------------
+     2) STATE BRIDGE (EPTEC_MASTER.UI_STATE or EPTEC_UI_STATE)
+     ----------------------------- */
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
 
-  // Coupling rule: once second room active -> only joint cancel
-  Billing.updateCoupling = Billing.updateCoupling || (() => {
-    const feed = ensure(readFeed());
-    const r1 = !!feed?.products?.construction?.active;
-    const r2 = !!feed?.products?.controlling?.active;
-    feed.coupling.jointCancel = !!(r1 && r2);
-    writeFeed(feed);
-    return { ok: true, jointCancel: feed.coupling.jointCancel };
+  /* -----------------------------
+     3) PERSISTENCE (device language)
+     ----------------------------- */
+  const DEVICE_KEY = "EPTEC_DEVICE_LANG";
+
+  function loadDeviceLangKey() {
+    const raw = safe(() => localStorage.getItem(DEVICE_KEY));
+    const k = String(raw || "").trim().toLowerCase();
+    return KEY_TO_UI[k] ? k : "";
+  }
+
+  function saveDeviceLangKey(key) {
+    const k = String(key || "").trim().toLowerCase();
+    if (!KEY_TO_UI[k]) return;
+    safe(() => localStorage.setItem(DEVICE_KEY, k));
+  }
+
+  /* -----------------------------
+     4) EMERGENCY SWITCH INTEGRATION (optional)
+     - rail remains clickable; language switch may be refused if disabled
+     ----------------------------- */
+  function emergencyAllows(uiCode) {
+    const E = window.EPTEC_LANG_EMERGENCY;
+    const canUse = E && typeof E.canUse === "function" ? E.canUse : null;
+    if (!canUse) return true;
+    return !!safe(() => canUse(uiCode));
+  }
+
+  function toast(msg, type = "info", ms = 2400) {
+    const bridged = safe(() => window.EPTEC_UI?.toast?.(String(msg), String(type), ms));
+    if (bridged !== undefined) return bridged;
+    console.log(`[TOAST:${type}]`, msg);
+  }
+
+  /* -----------------------------
+     5) APPLY LANGUAGE (global)
+     ----------------------------- */
+  function applyLanguage(uiCodeOrKey) {
+    const ui = normToUI(uiCodeOrKey);
+    if (!emergencyAllows(ui)) {
+      toast(`Sprache ${ui} ist derzeit deaktiviert.`, "error", 2600);
+      safe(() => window.EPTEC_ACTIVITY?.log?.("i18n.blocked", { ui }));
+      return { ok: false, reason: "DISABLED", ui };
+    }
+
+    const meta = MAP[ui] || MAP.EN;
+    const key = meta.key;
+
+    // DOM lang/dir
+    safe(() => document.documentElement.setAttribute("lang", key));
+    safe(() => document.documentElement.setAttribute("dir", meta.dir));
+
+    // State
+    setState({
+      lang: key,
+      locale: meta.locale,
+      i18n: { lang: key, locale: meta.locale, dir: meta.dir, ui }
+    });
+
+    // Persist device preference
+    saveDeviceLangKey(key);
+
+    // audit
+    safe(() => window.EPTEC_ACTIVITY?.log?.("i18n.set", { ui, key, locale: meta.locale, dir: meta.dir }));
+
+    // immediate clock refresh
+    updateClock();
+
+    return { ok: true, ui, key, locale: meta.locale, dir: meta.dir };
+  }
+
+  /* -----------------------------
+     6) CLOCK (always consistent with current locale)
+     ----------------------------- */
+  function getLocale() {
+    const st = getState();
+    const loc = st?.i18n?.locale || st?.locale;
+    return String(loc || "en-US");
+  }
+
+  function updateClock() {
+    const el = $("system-clock");
+    if (!el) return;
+    const loc = getLocale();
+    safe(() => {
+      el.textContent = new Date().toLocaleString(loc, { dateStyle: "medium", timeStyle: "medium" });
+    });
+  }
+
+  function bindClock() {
+    const el = $("system-clock");
+    if (!el || el.__eptec_lang_clock) return;
+    el.__eptec_lang_clock = true;
+    updateClock();
+    setInterval(updateClock, 1000);
+  }
+
+  /* -----------------------------
+     7) UNBLOCKABLE LANGUAGE RAIL
+     - capture-phase click handler (does not rely on per-button bindings)
+     ----------------------------- */
+  function bindRailUnblockable() {
+    if (document.__eptec_lang_capture) return;
+    document.__eptec_lang_capture = true;
+
+    document.addEventListener("click", (e) => {
+      const t = e?.target;
+      if (!t) return;
+
+      // find closest .lang-item or [data-lang]
+      const btn = t.closest ? t.closest(".lang-item,[data-lang]") : null;
+      if (!btn) return;
+
+      const dataLang = btn.getAttribute("data-lang");
+      if (!dataLang) return;
+
+      // Accept both "EN" and "en"
+      const ui = normToUI(dataLang);
+      applyLanguage(ui);
+
+      // auto-close rail if present
+      const sw = $("language-switcher");
+      if (sw) sw.classList.remove("lang-open");
+    }, true); // <-- capture phase
+  }
+
+  /* -----------------------------
+     8) LOCALES LOADER + t(key)
+     - Loads ./locales/<key>.json (en,de,...,cn,jp)
+     - Falls back to EN if missing
+     ----------------------------- */
+  const cache = new Map(); // langKey -> object
+  const pending = new Map();
+
+  async function loadLocaleJSON(langKey) {
+    const k = String(langKey || "en").trim().toLowerCase();
+    if (cache.has(k)) return cache.get(k);
+    if (pending.has(k)) return pending.get(k);
+
+    const p = (async () => {
+      try {
+        const r = await fetch(`./locales/${encodeURIComponent(k)}.json`, { cache: "no-store" });
+        const j = r.ok ? await r.json() : {};
+        const out = isObj(j) ? j : {};
+        cache.set(k, out);
+        return out;
+      } catch {
+        cache.set(k, {});
+        return {};
+      } finally {
+        pending.delete(k);
+      }
+    })();
+
+    pending.set(k, p);
+    return p;
+  }
+
+  async function tAsync(key, fallback = "") {
+    const st = getState();
+    const langKey = String(st?.i18n?.lang || st?.lang || "en").trim().toLowerCase();
+    const loc = await loadLocaleJSON(langKey);
+    if (loc && Object.prototype.hasOwnProperty.call(loc, key)) return String(loc[key] ?? "");
+    if (langKey !== "en") {
+      const en = await loadLocaleJSON("en");
+      if (en && Object.prototype.hasOwnProperty.call(en, key)) return String(en[key] ?? "");
+    }
+    return String(fallback || "");
+  }
+
+  function tSync(key, fallback = "") {
+    const st = getState();
+    const langKey = String(st?.i18n?.lang || st?.lang || "en").trim().toLowerCase();
+    const loc = cache.get(langKey) || {};
+    if (Object.prototype.hasOwnProperty.call(loc, key)) return String(loc[key] ?? "");
+    const en = cache.get("en") || {};
+    if (Object.prototype.hasOwnProperty.call(en, key)) return String(en[key] ?? "");
+    return String(fallback || "");
+  }
+
+  /* -----------------------------
+     9) EXPORT API (Append-friendly)
+     ----------------------------- */
+  window.EPTEC_I18N = window.EPTEC_I18N || {};
+  // authoritative apply (no conflict)
+  window.EPTEC_I18N.apply = window.EPTEC_I18N.apply || applyLanguage;
+  window.EPTEC_I18N.get = window.EPTEC_I18N.get || (() => {
+    const st = getState();
+    const k = String(st?.i18n?.lang || st?.lang || "en").trim().toLowerCase();
+    return KEY_TO_UI[k] ? k : "en";
   });
+  window.EPTEC_I18N.t = window.EPTEC_I18N.t || tSync;
+  window.EPTEC_I18N.tAsync = window.EPTEC_I18N.tAsync || tAsync;
+  window.EPTEC_I18N.loadLocale = window.EPTEC_I18N.loadLocale || loadLocaleJSON;
+
+  /* -----------------------------
+     10) BOOT
+     - Default EN, unless device already chose something
+     ----------------------------- */
+  function boot() {
+    // Load EN locale early (best effort; does not block)
+    safe(() => loadLocaleJSON("en"));
+
+    const device = loadDeviceLangKey();
+    if (device) {
+      applyLanguage(device); // key accepted
+    } else {
+      // baseline default EN (your requirement)
+      applyLanguage("EN");
+    }
+
+    bindRailUnblockable();
+    bindClock();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
 })();
 
 /* =========================================================
