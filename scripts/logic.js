@@ -2151,6 +2151,10 @@ PASTE HERE:
     const r2 = !!feed?.products?.controlling?.active;
     feed.coupling.jointCancel = !!(r1 && r2);
     writeFeed(feed);
+    return { ok: true, jointCancel: feed.coupling.jointCancel };
+  });
+})();
+
 /* =========================================================
    EPTEC APPEND — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE (RECORD UNTIL LOGOUT)
    - Demo: show placeholder icons (start + doors) without enabling functions
