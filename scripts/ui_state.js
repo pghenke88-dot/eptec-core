@@ -1,373 +1,174 @@
 /**
  * scripts/ui_state.js
- * EPTEC UI-State (pure state)
- * Extended:
- * - products (construction/controlling + coupling flag)
- * - codes (referral + present status)
- * - billing (next invoice preview)
+ * EPTEC UI-STATE – FINAL (PURE STATE, NO PATCHES)
  *
- * NOTE:
- * This file stays PURE state. No business logic, no DOM, no backend calls.
+ * - Pure state only: no DOM, no backend calls, no console logs, no Audio
+ * - Deep-merge set()
+ * - Dramaturgie-ready views + modes + transitions + paywall + products/codes/billing
  */
 
 (() => {
   "use strict";
 
-  const state = {
-    view: "meadow",         // "meadow" | "room1" | "room2"
-    modal: null,            // null | "register" | "forgot" | "legal"
-    legalKind: null,        // "imprint" | "terms" | "support" | "privacy" | null
+  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+
+  function deepMerge(base, patch) {
+    if (!isObj(base)) base = {};
+    if (!isObj(patch)) return base;
+    for (const k of Object.keys(patch)) {
+      const bv = base[k];
+      const pv = patch[k];
+      if (isObj(bv) && isObj(pv)) base[k] = deepMerge({ ...bv }, pv);
+      else base[k] = pv;
+    }
+    return base;
+  }
+
+  const DEFAULTS = {
+    // Dramaturgie
+    view: "meadow",                 // meadow | tunnel | doors | room1 | room2 | profile | legal
+    modal: null,                    // null | register | forgot | legal
+    legalKind: null,                // imprint | terms | support | privacy | null
     loading: false,
 
-    // -----------------------------
-    // NEW: Dashboard-visual state
-    // -----------------------------
+    // i18n / locale (12 languages handled by main; ui uses this state)
+    i18n: {
+      lang: "en",
+      dir: "ltr",
+      locale: "en-US"
+    },
+
+    // Modes (UI flags)
+    modes: {
+      demo: false,
+      admin: false,
+      vip: false
+    },
+
+    // Transitions / FX flags (UI only)
+    transition: {
+      whiteout: false,
+      tunnelActive: false,
+      last: null
+    },
+
+    // Door hub (Zwischenraum)
+    doors: {
+      selected: null,               // construction | controlling | null
+      lastAttempt: null
+    },
+
+    // Access (what user can enter)
+    access: {
+      construction: false,
+      controlling: false
+    },
+
+    // Paywall UI (door-specific)
+    paywall: {
+      open: false,
+      door: null,                   // construction | controlling | null
+      message: "",
+      referral: { input: "", lastResult: null },
+      vip: { input: "", lastResult: null }
+    },
+
+    // Dashboard visuals (fed by StateManager)
     products: {
-      construction: { active: false, tier: null }, // tier: "BASIS" | "PREMIUM" | null
-      controlling:  { active: false, tier: null }, // tier: "BASIS" | "PREMIUM" | null (premium may come later)
+      construction: { active: false, tier: null },
+      controlling:  { active: false, tier: null },
       coupled: false
     },
 
     codes: {
-      // user-generated referral (unlimited uses)
       referral: { code: null },
-
-      // global present code (admin-generated)
-      present: {
-        status: "none",          // "none" | "active" | "used" | "expired"
-        discountPercent: null,   // number | null (e.g., 50)
-        validUntil: null         // string (date) | null (e.g., "2026-12-31")
-      }
+      present: { status: "none", discountPercent: null, validUntil: null }
     },
 
     billing: {
-      nextInvoiceDate: null,             // string | null
-      nextInvoiceDiscountPercent: null   // number | null
+      nextInvoiceDate: null,
+      nextInvoiceDiscountPercent: null
+    },
+
+    // Recording hooks (admin film mode – later module)
+    recording: {
+      enabled: false,
+      on: false,
+      source: "screen",             // screen | camera
+      status: "idle",               // idle | starting | recording | stopping | ready | error
+      lastError: null,
+      lastBlobUrl: null
+    },
+
+    // Optional global notice
+    notice: {
+      type: null,                   // ok | warn | error | null
+      text: "",
+      ts: null
     }
   };
 
+  let state = deepMerge({}, DEFAULTS);
   const listeners = new Set();
 
   function snapshot() {
-    // shallow clone of top-level + nested objects to avoid accidental external mutation
-    return {
-      ...state,
-      products: {
-        ...state.products,
-        construction: { ...state.products.construction },
-        controlling: { ...state.products.controlling }
-      },
-      codes: {
-        ...state.codes,
-        referral: { ...state.codes.referral },
-        present: { ...state.codes.present }
-      },
-      billing: { ...state.billing }
-    };
+    return JSON.parse(JSON.stringify(state));
+  }
+
+  function normalize(next) {
+    const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
+    const lang = String(n.i18n?.lang || "en").toLowerCase().trim() || "en";
+    n.i18n = n.i18n || {};
+    n.i18n.lang = lang;
+    n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
+    return n;
   }
 
   function set(patch = {}) {
-    // ✅ tiny normalization: avoid undefined legalKind
-    if ("legalKind" in patch && patch.legalKind === undefined) patch.legalKind = null;
-
-    // allow partial nested patches (products/codes/billing) without requiring full objects
-    if (patch.products) {
-      state.products = {
-        ...state.products,
-        ...patch.products,
-        construction: {
-          ...state.products.construction,
-          ...(patch.products.construction || {})
-        },
-        controlling: {
-          ...state.products.controlling,
-          ...(patch.products.controlling || {})
-        }
-      };
-      delete patch.products;
-    }
-
-    if (patch.codes) {
-      state.codes = {
-        ...state.codes,
-        ...patch.codes,
-        referral: {
-          ...state.codes.referral,
-          ...(patch.codes.referral || {})
-        },
-        present: {
-          ...state.codes.present,
-          ...(patch.codes.present || {})
-        }
-      };
-      delete patch.codes;
-    }
-
-    if (patch.billing) {
-      state.billing = {
-        ...state.billing,
-        ...(patch.billing || {})
-      };
-      delete patch.billing;
-    }
-
-    Object.assign(state, patch);
+    const next = normalize(deepMerge(snapshot(), isObj(patch) ? patch : {}));
+    state = next;
 
     const snap = snapshot();
     for (const fn of listeners) {
       try { fn(snap); } catch {}
     }
+    return snap;
   }
 
   function onChange(fn) {
+    if (typeof fn !== "function") return () => {};
     listeners.add(fn);
     try { fn(snapshot()); } catch {}
     return () => listeners.delete(fn);
   }
 
-  window.EPTEC_UI_STATE = { state, set, onChange };
-})();
-/* =========================================================
-   PATCH FOR scripts/ui_state.js  (append-only)
-   Drop this at the END of ui_state.js (after existing code)
-   Purpose:
-   - Adds stable "modes" support (demo/admin/vip) without rewriting core
-   - Makes .set() deep-merge safe for nested objects (modes, admin, etc.)
-   - Guarantees default keys exist so ui_controller/main patches don’t break
-   ========================================================= */
-(() => {
-  "use strict";
-
-  // If EPTEC_UI_STATE doesn't exist yet, create a minimal compatible one.
-  // If it exists, patch it WITHOUT rewriting.
-  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
-
-  function deepMerge(a, b) {
-    if (!isObj(a)) a = {};
-    if (!isObj(b)) return a;
-    for (const k of Object.keys(b)) {
-      const av = a[k], bv = b[k];
-      if (isObj(av) && isObj(bv)) a[k] = deepMerge({ ...av }, bv);
-      else a[k] = bv;
-    }
-    return a;
+  // Convenience helpers (still pure)
+  function setView(view) { return set({ view: String(view || "meadow") }); }
+  function openModal(modal, extra = {}) { return set({ modal: modal ? String(modal) : null, ...extra }); }
+  function closeModal() { return set({ modal: null }); }
+  function setLang(lang) { return set({ i18n: { lang: String(lang || "en").toLowerCase().trim() } }); }
+  function setMode(key, on) {
+    const k = String(key || "").trim();
+    if (!k) return snapshot();
+    const cur = snapshot();
+    cur.modes = cur.modes || {};
+    cur.modes[k] = !!on;
+    return set({ modes: cur.modes });
   }
+  function setNotice(type, text) { return set({ notice: { type: type || null, text: String(text || ""), ts: Date.now() } }); }
 
-  const DEFAULTS = {
-    view: "meadow",          // "meadow" | "room1" | "room2" | "doors" (optional)
-    modal: null,             // null | "register" | "forgot" | "legal"
-    legalKind: null,         // imprint | terms | support | privacy (stable key)
-    modes: {                 // NEW: demo flag used by demo-mode CSS + orb permission
-      demo: false,
-      // admin/vip are optional; admin mode is primarily EPTEC_BRAIN.Config.ADMIN_MODE
-      admin: false,
-      vip: false
-    },
-    products: {
-      construction: { active: false, tier: null },
-      controlling: { active: false, tier: null },
-      coupled: false
-    },
-    codes: {
-      referral: { code: null },
-      present: { status: "none", discountPercent: null, validUntil: null }
-    },
-    billing: {
-      nextInvoiceDate: null,
-      nextInvoiceDiscountPercent: null,
-      paymentRegistered: false
-    },
-    admin: {
-      vipCodes: null,     // optional list for admin UI
-      present: null,      // optional {code, validUntil}
-      countryLocks: null  // optional map
-    }
+  window.EPTEC_UI_STATE = {
+    get state() { return state; },
+    set,
+    onChange,
+    snapshot,
+
+    // helpers
+    setView,
+    openModal,
+    closeModal,
+    setLang,
+    setMode,
+    setNotice
   };
-
-  function normalizeState(s) {
-    const base = deepMerge(JSON.parse(JSON.stringify(DEFAULTS)), isObj(s) ? s : {});
-    // Ensure nested keys exist
-    base.modes = isObj(base.modes) ? base.modes : { demo: false, admin: false, vip: false };
-    if (typeof base.modes.demo !== "boolean") base.modes.demo = !!base.modes.demo;
-    if (typeof base.modes.admin !== "boolean") base.modes.admin = !!base.modes.admin;
-    if (typeof base.modes.vip !== "boolean") base.modes.vip = !!base.modes.vip;
-    return base;
-  }
-
-  // Create minimal state manager if missing
-  if (!window.EPTEC_UI_STATE) {
-    let _state = normalizeState({});
-    const listeners = new Set();
-
-    window.EPTEC_UI_STATE = {
-      get state() { return _state; },
-      set(patch) {
-        const next = normalizeState(deepMerge({ ..._state }, isObj(patch) ? patch : {}));
-        _state = next;
-        listeners.forEach((fn) => { try { fn(_state); } catch {} });
-        return _state;
-      },
-      onChange(fn) { if (typeof fn === "function") listeners.add(fn); }
-    };
-    return;
-  }
-
-  // Patch existing EPTEC_UI_STATE
-  const ui = window.EPTEC_UI_STATE;
-
-  // Ensure state exists and is normalized
-  try {
-    const cur = normalizeState(ui.state || ui._state || {});
-    // If it has a setter, use it; otherwise overwrite safe property
-    try { ui.set?.(cur); } catch {}
-    if (!ui.state) ui.state = cur; // if state is plain field
-  } catch {}
-
-  // Wrap .set to deep-merge
-  if (typeof ui.set === "function" && !ui.set.__eptec_patched) {
-    const origSet = ui.set.bind(ui);
-    const wrapped = function(patch) {
-      const current = normalizeState(ui.state || {});
-      const merged = normalizeState(deepMerge({ ...current }, isObj(patch) ? patch : {}));
-      return origSet(merged);
-    };
-    wrapped.__eptec_patched = true;
-    ui.set = wrapped;
-  }
-
-  // Ensure onChange exists
-  if (typeof ui.onChange !== "function") {
-    const listeners = new Set();
-    ui.onChange = (fn) => { if (typeof fn === "function") listeners.add(fn); };
-    const origSet = ui.set?.bind(ui);
-    if (origSet) {
-      ui.set = function(patch) {
-        const res = origSet(patch);
-        listeners.forEach((fn) => { try { fn(ui.state); } catch {} });
-        return res;
-      };
-    }
-  }
-
-  // Convenience helpers (append-only)
-  ui.setView = ui.setView || ((view) => ui.set({ view }));
-  ui.setDemo = ui.setDemo || ((on) => ui.set({ modes: { ...(ui.state?.modes || {}), demo: !!on } }));
-
 })();
-// Erweiterung von State: Neue Funktion für Modusänderungen und Produktstatus
-(() => {
-  "use strict";
-
-  // Funktion zum Setzen des Modus (z.B. demo, admin, vip)
-  function setMode(mode, value) {
-    const validModes = ['demo', 'admin', 'vip'];
-    if (validModes.includes(mode)) {
-      EPTEC_UI_STATE.set({ modes: { ...EPTEC_UI_STATE.state.modes, [mode]: value } });
-    }
-  }
-
-  // Funktion zum Aktualisieren des Produktstatus
-  function updateProductStatus(products) {
-    EPTEC_UI_STATE.set({
-      products: {
-        construction: { active: products.construction?.active, tier: products.construction?.tier },
-        controlling: { active: products.controlling?.active, tier: products.controlling?.tier },
-        coupled: products.coupled || false
-      }
-    });
-  }
-
-  // Event-Listener für Produkt- oder Modusänderungen, z.B. nach erfolgreichem Login
-  EPTEC_UI_STATE.onChange((newState) => {
-    if (newState.modes.demo) {
-      // Beispiel: Demo-Modus aktiviert -> UI ändern
-      console.log("Demo-Modus aktiviert");
-    }
-    if (newState.products.construction.active) {
-      // Beispiel: Construction aktiv -> UI ändern
-      console.log("Construction ist aktiv");
-    }
-  });
-
-  // Füge die Funktionen dem globalen Objekt hinzu
-  window.EPTEC_UI_STATE.setMode = setMode;
-  window.EPTEC_UI_STATE.updateProductStatus = updateProductStatus;
-
-})();
-// Erweiterung von State: Neue Funktion für Tür-Status und Benutzerfeedback
-(() => {
-  "use strict";
-
-  // Funktion zum Setzen des Türstatus (ob eine Tür freigeschaltet ist oder nicht)
-  function setDoorStatus(door, status) {
-    const validDoors = ['construction', 'controlling'];
-    if (validDoors.includes(door)) {
-      EPTEC_UI_STATE.set({
-        products: {
-          ...EPTEC_UI_STATE.state.products,
-          [door]: { ...EPTEC_UI_STATE.state.products[door], active: status }
-        }
-      });
-    }
-  }
-
-  // Funktion zum Anzeigen von Benutzerfeedback
-  function showFeedback(message, type) {
-    const feedback = {
-      success: "Erfolg: " + message,
-      error: "Fehler: " + message,
-      warning: "Warnung: " + message
-    };
-
-    const msg = feedback[type] || feedback.success;
-    EPTEC_UI_STATE.set({
-      feedback: { message: msg, type }
-    });
-  }
-
-  // Event-Listener für Benutzerinteraktionen
-  EPTEC_UI_STATE.onChange((newState) => {
-    if (newState.feedback) {
-      console.log(newState.feedback.message); // Hier kannst du die Anzeige der Nachrichten im UI anpassen
-    }
-  });
-
-  // Füge die Funktionen dem globalen Objekt hinzu
-  window.EPTEC_UI_STATE.setDoorStatus = setDoorStatus;
-  window.EPTEC_UI_STATE.showFeedback = showFeedback;
-
-})();
-const Audio = {
-    interval: null,
-    play(soundID, volume = 1.0) {
-        Safe.try(() => {
-            const snd = Safe.byId(soundID);
-            if (!snd) return;
-            snd.volume = Safe.clamp01(volume);
-            snd.play().catch(() => {}); // autoplay policies -> no-crash
-        }, "Audio.play");
-    },
-
-    startRandomDielenKnacken() {
-        this.stopAmbient();
-        this.interval = setInterval(() => {
-            if (Math.random() > 0.7 && Navigation.currentLocation === "R2") {
-                this.play("snd-dielen-knacken", 0.3); // Das Geräusch von Dielenknacken
-            }
-        }, 45000);
-    },
-
-    stopAmbient() {
-        if (this.interval) { clearInterval(this.interval); this.interval = null; }
-    }
-};
-function navigateToTunnel() {
-    const tunnel = Safe.byId('eptec-tunnel');
-    tunnel.classList.remove('tunnel-hidden');
-    Audio.play("snd-tunnel", 1.0); // Tunnelgeräusch mit voller Lautstärke
-
-    setTimeout(() => {
-        tunnel.classList.add('tunnel-hidden');
-        Navigation.triggerTunnel("R2");  // Weiterleitung zum Raum 2 nach dem Tunnelgeräusch
-    }, 2000); // Verzögerung für das Tunnelgeräusch
-}
