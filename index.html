@@ -10,33 +10,28 @@
   <link rel="stylesheet" href="assets/ui_elements.css" />
   <link rel="stylesheet" href="assets/hidden.css" />
 
-  <!-- Core: UI/State/Logic (defer keeps order) -->
+  <!-- Order matters (defer preserves order) -->
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
-
-  <!-- EPTEC Logic Kernel (your big logic.js) -->
   <script src="scripts/logic.js" defer></script>
-
-  <!-- Main controller -->
   <script src="scripts/main.js" defer></script>
 </head>
 
 <body>
 
 <!-- =========================================================
-START / MEADOW (Scene: start)
-IDs required by logic:
-- login-username, login-password, btn-login, btn-demo
-- admin-code, admin-submit, (optional) admin-camera-toggle
-- language-switcher, lang-toggle, lang-rail, system-clock
+START / MEADOW  (logic scene: start)
+Required IDs: login-username, login-password, btn-login, btn-demo,
+admin-code, admin-submit, admin-camera-toggle(optional),
+language-switcher, lang-toggle, lang-rail, system-clock
 ========================================================= -->
 <section id="meadow-view" class="scene">
-
   <div class="login-box">
+
     <input id="login-username" type="text" placeholder="Username" />
     <input id="login-password" type="password" placeholder="Password" />
 
-    <button id="btn-login">Login</button>
+    <button id="btn-login" type="button">Login</button>
     <button id="btn-demo" type="button">Demo</button>
 
     <div id="login-message" class="system-msg"></div>
@@ -44,18 +39,19 @@ IDs required by logic:
     <button id="btn-register" type="button">Register</button>
     <button id="btn-forgot" type="button">Forgot password</button>
 
-    <!-- Admin start (Author) -->
+    <!-- Admin start -->
     <input id="admin-code" type="password" placeholder="" />
     <button id="admin-submit" type="button">Enter</button>
 
-    <!-- Optional: Author camera toggle (used by your camera append if present) -->
+    <!-- Optional: used by your camera append -->
     <label class="admin-camera-row">
       <input id="admin-camera-toggle" type="checkbox" />
       <span>Camera Mode</span>
     </label>
+
   </div>
 
-  <!-- Language Rail (logic supports 12; UI can show fewer or all) -->
+  <!-- Language rail (12 supported by your logic/appends) -->
   <div id="language-switcher">
     <button id="lang-toggle" type="button">🌍</button>
     <div id="lang-rail">
@@ -78,32 +74,22 @@ IDs required by logic:
 </section>
 
 <!-- =========================================================
-TUNNEL + WHITEOUT (Scenes: tunnel / whiteout)
-Renderer mapping expects:
-- tunnel-view
-Whiteout overlay exists via eptec-white-flash
+TUNNEL (logic scene: tunnel) + WHITEOUT overlay (transition.whiteout)
 ========================================================= -->
 <section id="tunnel-view" class="scene tunnel-hidden"></section>
 <div id="eptec-white-flash" class="whiteout-hidden"></div>
 
 <!-- =========================================================
-DOORS (Scene: viewdoors)
-Logic expects either:
-- data-logic-id="doors.door1" / "doors.door2" for click
-AND/OR the optional under-door inputs:
-- door1-present, door1-present-apply
-- door1-vip, door1-vip-apply
-- door1-master, door1-master-apply
-- door2-present, door2-present-apply
-- door2-vip, door2-vip-apply
-- door2-master, door2-master-apply
+DOORS (logic scene: viewdoors)
+Required door click hooks:
+- data-logic-id="doors.door1" / "doors.door2"
+Optional inputs used by logic bindings:
+- door1-present/door1-present-apply, door1-vip/door1-vip-apply, door1-master/door1-master-apply
+- door2-present/door2-present-apply, door2-vip/door2-vip-apply, door2-master/door2-master-apply
 ========================================================= -->
 <section id="doors-view" class="scene modal-hidden">
   <div class="doors-wrapper">
 
-    <!-- ======================
-    DOOR 1 — ROOM1 (Construction)
-    ======================= -->
     <div class="door-block" id="door-construction" data-logic-id="doors.door1">
       <h2>Construction</h2>
 
@@ -113,14 +99,10 @@ AND/OR the optional under-door inputs:
       <input id="door1-vip" type="text" placeholder="VIP Code" />
       <button id="door1-vip-apply" type="button">Apply</button>
 
-      <!-- MASTER DOOR (Room1) -->
       <input id="door1-master" type="password" placeholder="" />
       <button id="door1-master-apply" type="button">Enter</button>
     </div>
 
-    <!-- ======================
-    DOOR 2 — ROOM2 (Controlling)
-    ======================= -->
     <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
       <h2>Contract Controlling</h2>
 
@@ -130,7 +112,6 @@ AND/OR the optional under-door inputs:
       <input id="door2-vip" type="text" placeholder="VIP Code" />
       <button id="door2-vip-apply" type="button">Apply</button>
 
-      <!-- MASTER DOOR (Room2) -->
       <input id="door2-master" type="password" placeholder="" />
       <button id="door2-master-apply" type="button">Enter</button>
     </div>
@@ -139,17 +120,11 @@ AND/OR the optional under-door inputs:
 </section>
 
 <!-- =========================================================
-ROOM 1 — CONSTRUCTION (Scene: room1)
-Logic expects (optional hotspots via data-logic-id):
-- r1.savepoint
-- r1.table.download
-- r1.mirror.download
-- r1.traffic.enable
+ROOM 1 (logic scene: room1) — hotspots via data-logic-id
 ========================================================= -->
 <section id="room-1-view" class="scene modal-hidden">
   <h1>Construction</h1>
 
-  <!-- Minimal hotspot anchors (you can style/position via CSS) -->
   <button data-logic-id="r1.savepoint" type="button">Savepoint</button>
   <button data-logic-id="r1.table.download" type="button">Download Composed</button>
   <button data-logic-id="r1.mirror.download" type="button">Download Snippets+Law</button>
@@ -157,17 +132,11 @@ Logic expects (optional hotspots via data-logic-id):
 </section>
 
 <!-- =========================================================
-ROOM 2 — CONTROLLING (Scene: room2)
-Logic expects (optional hotspots via data-logic-id):
-- r2.hotspot.center
-- r2.hotspot.left1 / left2
-- r2.hotspot.right1 / right2
-- r2.plant.backup
+ROOM 2 (logic scene: room2) — hotspots via data-logic-id
 ========================================================= -->
 <section id="room-2-view" class="scene modal-hidden">
   <h1>Contract Controlling</h1>
 
-  <!-- Minimal hotspot anchors -->
   <button data-logic-id="r2.hotspot.center" type="button">Center Upload</button>
 
   <button data-logic-id="r2.hotspot.left1" type="button">Left 1 Download</button>
