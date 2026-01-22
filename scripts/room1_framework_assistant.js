@@ -1,51 +1,29 @@
-/**
- * scripts/room1_framework_assistant.js
- * EPTEC ROOM1 FRAMEWORK ASSISTANT — FINAL
- *
- * Ziel:
- * - Klick auf römische Modul-Hotspots (z.B. I, II, III …)
- * - KI (oder Fallback) liefert Kandidaten
- * - User klickt Kandidat -> "fliegt auf den Tisch" (addSnippet)
- * - System erzwingt Limit (5 Basis / 8 Premium) via EPTEC_ROOM1.maxPerModule()
- *
- * Erwartete Hooks (optional):
- * - window.EPTEC_ROOM1.addSnippet(moduleRoman, snippetId)  (aus deinem APPEND4)
- * - window.EPTEC_ROOM1.maxPerModule()                     (aus deinem APPEND4)
- * - window.EPTEC_AI.suggestFrameworkBlocks(...)
- *
- * Kandidatenquelle:
- * - window.EPTEC_FRAMEWORK_CANDIDATES[modRoman] = [{id,label,text}, ...]
- *   (später aus /docs oder /locales generieren)
- *
- * UI Darstellung:
- * - Injected Overlay-Liste (nur UI), keine festen IDs nötig.
- */
-
 (() => {
   "use strict";
 
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
+  // Toast-Funktion für Benachrichtigungen
   function toast(msg, type = "info", ms = 2400) {
     const ok = safe(() => window.EPTEC_UI?.toast?.(String(msg), String(type), ms));
     if (ok !== undefined) return;
     console.log(`[TOAST:${type}]`, msg);
   }
 
+  // Holen des Vertrags Textes
   function getContractText() {
-    // Optional: später aus Upload/OCR/TextAnalyzer
-    // Hook: window.EPTEC_ROOM1_TEXT.get()
     const t = safe(() => window.EPTEC_ROOM1_TEXT?.get?.());
     if (typeof t === "string" && t.trim()) return t;
     return "";
   }
 
+  // Maximale Snippet-Anzahl pro Modul
   function maxPerModule() {
     const fn = safe(() => window.EPTEC_ROOM1?.maxPerModule);
-    if (typeof fn === "function") return Number(fn()) || 5;
-    return 5;
+    return typeof fn === "function" ? Number(fn()) || 5 : 5;
   }
 
+  // Snippet zum Framework hinzufügen
   function addToFramework(modRoman, snippetId) {
     const add = safe(() => window.EPTEC_ROOM1?.addSnippet);
     if (typeof add !== "function") {
@@ -55,13 +33,14 @@
     return safe(() => add(modRoman, snippetId)) || { ok: false, reason: "FAILED" };
   }
 
+  // Kandidaten für das gegebene Modul holen
   function candidatesFor(modRoman) {
     const reg = safe(() => window.EPTEC_FRAMEWORK_CANDIDATES) || {};
-    const list = reg && typeof reg === "object" ? reg[String(modRoman||"").toUpperCase()] : null;
+    const list = reg && typeof reg === "object" ? reg[String(modRoman || "").toUpperCase()] : null;
     return Array.isArray(list) ? list : [];
   }
 
-  // -------- UI Overlay (candidates list) --------
+  // Overlay-Funktionalitäten für UI
   const OVERLAY_ID = "eptec-room1-candidates-overlay";
 
   function closeOverlay() {
@@ -125,7 +104,6 @@
         const res = addToFramework(String(modRoman).toUpperCase(), String(it.id || "").trim());
         if (res?.ok) {
           toast("Framework-Element hinzugefügt.", "ok", 1600);
-          // "fliegt auf den Tisch" = UI-Effekt später; hier nur logisch add
         } else if (res?.reason === "LIMIT") {
           toast(`Limit erreicht (${res.cap}).`, "warn", 2400);
         } else {
@@ -168,8 +146,7 @@
     document.body.appendChild(overlay);
   }
 
-  // -------- Binding: roman module hotspots --------
-  // Erwartet z.B. Elemente mit data-logic-id="r1.module.I" (oder II, III...)
+  // Bind der römischen Modul-Hotspots
   function bindRomanHotspots() {
     const els = Array.from(document.querySelectorAll("[data-logic-id^='r1.module.']"));
     if (!els.length) return;
@@ -213,5 +190,4 @@
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
-
 })();
