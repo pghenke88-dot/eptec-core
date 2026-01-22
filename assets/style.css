@@ -1,20 +1,17 @@
 /* ============================================================
    assets/style.css
-   EPTEC STYLE — FINAL (FULL REWRITE)
-   konfliktarm, harmonisiert mit Index + UI-State + Controller
-   Ziel: ruhige UI, nichts springt, Globe bleibt fix, Modals stabil,
-         Full-scene UI bleibt erhalten, Footer ist immer sichtbar.
+   EPTEC STYLE — FINAL (FULL REWRITE, Security/UX Hardened)
+   - Full-scene UI (fixed scenes)
+   - Footer ALWAYS visible/clickable
+   - Globe pinned top-right (RTL safe)
+   - Modals stable
+   - Whiteout/tunnel never block clicks
+   - No layout jumps
    ============================================================ */
 
-/* ----------------------------
-   0) Variables
----------------------------- */
 :root{
   --gold: #d4af37;
   --gold-glow: rgba(212, 175, 55, 0.4);
-  --oak: #3d2b1f;
-  --dark-oak: #261a12;
-  --paper: #f4f1ea;
 
   --ui-black: #000;
   --ui-white: #fff;
@@ -23,6 +20,7 @@
   --toast-bg: rgba(255,255,255,0.92);
 
   --footer-h: 56px;
+
   --z-footer: 1000000;
   --z-globe:  999999;
   --z-modal:  999900;
@@ -30,180 +28,46 @@
 }
 
 /* ----------------------------
-   1) Global baseline / reset
-   - No transition:all
+   Global baseline
 ---------------------------- */
-*{ box-sizing: border-box; }
+*{ box-sizing:border-box; }
 
 html, body{
-  margin: 0;
-  padding: 0;
-  height: 100%;
+  margin:0;
+  padding:0;
+  height:100%;
+  overflow:hidden; /* Full-scene UI: no document scroll */
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: var(--ui-black);
-
-  /* IMPORTANT:
-     Full-scene UI means no document scrolling.
-     Footer will be fixed, so we keep overflow hidden.
-  */
-  overflow: hidden;
 }
 
-/* Ensure text direction is honored but never shifts the globe */
-html{ direction: ltr; }
+/* helpers used across files */
+.hidden{ display:none !important; }
+.modal-hidden{ display:none !important; }
 
 /* ----------------------------
-   2) Full-scene architecture
+   Full-scene baseline
 ---------------------------- */
 .scene{
+  position: fixed;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  position: fixed;
-  inset: 0;
-  /* Reserve space for fixed footer so it doesn't overlap UI */
-  padding-bottom: var(--footer-h);
-}
-
-/* Default hidden classes used by controller/other css */
-.hidden{ display: none !important; }
-.modal-hidden{ display: none !important; }
-
-/* ----------------------------
-   3) LANGUAGE SWITCHER (Globe + rail)
-   - HARD pin, RTL-safe
----------------------------- */
-html[dir="rtl"] #language-switcher,
-html[dir="ltr"] #language-switcher,
-#language-switcher{
-  position: fixed !important;
-  top: 14px !important;
-  right: 14px !important;
-  left: auto !important;
-  bottom: auto !important;
-  transform: none !important;
-  margin: 0 !important;
-  direction: ltr !important;
-  unicode-bidi: isolate !important;
-  z-index: var(--z-globe) !important;
-}
-
-/* The globe button itself (kept minimal; detailed styles can live in ui_elements.css) */
-#lang-toggle{
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(0,0,0,.20);
-  color: #fff;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  line-height: 1;
-}
-
-/* Rail: vertical dropdown below globe */
-html[dir="rtl"] #language-switcher #lang-rail,
-html[dir="ltr"] #language-switcher #lang-rail,
-#language-switcher #lang-rail{
-  position: absolute !important;
-  top: 56px !important;
-  right: 0 !important;
-  left: auto !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-  gap: 8px !important;
-
-  transform-origin: top right !important;
-  transform: scaleY(0) !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-
-  transition: transform 220ms ease, opacity 220ms ease !important;
-}
-
-/* Open state */
-html[dir="rtl"] #language-switcher.lang-open #lang-rail,
-html[dir="ltr"] #language-switcher.lang-open #lang-rail,
-#language-switcher.lang-open #lang-rail{
-  transform: scaleY(1) !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-/* Language buttons */
-.lang-item{
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(0,0,0,.20);
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-
-  display: grid;
-  place-items: center;
-
-  font-size: 16px;
-  line-height: 1;
-  color: white;
+  padding-bottom: var(--footer-h); /* reserve footer space */
 }
 
 /* ----------------------------
-   4) HEADER / CLOCK (optional)
----------------------------- */
-.app-header{
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  z-index: 10;  /* intentionally under globe */
-  pointer-events: none;
-}
-
-#app-title{
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #000;
-}
-
-#app-subtitle{
-  margin-top: 4px;
-  font-size: 14px;
-  opacity: 0.85;
-  color: #000;
-}
-
-#system-clock{
-  margin-top: 6px;
-  font-size: 13px;
-  opacity: 0.9;
-  color: #000;
-}
-
-/* ----------------------------
-   5) MEADOW layout
+   Meadow layout (visuals in imagine.css)
 ---------------------------- */
 #meadow-view{
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: fixed;
-  inset: 0;
-  padding-bottom: var(--footer-h);
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
 /* ----------------------------
-   6) ENTRY UI (Login box)
+   Entry UI (login box)
 ---------------------------- */
-.entry-ui,
 .login-box{
   position: relative;
   width: min(520px, 92vw);
@@ -213,222 +77,190 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   border: 1px solid rgba(255,255,255,0.22);
   backdrop-filter: blur(12px);
   box-shadow: 0 18px 50px rgba(0,0,0,0.35);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
 
-.entry-actions{
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
+.pw-wrap{ position:relative; }
 
-/* Inputs */
-.login-box input,
-.modal-card input,
-.entry-input{
-  width: 100%;
+.login-box input{
+  width:100%;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.45);
   background: rgba(255,255,255,0.92);
-  color: #111;
+  color:#111;
   padding: 10px 14px;
-  font-size: 16px;
-  outline: none;
+  font-size:16px;
+  outline:none;
 }
 
-.login-box input:focus,
-.modal-card input:focus,
-.entry-input:focus{
+.login-box input:focus{
   border-color: rgba(0,0,0,0.65);
 }
 
-/* Buttons */
-.login-box button,
-.modal-card button,
-.entry-btn{
+.login-box button{
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.55);
   background: rgba(255,255,255,0.92);
-  color: #111;
+  color:#111;
   padding: 10px 16px;
-  font-size: 16px;
-  cursor: pointer;
-  min-height: 44px;
+  font-size:16px;
+  cursor:pointer;
+  min-height:44px;
 }
 
-.login-box button:hover,
-.modal-card button:hover,
-.entry-btn:hover{
-  filter: brightness(1.03);
-}
+.login-box button:hover{ filter: brightness(1.03); }
 
-.entry-btn.secondary{
-  background: rgba(255,255,255,0.75);
+.login-box button.locked,
+.login-box button:disabled{
+  opacity:0.55;
+  cursor:not-allowed;
 }
-
-.entry-btn.locked,
-.login-box button.locked{
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* Wrapper for password fields (eye toggle space) */
-.pw-wrap{
-  position: relative;
-}
-
-/* Admin gate optional layout */
-.admin-gate{
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-top: 4px;
-}
-
-#admin-code{ flex: 1; }
-#admin-submit{ white-space: nowrap; }
 
 /* ----------------------------
-   7) MODALS (Register/Forgot/Legal)
+   System message
 ---------------------------- */
-.modal{
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background: rgba(0,0,0,0.72);
-  z-index: var(--z-modal);
-}
-
-.modal-card{
-  position: relative;
-  width: min(560px, 94vw);
-  max-height: 86vh;
-  overflow: auto;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid rgba(0,0,0,0.20);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.45);
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.modal-title{
-  font-size: 18px;
-  font-weight: 650;
-  color: #111;
-  margin-bottom: 4px;
-}
-
-/* Registration rules text */
-.rule-text{
-  font-size: 13px;
-  color: rgba(0,0,0,0.72);
-  line-height: 1.25;
-}
-
-/* Suggestions UI (optional) */
-.suggestions{
-  border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 14px;
-  padding: 10px;
-  background: rgba(0,0,0,0.03);
-}
-
-.suggestions-title{
-  font-weight: 650;
-  margin-bottom: 6px;
-  color: #111;
-}
-
-.suggestion{
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: rgba(255,255,255,0.92);
-  cursor: pointer;
-  margin-bottom: 8px;
-}
-
-.suggestion:last-child{ margin-bottom: 0; }
-.suggestion:hover{ filter: brightness(1.02); }
-
-/* ----------------------------
-   8) SYSTEM MESSAGES / TOAST
----------------------------- */
-#login-message{ display: none; }
-#login-message.show{ display: block; }
+#login-message{ display:none; }
+#login-message.show{ display:block; }
 
 .system-msg{
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(520px, 92%);
-  padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,0,0,0.20);
   background: var(--msg-bg);
-  color: #111;
-  font-size: 14px;
-  line-height: 1.3;
-  display: none;
-  z-index: 20;
+  color:#111;
+  font-size:14px;
+  line-height:1.3;
+  padding:10px 12px;
 }
-
-.system-msg.show{ display:block; }
-.system-msg.error{ border-color: rgba(200,0,0,0.35); }
-.system-msg.ok{ border-color: rgba(0,160,0,0.35); }
-.system-msg.warn{ border-color: rgba(200,140,0,0.35); }
-
-#register-message{ bottom: 92px; }
-#forgot-message{ bottom: 92px; }
-
-.eptec-toast{
-  position: fixed;
-  right: 16px;
-  top: 70px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.25);
-  background: var(--toast-bg);
-  color: #111;
-  max-width: 360px;
-  z-index: var(--z-globe);
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-  transform: translateX(20px);
-  opacity: 0;
-  transition: transform 180ms ease, opacity 180ms ease;
-}
-
-.eptec-toast.show{ transform: translateX(0); opacity: 1; }
-.eptec-toast.error{ border-color: rgba(176,0,32,.35); }
-.eptec-toast.warn{ border-color: rgba(200,140,0,.35); }
-.eptec-toast.ok{ border-color: rgba(0,140,0,.35); }
 
 /* ----------------------------
-   9) DOORS / ROOMS baseline
+   Language switcher (globe pinned, RTL safe)
+---------------------------- */
+html[dir="rtl"] #language-switcher,
+html[dir="ltr"] #language-switcher,
+#language-switcher{
+  position: fixed !important;
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
+  bottom: auto !important;
+
+  transform: none !important;
+  margin: 0 !important;
+
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+
+  z-index: var(--z-globe) !important;
+}
+
+#lang-toggle{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.20);
+  color: #fff;
+  backdrop-filter: blur(10px);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-size:18px;
+  line-height:1;
+}
+
+#language-switcher #lang-rail{
+  position:absolute;
+  top:56px;
+  right:0;
+  left:auto;
+
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+
+  transform-origin: top right;
+  transform: scaleY(0);
+  opacity:0;
+  pointer-events:none;
+
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+#language-switcher.lang-open #lang-rail{
+  transform: scaleY(1);
+  opacity:1;
+  pointer-events:auto;
+}
+
+.lang-item{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.20);
+  backdrop-filter: blur(10px);
+  cursor:pointer;
+
+  display:grid;
+  place-items:center;
+
+  font-size:16px;
+  line-height:1;
+  color:#fff;
+}
+
+/* Clock */
+#system-clock{
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.9;
+  color: #000;
+}
+
+/* ----------------------------
+   Tunnel / transitions (controller toggles classes)
+---------------------------- */
+.tunnel-hidden{ display:none; }
+.tunnel-active{ display:block; }
+
+/* Whiteout overlay MUST never block clicks */
+.whiteout-hidden{ display:none !important; }
+#eptec-white-flash{
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  z-index: var(--z-whiteout);
+  pointer-events: none; /* critical */
+}
+
+.white-flash-active{
+  display:block !important;
+  opacity:1;
+  transition: opacity 120ms linear;
+}
+
+/* ----------------------------
+   Doors / rooms baseline
 ---------------------------- */
 #doors-view{
-  display: none;
-  padding: 24px;
-  justify-content: center;
-  align-items: center;
+  display:none;
+  padding:24px;
+  justify-content:center;
+  align-items:center;
 }
 
 .doors-wrapper{
   width: min(980px, 96vw);
-  display: flex;
-  gap: 18px;
-  justify-content: center;
-  align-items: stretch;
-  flex-wrap: wrap;
+  display:flex;
+  gap:18px;
+  justify-content:center;
+  align-items:stretch;
+  flex-wrap:wrap;
 }
 
 .door-block{
@@ -441,36 +273,28 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   color: #fff;
 }
 
-#room-1-view,
-#room-2-view{
-  display: none;
-  padding: 24px;
-  color: #fff;
+#room-1-view, #room-2-view{
+  display:none;
+  padding:24px;
+  color:#fff;
 }
 
 /* ----------------------------
-   10) Whiteout overlay
-   - NEVER block clicks
+   Modals (stable)
 ---------------------------- */
-.whiteout-hidden{ display:none !important; }
-
-#eptec-white-flash{
+.modal{
   position: fixed;
   inset: 0;
-  background: #fff;
-  opacity: 0;
-  z-index: var(--z-whiteout);
-  pointer-events: none; /* critical */
-}
-
-.white-flash-active{
-  display: block !important;
-  opacity: 1;
-  transition: opacity 120ms linear;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background: rgba(0,0,0,0.72);
+  z-index: var(--z-modal);
 }
 
 /* ----------------------------
-   11) Footer (ALWAYS visible in full-scene UI)
+   Footer ALWAYS visible/clickable
 ---------------------------- */
 footer, #eptec-footer{
   position: fixed;
@@ -479,9 +303,9 @@ footer, #eptec-footer{
   bottom: 0;
   height: var(--footer-h);
 
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display:flex;
+  align-items:center;
+  gap:14px;
   padding: 10px 14px;
 
   background: rgba(255,255,255,0.92);
@@ -493,29 +317,27 @@ footer, #eptec-footer{
 }
 
 footer a, #eptec-footer a{
-  pointer-events: auto;
-  cursor: pointer;
-  color: #111;
-  text-decoration: none;
-  font-size: 14px;
+  pointer-events:auto;
+  cursor:pointer;
+  color:#111;
+  text-decoration:none;
+  font-size:14px;
 }
 
-footer a:hover, #eptec-footer a:hover{
-  text-decoration: underline;
-}
+footer a:hover{ text-decoration: underline; }
 
 /* ----------------------------
-   12) Optional visual components
+   Optional visuals (your original)
 ---------------------------- */
 .portal-door{
-  width: 220px;
-  height: 350px;
-  background: rgba(255, 255, 255, 0.10);
+  width:220px;
+  height:350px;
+  background: rgba(255,255,255,0.10);
   border: 4px solid var(--gold);
   border-radius: 110px 110px 20px 20px;
   backdrop-filter: blur(15px);
   box-shadow: 0 0 50px var(--gold-glow), inset 0 0 20px var(--gold-glow);
-  cursor: pointer;
+  cursor:pointer;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -525,51 +347,43 @@ footer a:hover, #eptec-footer a:hover{
 }
 
 .ampel-standalone{
-  background: #111;
-  padding: 30px;
-  border-radius: 60px;
+  background:#111;
+  padding:30px;
+  border-radius:60px;
   border: 4px solid #333;
   box-shadow: 0 0 50px rgba(0,0,0,1);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-self: center;
-  align-self: center;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  justify-self:center;
+  align-self:center;
 }
 
 .ampel-bulb{
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: #222;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:#222;
   border: 4px solid #000;
-  cursor: pointer;
-  opacity: 0.2;
+  cursor:pointer;
+  opacity:0.2;
   transition: opacity 140ms ease, filter 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
 .ampel-bulb.active{
-  opacity: 1;
+  opacity:1;
   filter: brightness(1.5);
 }
 
 #bulb-1.active, #bulb-2.active, #bulb-3.active{
-  background: #ffcc00;
+  background:#ffcc00;
   box-shadow: 0 0 40px #ffcc00;
 }
-
 #bulb-4.active{
-  background: #ff6600;
+  background:#ff6600;
   box-shadow: 0 0 40px #ff6600;
 }
-
 #bulb-5.active{
-  background: #ff0000;
+  background:#ff0000;
   box-shadow: 0 0 40px #ff0000;
 }
-
-/* ============================================================
-   End of file
-   ============================================================ */
-
-
