@@ -6,12 +6,12 @@
   "main": "server.js",
 
   "scripts": {
-    "start": "node server.js",
+    "start": "pm2 start server.js", // pm2 für Produktionsumgebungen
     "dev": "node --watch server.js"
   },
 
   "engines": {
-    "node": ">=18"
+    "node": "18.16.0" // Spezifische Node.js Version (optional)
   },
 
   "dependencies": {
