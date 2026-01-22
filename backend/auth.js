@@ -10,7 +10,9 @@ import { jwtVerify } from "./security.js";
 
 export function authRequired(req, res, next) {
   try {
+    // Authorization header auslesen
     const header = String(req.headers.authorization || "");
+    // Token im Bearer-Format extrahieren
     const match = header.match(/^Bearer\s+(.+)$/i);
 
     if (!match) {
@@ -22,15 +24,10 @@ export function authRequired(req, res, next) {
     }
 
     const token = match[1];
+    // JWT verifizieren und Payload extrahieren
     const payload = jwtVerify(token);
 
-    // Erwartete Payload-Struktur:
-    // {
-    //   sub: userId,
-    //   username: string,
-    //   iat, exp, ...
-    // }
-
+    // Überprüfen der erwarteten Payload-Struktur
     if (!payload?.sub || !payload?.username) {
       return res.status(401).json({
         ok: false,
@@ -39,11 +36,13 @@ export function authRequired(req, res, next) {
       });
     }
 
+    // Benutzerinformationen in req.user setzen
     req.user = {
       id: payload.sub,
       username: payload.username
     };
 
+    // Weiterleiten an den nächsten Middleware-Handler
     return next();
 
   } catch (err) {
