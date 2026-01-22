@@ -11,54 +11,48 @@
   <link rel="stylesheet" href="assets/hidden.css" />
   <link rel="stylesheet" href="assets/imagine.css" />
 
-  <!-- Script Order — FINAL / CANONICAL -->
-  <script src="scripts/ui_state.js" defer></script>
-  <script src="scripts/ui_controller.js" defer></script>
+  <!-- =====================================================
+       SCRIPT ORDER — CANONICAL (CACHE BUSTED)
+       -----------------------------------------------------
+       1) ui_state            -> Store
+       2) ui_controller       -> Rendering
+       3) sounds              -> SoundEngine
+       4) ui_password_tools   -> placeholders + 👁 toggles
+       5) mock_backend        -> phase-1 backend
+       6) logic               -> kernel / dramaturgy
+       7) state_manager       -> products/codes/persistence adapter
+       8) registration_engine -> register + forgot flows
+       9) main                -> orchestration
+       ===================================================== -->
+  <script src="scripts/ui_state.js?v=fixA" defer></script>
+  <script src="scripts/ui_controller.js?v=fixA" defer></script>
 
-  <!-- Sound engine must exist before any click sounds -->
-  <script src="scripts/sounds.js" defer></script>
+  <script src="scripts/sounds.js?v=fixA" defer></script>
+  <script src="scripts/ui_password_tools.js?v=fixA" defer></script>
 
-  <script src="scripts/mock_backend.js" defer></script>
-  <script src="scripts/logic.js" defer></script>
-  <script src="scripts/state_manager.js" defer></script>
+  <script src="scripts/mock_backend.js?v=fixA" defer></script>
+  <script src="scripts/logic.js?v=fixA" defer></script>
+  <script src="scripts/state_manager.js?v=fixA" defer></script>
 
-  <!-- Register/Forgot logic needs modal DOM + UI helpers -->
-  <script src="scripts/registration_engine.js" defer></script>
-
-  <script src="scripts/main.js" defer></script>
-
-  <!-- Transparency append (OFF by default) -->
-  <script defer>
-    window.EPTEC_TRANSPARENCY = {
-      enabled: false,
-      mode: "passive",
-      documents: ["terms","privacy","deletion","backup","access-log"],
-      hasBackend: false
-    };
-  </script>
-  <!-- Only load if the file exists (safe). If you don't want it at all, delete this line. -->
-  <script src="scripts/transparency_ui.js" defer></script>
+  <script src="scripts/registration_engine.js?v=fixA" defer></script>
+  <script src="scripts/main.js?v=fixA" defer></script>
 </head>
 
 <body>
 
-  <!-- HEADER: Contract Office bei Johannes Büngener -->
-  <div class="app-header">
-    <h1 id="app-title">Contract Office</h1>
-    <div id="app-subtitle">bei Johannes Büngener</div>
-    <div id="system-clock"></div>
-  </div>
-
-  <!-- START / MEADOW -->
+  <!-- =========================================================
+       START / MEADOW
+       ========================================================= -->
   <section id="meadow-view" class="scene grassy-meadow">
     <div class="sun"></div>
     <div class="stream"></div>
 
     <div class="login-box">
+
       <input id="login-username" type="text" placeholder="Username" />
-      <div style="position:relative;">
-        <input id="login-password" type="password" placeholder="Password" />
-      </div>
+
+      <!-- wrapper is optional; ui_password_tools will create one if missing -->
+      <input id="login-password" type="password" placeholder="Password" autocomplete="off" />
 
       <button id="btn-login">Login</button>
       <div id="login-message" class="system-msg"></div>
@@ -67,11 +61,12 @@
       <button id="btn-forgot">Forgot password</button>
 
       <!-- Master Start -->
-      <input id="admin-code" type="password" placeholder="Masterpasswort" autocomplete="off" />
+      <input id="admin-code" type="password" placeholder="Master password" autocomplete="off" />
       <button id="admin-submit">Enter</button>
+
     </div>
 
-    <!-- Language (12) -->
+    <!-- Language -->
     <div id="language-switcher">
       <button id="lang-toggle">🌍</button>
       <div id="lang-rail">
@@ -89,18 +84,25 @@
         <button class="lang-item" data-lang="JP">JP</button>
       </div>
     </div>
+
+    <div id="system-clock"></div>
   </section>
 
-  <!-- TUNNEL / WHITEOUT -->
+  <!-- =========================================================
+       TUNNEL / WHITEOUT
+       ========================================================= -->
   <section id="tunnel-view" class="scene tunnel-hidden">
     <div class="tunnel-wall"></div>
   </section>
   <div id="eptec-white-flash" class="whiteout-hidden"></div>
 
-  <!-- DOORS -->
+  <!-- =========================================================
+       DOORS
+       ========================================================= -->
   <section id="doors-view" class="scene modal-hidden">
     <div class="doors-wrapper">
 
+      <!-- DOOR 1 — CONSTRUCTION -->
       <div class="door-block" id="door-construction" data-logic-id="doors.door1">
         <h2>Construction</h2>
 
@@ -110,10 +112,11 @@
         <input id="door1-vip" type="text" placeholder="VIP Code" />
         <button id="door1-vip-apply">Apply</button>
 
-        <input id="door1-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        <input id="door1-master" type="password" placeholder="Master password" autocomplete="off" />
         <button id="door1-master-apply">Enter</button>
       </div>
 
+      <!-- DOOR 2 — CONTROLLING -->
       <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
         <h2>Contract Controlling</h2>
 
@@ -123,66 +126,47 @@
         <input id="door2-vip" type="text" placeholder="VIP Code" />
         <button id="door2-vip-apply">Apply</button>
 
-        <input id="door2-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        <input id="door2-master" type="password" placeholder="Master password" autocomplete="off" />
         <button id="door2-master-apply">Enter</button>
       </div>
 
     </div>
   </section>
 
-  <!-- ROOMS -->
+  <!-- =========================================================
+       ROOM 1
+       ========================================================= -->
   <section id="room-1-view" class="scene modal-hidden">
     <h1>Construction</h1>
   </section>
 
+  <!-- =========================================================
+       ROOM 2
+       ========================================================= -->
   <section id="room-2-view" class="scene modal-hidden">
     <h1>Contract Controlling</h1>
   </section>
 
-  <!-- MODALS (filled so registration_engine can work) -->
-  <section id="register-screen" class="modal modal-hidden">
-    <div class="modal-card register-card">
-      <div class="modal-title">Register</div>
+  <!-- =========================================================
+       MODALS
+       ========================================================= -->
 
-      <input id="reg-first-name" type="text" placeholder="First name" />
-      <input id="reg-last-name" type="text" placeholder="Last name" />
-      <input id="reg-birthdate" type="text" placeholder="DD.MM.YYYY" />
-      <input id="reg-email" type="email" placeholder="E-Mail" />
-      <input id="reg-username" type="text" placeholder="Username" />
+  <!-- REGISTER (keep empty if your registration_engine injects, or fill later) -->
+  <section id="register-screen" class="modal modal-hidden"></section>
 
-      <div style="position:relative;">
-        <input id="reg-password" type="password" placeholder="Password" />
-      </div>
+  <!-- FORGOT -->
+  <section id="forgot-screen" class="modal modal-hidden"></section>
 
-      <div id="reg-rules-username"></div>
-      <div id="reg-rules-password"></div>
-
-      <div id="register-message" class="system-msg"></div>
-
-      <button id="reg-submit">Complete registration</button>
-      <button id="reg-close" type="button">Close</button>
-    </div>
-  </section>
-
-  <section id="forgot-screen" class="modal modal-hidden">
-    <div class="modal-card forgot-card">
-      <div class="modal-title">Forgot password</div>
-
-      <input id="forgot-identity" type="text" placeholder="Email or username" />
-      <div id="forgot-message" class="system-msg"></div>
-
-      <button id="forgot-submit">Request link</button>
-      <button id="forgot-close" type="button">Close</button>
-    </div>
-  </section>
-
+  <!-- LEGAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <button id="legal-close" type="button">Close</button>
     <h2 id="legal-title"></h2>
     <div id="legal-body"></div>
   </section>
 
-  <!-- FOOTER -->
+  <!-- =========================================================
+       FOOTER
+       ========================================================= -->
   <footer>
     <a id="link-imprint">Imprint</a>
     <a id="link-terms">Terms</a>
