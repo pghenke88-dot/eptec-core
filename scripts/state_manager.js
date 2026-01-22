@@ -1,30 +1,32 @@
 /**
  * scripts/state_manager.js
- * EPTEC Dashboard State Manager – FINAL (Dramaturgie vollständig für STATE)
+ * EPTEC Dashboard State Manager — FINAL (FULL FEATURES + Chrome-safe)
  *
  * Single adapter between:
  *   EPTEC_MOCK_BACKEND (truth/rules) <-> EPTEC_UI_STATE (visual)
  *
  * Persisted state: localStorage key "EPTEC_FEED"
  *
- * Enthält (STATE-relevant aus deiner Dramaturgie):
+ * Enthält (STATE-relevant):
  * - Products + Kopplung (Construction <-> Controlling)
  * - Door Access (immer aus Products abgeleitet)
  * - Present (Admin erstellt, User löst ein, 30 Tage, einmal pro User)
  * - Referral (User-Generierung, Neukunde löst ein, dauerhaft gültig)
  * - VIP (Admin erstellt, User löst ein, One-Time, Bypass Paywall)
  * - Billing Preview (nächste Abrechnung + Rabatt)
- * - Kündigung (nur beide kündigen, Confirm-Flow + Doc-Placeholder)
- * - Upgrade / Tarifwechsel (BASIS->PREMIUM placeholder + Confirm)
+ * - Kündigung (nur beide kündigen, Confirm-Flow)
+ * - Upgrade / Tarifwechsel (Confirm)
  * - Raum hinzufügen (Add Room + Kopplungs-Confirm)
  * - Admin Country Notfall-Switch (3x Confirm + 30 Tage Countdown, jederzeit revert)
- * - Newsletter / Inbox Container (Admin broadcast placeholder, User inbox placeholder)
- * - Recording/Kamera Mode Flag (Admin showcase mode placeholder)
+ * - Newsletter / Inbox Container (Broadcast + Inbox)
+ * - Recording/Kamera Mode Flag (placeholder)
  *
- * Rules:
+ * Chrome/Browser-Safety:
  * - NO DOM access
- * - NO inline audio
- * - NO duplicated business rules: access is derived from products
+ * - NO audio
+ * - NO infinite loops
+ * - Defensive storage parsing
+ * - UI updates only when changed (prevents state storms)
  */
 
 (() => {
@@ -35,28 +37,14 @@
   // -----------------------------
   const FEED_KEY = "EPTEC_FEED";
 
+  const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
+  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+
   const $ui = () => window.EPTEC_UI_STATE;
 
   // -----------------------------
   // HELPERS
   // -----------------------------
-  function isObj(x) { return x && typeof x === "object" && !Array.isArray(x); }
-
-  function loadJson(key) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      return isObj(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function saveJson(key, data) {
-    try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
-  }
-
   function deepMerge(a, b) {
     if (!isObj(a)) a = {};
     if (!isObj(b)) return a;
@@ -66,6 +54,23 @@
       else a[k] = bv;
     }
     return a;
+  }
+
+  function stableStringify(x) {
+    return safe(() => JSON.stringify(x), "") || "";
+  }
+
+  function loadJson(key) {
+    return safe(() => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return isObj(parsed) ? parsed : {};
+    }, {}) || {};
+  }
+
+  function saveJson(key, data) {
+    safe(() => localStorage.setItem(key, JSON.stringify(isObj(data) ? data : {})));
   }
 
   function nowISO() { return new Date().toISOString(); }
@@ -92,6 +97,19 @@
     }
   }
 
+  // UI set — only if changed (prevents storms)
+  function uiSet(patch) {
+    const S = $ui();
+    if (!S?.set) return false;
+
+    const before = safe(() => (typeof S.get === "function" ? S.get() : S.state), {}) || {};
+    const merged = deepMerge(JSON.parse(stableStringify(before) || "{}"), isObj(patch) ? patch : {});
+    if (stableStringify(before) === stableStringify(merged)) return false;
+
+    safe(() => S.set(merged));
+    return true;
+  }
+
   // -----------------------------
   // PRODUCTS / ACCESS / DOORS
   // -----------------------------
@@ -114,7 +132,7 @@
     const k = !!p?.controlling?.active;
     return {
       construction: c,
-      controlling: (k && c)
+      controlling: (k && c) // controlling requires construction active
     };
   }
 
@@ -127,7 +145,7 @@
     const feed = readFeed();
     const derived = deriveAccessFromProducts(feed.products || {});
     writeFeed({ access: derived });
-    $ui()?.set?.({ access: derived });
+    uiSet({ access: derived });
     return derived;
   }
 
@@ -147,7 +165,45 @@
     return { ok: true, door: d, access };
   }
 
-  // demo filmability: unlockDoor activates baseline products safely
+  function setProducts(products) {
+    const p = isObj(products) ? products : {};
+    const construction = p.construction || { active: false, tier: null };
+    const controlling  = p.controlling  || { active: false, tier: null };
+
+    const nextProducts = {
+      construction: { active: !!construction.active, tier: construction.tier || null },
+      controlling:  { active: !!controlling.active,  tier: controlling.tier  || null }
+    };
+
+    // Coupling rules:
+    // - If construction off -> controlling off
+    // - If controlling on -> construction on (BASIS)
+    if (!nextProducts.construction.active) {
+      nextProducts.controlling = { active: false, tier: null };
+    }
+    if (nextProducts.controlling.active && !nextProducts.construction.active) {
+      nextProducts.construction = { active: true, tier: nextProducts.construction.tier || "BASIS" };
+    }
+    if (nextProducts.controlling.active && !nextProducts.construction.tier) {
+      nextProducts.construction.tier = "BASIS";
+    }
+
+    const coupled = !!(nextProducts.construction.active && nextProducts.controlling.active);
+
+    writeFeed({ products: nextProducts });
+
+    uiSet({
+      products: {
+        construction: nextProducts.construction,
+        controlling: nextProducts.controlling,
+        coupled
+      }
+    });
+
+    setAccessFromProducts();
+    return nextProducts;
+  }
+
   function unlockDoor(door) {
     const d = normalizeDoor(door);
     if (!d) return { ok: false, reason: "INVALID_DOOR" };
@@ -166,7 +222,7 @@
     if (d === DOORS.CONTROLLING) {
       setProducts({
         construction: { active: true, tier: (p?.construction?.tier || "BASIS") },
-        controlling:  { active: true, tier: (p?.controlling?.tier || "BASIS") }
+        controlling:  { active: true, tier: "BASIS" }
       });
       return { ok: true, door: d, access: getAccess() };
     }
@@ -201,52 +257,13 @@
     return { ok: true, door: d, access: getAccess() };
   }
 
-  function setProducts(products) {
-    const p = isObj(products) ? products : {};
-    const construction = p.construction || { active: false, tier: null };
-    const controlling  = p.controlling  || { active: false, tier: null };
-
-    const nextProducts = {
-      construction: { active: !!construction.active, tier: construction.tier || null },
-      controlling:  { active: !!controlling.active,  tier: controlling.tier  || null }
-    };
-
-    // Hard coupling rules (your decided product logic):
-    // - If construction off -> controlling off
-    // - If controlling on -> construction on (basis)
-    if (!nextProducts.construction.active) {
-      nextProducts.controlling = { active: false, tier: null };
-    }
-    if (nextProducts.controlling.active && !nextProducts.construction.active) {
-      nextProducts.construction = { active: true, tier: nextProducts.construction.tier || "BASIS" };
-    }
-    if (nextProducts.controlling.active && !nextProducts.construction.tier) {
-      nextProducts.construction.tier = "BASIS";
-    }
-
-    const coupled = !!(nextProducts.construction.active && nextProducts.controlling.active);
-
-    writeFeed({ products: nextProducts });
-
-    $ui()?.set?.({
-      products: {
-        construction: nextProducts.construction,
-        controlling: nextProducts.controlling,
-        coupled
-      }
-    });
-
-    setAccessFromProducts();
-    return nextProducts;
-  }
-
   // -----------------------------
   // CODES / BILLING (persist + ui)
   // -----------------------------
   function setReferralCode(code) {
     const c = String(code || "").trim() || null;
     writeFeed({ codes: { referral: { code: c } } });
-    $ui()?.set?.({ codes: { referral: { code: c } } });
+    uiSet({ codes: { referral: { code: c } } });
     return c;
   }
 
@@ -259,7 +276,7 @@
       code: (p.code ?? null)
     };
     writeFeed({ codes: { present: next } });
-    $ui()?.set?.({ codes: { present: { status: next.status, discountPercent: next.discountPercent, validUntil: next.validUntil } } });
+    uiSet({ codes: { present: { status: next.status, discountPercent: next.discountPercent, validUntil: next.validUntil } } });
     return next;
   }
 
@@ -270,7 +287,7 @@
       nextInvoiceDiscountPercent: (b.nextInvoiceDiscountPercent ?? b.discountPercent ?? null)
     };
     writeFeed({ billing: next });
-    $ui()?.set?.({ billing: next });
+    uiSet({ billing: next });
     return next;
   }
 
@@ -386,7 +403,7 @@
         }
       }
     });
-    $ui()?.set?.({ flows: next.flows });
+    uiSet({ flows: next.flows });
     return { ok: true, flow: next.flows?.cancelAll };
   }
 
@@ -411,13 +428,12 @@
     });
 
     if (confirmed) {
-      // effect: products off (coupling)
       setProducts({ construction: { active: false, tier: null }, controlling: { active: false, tier: null } });
       setBillingPreview({ nextInvoiceDate: null, nextInvoiceDiscountPercent: null });
       setPresentStatus({ status: "none", code: null, discountPercent: null, validUntil: null });
     }
 
-    $ui()?.set?.({ flows: next.flows });
+    uiSet({ flows: next.flows });
     return { ok: true, flow: next.flows?.cancelAll };
   }
 
@@ -437,7 +453,7 @@
         }
       }
     });
-    $ui()?.set?.({ flows: next.flows });
+    uiSet({ flows: next.flows });
     return { ok: true, flow: next.flows?.upgrade };
   }
 
@@ -457,7 +473,6 @@
     });
 
     if (confirmed) {
-      // placeholder effect: set tier only (real billing later)
       const products = feed.products || {};
       const nextProducts = deepMerge({ ...products }, {
         [f.product]: { active: true, tier: f.targetTier || "PREMIUM" }
@@ -466,7 +481,7 @@
     }
 
     const updated = readFeed();
-    $ui()?.set?.({ flows: updated.flows });
+    uiSet({ flows: updated.flows });
     return { ok: true, flow: updated.flows?.upgrade };
   }
 
@@ -484,7 +499,7 @@
         }
       }
     });
-    $ui()?.set?.({ flows: next.flows });
+    uiSet({ flows: next.flows });
     return { ok: true, flow: next.flows?.addRoom };
   }
 
@@ -504,13 +519,12 @@
     });
 
     if (confirmed) {
-      // placeholder: activate controlling if requested, or construction if requested
       if (f.room === "controlling") unlockDoor("controlling");
       if (f.room === "construction") unlockDoor("construction");
     }
 
     const updated = readFeed();
-    $ui()?.set?.({ flows: updated.flows });
+    uiSet({ flows: updated.flows });
     return { ok: true, flow: updated.flows?.addRoom };
   }
 
@@ -522,23 +536,21 @@
     if (!c) return { ok: false, reason: "EMPTY" };
 
     const effectiveAt = new Date(nowMs() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
     const feed = readFeed();
     const curLocks = isObj(feed.countryLocks) ? feed.countryLocks : {};
 
     const nextLocks = {
       ...curLocks,
       [c]: {
-        status: "PENDING",   // PENDING -> ACTIVE
-        step: 1,             // 1..3
+        status: "PENDING",
+        step: 1,
         requestedAt: nowISO(),
         effectiveAt
       }
     };
 
     writeFeed({ countryLocks: nextLocks });
-    $ui()?.set?.({ admin: { countryLocks: nextLocks } });
-
+    uiSet({ admin: { countryLocks: nextLocks } });
     return { ok: true, lock: nextLocks[c] };
   }
 
@@ -562,8 +574,7 @@
     };
 
     writeFeed({ countryLocks: next });
-    $ui()?.set?.({ admin: { countryLocks: next } });
-
+    uiSet({ admin: { countryLocks: next } });
     return { ok: true, lock: next[c] };
   }
 
@@ -585,7 +596,7 @@
     };
 
     writeFeed({ countryLocks: next });
-    $ui()?.set?.({ admin: { countryLocks: next } });
+    uiSet({ admin: { countryLocks: next } });
     return { ok: true, lock: next[c] };
   }
 
@@ -599,13 +610,12 @@
     delete next[c];
 
     writeFeed({ countryLocks: next });
-    $ui()?.set?.({ admin: { countryLocks: next } });
-
+    uiSet({ admin: { countryLocks: next } });
     return { ok: true };
   }
 
   // -----------------------------
-  // Inbox / Newsletter containers (placeholder)
+  // Inbox / Newsletter containers
   // -----------------------------
   function adminBroadcast(message, meta = {}) {
     const msg = String(message || "").trim();
@@ -613,18 +623,19 @@
 
     const feed = readFeed();
     const broadcasts = Array.isArray(feed.broadcasts) ? feed.broadcasts : [];
+
     const entry = {
       id: "BC-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       createdAt: nowISO(),
       message: msg,
       meta: isObj(meta) ? meta : {}
     };
+
     broadcasts.unshift(entry);
     while (broadcasts.length > 50) broadcasts.pop();
 
     writeFeed({ broadcasts });
-    // UI can read broadcasts and render in admin mailbox later
-    $ui()?.set?.({ admin: { ...(readFeed().admin || {}), broadcasts } });
+    uiSet({ admin: { ...(readFeed().admin || {}), broadcasts } });
     return { ok: true, broadcast: entry };
   }
 
@@ -634,34 +645,36 @@
 
     const feed = readFeed();
     const inbox = Array.isArray(feed.inbox) ? feed.inbox : [];
+
     const entry = {
       id: "MAIL-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       createdAt: nowISO(),
       message: msg,
       meta: isObj(meta) ? meta : {}
     };
+
     inbox.unshift(entry);
     while (inbox.length > 100) inbox.pop();
 
     writeFeed({ inbox });
-    $ui()?.set?.({ inbox });
+    uiSet({ inbox });
     return { ok: true, mail: entry };
   }
 
   // -----------------------------
-  // Recording / Kamera Mode (placeholder state)
+  // Recording/Kamera mode flag
   // -----------------------------
   function setRecordingMode(on) {
     const feed = readFeed();
     const modes = isObj(feed.modes) ? feed.modes : {};
     const nextModes = { ...modes, recording: !!on, updatedAt: nowISO() };
     writeFeed({ modes: nextModes });
-    $ui()?.set?.({ modes: nextModes });
+    uiSet({ modes: nextModes });
     return { ok: true, modes: nextModes };
   }
 
   // -----------------------------
-  // DEMO toggles (filmable)
+  // Demo toggles
   // -----------------------------
   function demoSetConstruction(active) {
     const feed = readFeed();
@@ -697,41 +710,35 @@
   function hydrateFromStorage() {
     const feed = readFeed();
 
-    // products
     if (feed.products) setProducts(feed.products);
     else setProducts({ construction: { active: false, tier: null }, controlling: { active: false, tier: null } });
 
-    // codes
     const ref = feed?.codes?.referral?.code ?? null;
     if (ref) setReferralCode(ref);
 
     const pres = feed?.codes?.present;
     if (pres) setPresentStatus(pres);
 
-    // billing
     if (feed.billing) setBillingPreview(feed.billing);
 
-    // country locks into ui_state admin container
-    if (feed.countryLocks) {
-      $ui()?.set?.({ admin: { countryLocks: feed.countryLocks } });
-    }
+    if (feed.countryLocks) uiSet({ admin: { countryLocks: feed.countryLocks } });
 
-    // ensure access self-healed
     setAccessFromProducts();
 
-    // after login: ensure referral exists
-    try { ensureReferralForLoggedInUser(); } catch {}
+    safe(() => ensureReferralForLoggedInUser());
+
+    return feed;
   }
 
   // -----------------------------
   // PUBLIC API
   // -----------------------------
-  window.EPTEC_STATE_MANAGER = {
+  window.EPTEC_STATE_MANAGER = Object.freeze({
     // storage
     readFeed,
     writeFeed,
 
-    // products / doors
+    // doors/products
     DOORS,
     setProducts,
     getAccess,
@@ -771,11 +778,11 @@
     activateCountryDisableIfDue,
     cancelCountryDisable,
 
-    // newsletter/inbox placeholders
+    // newsletter/inbox
     adminBroadcast,
     userInboxAdd,
 
-    // recording mode flag
+    // recording
     setRecordingMode,
 
     // demo toggles
@@ -784,5 +791,12 @@
 
     // lifecycle
     hydrateFromStorage
-  };
+  });
+
+  // boot hydrate (idempotent)
+  if (!window.__eptec_state_manager_booted) {
+    window.__eptec_state_manager_booted = true;
+    safe(() => hydrateFromStorage());
+  }
+
 })();
