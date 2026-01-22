@@ -10,13 +10,8 @@ const DB_FILE = process.env.DB_FILE || "./eptec.db";
 // keep a single shared connection
 export const db = new sqlite3.Database(DB_FILE);
 
-/**
- * Initialize schema (idempotent).
- * Call once on server boot.
- */
 export function initDb() {
   db.serialize(() => {
-    // Create 'users' table if not exists
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,12 +27,11 @@ export function initDb() {
       );
     `);
 
-    // Create 'tokens' table if not exists
     db.run(`
       CREATE TABLE IF NOT EXISTS tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,              -- 'verify' | 'reset'
+        type TEXT NOT NULL,
         token TEXT NOT NULL UNIQUE,
         expires_at TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -46,27 +40,20 @@ export function initDb() {
       );
     `);
 
-    // Indexes for faster lookups
     db.run(`CREATE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
   });
 }
 
-/**
- * Get one row (or null).
- */
 export function getOne(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) reject(err);
-      else resolve(row || null); // return null if no row found
+      else resolve(row || null);
     });
   });
 }
 
-/**
- * Run a statement (INSERT/UPDATE/DELETE).
- */
 export function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -76,11 +63,9 @@ export function run(sql, params = []) {
   });
 }
 
-/**
- * Close DB (optional for graceful shutdown).
- */
 export function closeDb() {
   return new Promise((resolve, reject) => {
     db.close((err) => (err ? reject(err) : resolve(true)));
   });
 }
+
