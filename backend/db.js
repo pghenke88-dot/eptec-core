@@ -1,9 +1,19 @@
+// scripts/db.js
+// EPTEC SQLite DB – FINAL (clean init + promised helpers)
+
 import sqlite3 from "sqlite3";
+
 sqlite3.verbose();
 
 const DB_FILE = process.env.DB_FILE || "./eptec.db";
+
+// keep a single shared connection
 export const db = new sqlite3.Database(DB_FILE);
 
+/**
+ * Initialize schema (idempotent).
+ * Call once on server boot.
+ */
 export function initDb() {
   db.serialize(() => {
     db.run(`
@@ -39,17 +49,35 @@ export function initDb() {
   });
 }
 
+/**
+ * Get one row (or null).
+ */
 export function getOne(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row || null)));
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
   });
 }
 
+/**
+ * Run a statement (INSERT/UPDATE/DELETE).
+ */
 export function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) reject(err);
       else resolve({ changes: this.changes, lastID: this.lastID });
     });
+  });
+}
+
+/**
+ * Close DB (optional for graceful shutdown).
+ */
+export function closeDb() {
+  return new Promise((resolve, reject) => {
+    db.close((err) => (err ? reject(err) : resolve(true)));
   });
 }
