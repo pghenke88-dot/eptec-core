@@ -5,161 +5,190 @@
   <title>EPTEC</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- ======================
-       Styles
-       ====================== -->
+  <!-- Styles -->
   <link rel="stylesheet" href="assets/style.css" />
   <link rel="stylesheet" href="assets/ui_elements.css" />
   <link rel="stylesheet" href="assets/hidden.css" />
+  <link rel="stylesheet" href="assets/imagine.css" />
 
-  <!-- =====================================================
-       SCRIPT ORDER — FINAL / CANONICAL
-       -----------------------------------------------------
-       1) ui_state        → zentraler Store
-       2) ui_controller   → reines Rendering
-       3) mock_backend    → Phase-1 Backend (Session, Codes)
-       4) logic           → Autorität (Flow, Master, Rooms)
-       5) state_manager   → Produkte, Codes, Persistenz
-       6) main            → UI-Orchestrierung (leicht)
-       ===================================================== -->
+  <!-- Script Order — FINAL / CANONICAL -->
   <script src="scripts/ui_state.js" defer></script>
   <script src="scripts/ui_controller.js" defer></script>
+
+  <!-- Sound engine must exist before any click sounds -->
+  <script src="scripts/sounds.js" defer></script>
+
   <script src="scripts/mock_backend.js" defer></script>
   <script src="scripts/logic.js" defer></script>
   <script src="scripts/state_manager.js" defer></script>
+
+  <!-- Register/Forgot logic needs modal DOM + UI helpers -->
+  <script src="scripts/registration_engine.js" defer></script>
+
   <script src="scripts/main.js" defer></script>
+
+  <!-- Transparency append (OFF by default) -->
+  <script defer>
+    window.EPTEC_TRANSPARENCY = {
+      enabled: false,
+      mode: "passive",
+      documents: ["terms","privacy","deletion","backup","access-log"],
+      hasBackend: false
+    };
+  </script>
+  <!-- Only load if the file exists (safe). If you don't want it at all, delete this line. -->
+  <script src="scripts/transparency_ui.js" defer></script>
 </head>
 
 <body>
 
-<!-- =========================================================
-START / MEADOW
-========================================================= -->
-<section id="meadow-view" class="scene">
-  <div class="login-box">
-
-    <input id="login-username" type="text" placeholder="Username" />
-    <input id="login-password" type="password" />
-
-    <button id="btn-login">Login</button>
-    <div id="login-message" class="system-msg"></div>
-
-    <button id="btn-register">Register</button>
-    <button id="btn-forgot">Forgot password</button>
-
-    <!-- Master Start -->
-    <input id="admin-code" type="password" />
-    <button id="admin-submit">Enter</button>
-
+  <!-- HEADER: Contract Office bei Johannes Büngener -->
+  <div class="app-header">
+    <h1 id="app-title">Contract Office</h1>
+    <div id="app-subtitle">bei Johannes Büngener</div>
+    <div id="system-clock"></div>
   </div>
 
-  <!-- Language -->
-  <div id="language-switcher">
-    <button id="lang-toggle">🌍</button>
-    <div id="lang-rail">
-      <button class="lang-item" data-lang="en">EN</button>
-      <button class="lang-item" data-lang="de">DE</button>
-      <button class="lang-item" data-lang="fr">FR</button>
-      <button class="lang-item" data-lang="es">ES</button>
-    </div>
-  </div>
+  <!-- START / MEADOW -->
+  <section id="meadow-view" class="scene grassy-meadow">
+    <div class="sun"></div>
+    <div class="stream"></div>
 
-  <div id="system-clock"></div>
-</section>
+    <div class="login-box">
+      <input id="login-username" type="text" placeholder="Username" />
+      <div style="position:relative;">
+        <input id="login-password" type="password" placeholder="Password" />
+      </div>
 
-<!-- =========================================================
-TUNNEL / WHITEOUT
-========================================================= -->
-<section id="tunnel-view" class="scene tunnel-hidden"></section>
-<div id="eptec-white-flash"></div>
+      <button id="btn-login">Login</button>
+      <div id="login-message" class="system-msg"></div>
 
-<!-- =========================================================
-DOORS
-========================================================= -->
-<section id="doors-view" class="scene modal-hidden">
-  <div class="doors-wrapper">
+      <button id="btn-register">Register</button>
+      <button id="btn-forgot">Forgot password</button>
 
-    <!-- DOOR 1 — CONSTRUCTION -->
-    <div class="door-block" id="door-construction" data-logic-id="doors.door1">
-      <h2>Construction</h2>
-
-      <input id="door1-present" type="text" placeholder="Gift Code" />
-      <button id="door1-present-apply">Apply</button>
-
-      <input id="door1-vip" type="text" placeholder="VIP Code" />
-      <button id="door1-vip-apply">Apply</button>
-
-      <input id="door1-master" type="password" />
-      <button id="door1-master-apply">Enter</button>
+      <!-- Master Start -->
+      <input id="admin-code" type="password" placeholder="Masterpasswort" autocomplete="off" />
+      <button id="admin-submit">Enter</button>
     </div>
 
-    <!-- DOOR 2 — CONTROLLING -->
-    <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
-      <h2>Contract Controlling</h2>
-
-      <input id="door2-present" type="text" placeholder="Gift Code" />
-      <button id="door2-present-apply">Apply</button>
-
-      <input id="door2-vip" type="text" placeholder="VIP Code" />
-      <button id="door2-vip-apply">Apply</button>
-
-      <input id="door2-master" type="password" />
-      <button id="door2-master-apply">Enter</button>
+    <!-- Language (12) -->
+    <div id="language-switcher">
+      <button id="lang-toggle">🌍</button>
+      <div id="lang-rail">
+        <button class="lang-item" data-lang="EN">EN</button>
+        <button class="lang-item" data-lang="DE">DE</button>
+        <button class="lang-item" data-lang="ES">ES</button>
+        <button class="lang-item" data-lang="FR">FR</button>
+        <button class="lang-item" data-lang="IT">IT</button>
+        <button class="lang-item" data-lang="PT">PT</button>
+        <button class="lang-item" data-lang="NL">NL</button>
+        <button class="lang-item" data-lang="RU">RU</button>
+        <button class="lang-item" data-lang="UK">UK</button>
+        <button class="lang-item" data-lang="AR">AR</button>
+        <button class="lang-item" data-lang="CN">CN</button>
+        <button class="lang-item" data-lang="JP">JP</button>
+      </div>
     </div>
+  </section>
 
-  </div>
-</section>
+  <!-- TUNNEL / WHITEOUT -->
+  <section id="tunnel-view" class="scene tunnel-hidden">
+    <div class="tunnel-wall"></div>
+  </section>
+  <div id="eptec-white-flash" class="whiteout-hidden"></div>
 
-<!-- =========================================================
-ROOM 1 — CONSTRUCTION
-========================================================= -->
-<section id="room-1-view" class="scene modal-hidden">
-  <h1>Construction</h1>
-</section>
+  <!-- DOORS -->
+  <section id="doors-view" class="scene modal-hidden">
+    <div class="doors-wrapper">
 
-<!-- =========================================================
-ROOM 2 — CONTROLLING
-========================================================= -->
-<section id="room-2-view" class="scene modal-hidden">
-  <h1>Contract Controlling</h1>
-</section>
+      <div class="door-block" id="door-construction" data-logic-id="doors.door1">
+        <h2>Construction</h2>
 
-<!-- =========================================================
-MODALS
-========================================================= -->
-<section id="register-screen" class="modal modal-hidden"></section>
-<section id="forgot-screen" class="modal modal-hidden"></section>
+        <input id="door1-present" type="text" placeholder="Gift Code" />
+        <button id="door1-present-apply">Apply</button>
 
-<section id="legal-screen" class="modal modal-hidden">
-  <button id="legal-close">Close</button>
-  <div id="legal-body"></div>
-</section>
+        <input id="door1-vip" type="text" placeholder="VIP Code" />
+        <button id="door1-vip-apply">Apply</button>
 
-<!-- =========================================================
-FOOTER
-========================================================= -->
-<footer>
-  <a id="link-imprint">Imprint</a>
-  <a id="link-terms">Terms</a>
-  <a id="link-support">Support</a>
-  <a id="link-privacy-footer">Privacy</a>
-</footer>
+        <input id="door1-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        <button id="door1-master-apply">Enter</button>
+      </div>
+
+      <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
+        <h2>Contract Controlling</h2>
+
+        <input id="door2-present" type="text" placeholder="Gift Code" />
+        <button id="door2-present-apply">Apply</button>
+
+        <input id="door2-vip" type="text" placeholder="VIP Code" />
+        <button id="door2-vip-apply">Apply</button>
+
+        <input id="door2-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        <button id="door2-master-apply">Enter</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ROOMS -->
+  <section id="room-1-view" class="scene modal-hidden">
+    <h1>Construction</h1>
+  </section>
+
+  <section id="room-2-view" class="scene modal-hidden">
+    <h1>Contract Controlling</h1>
+  </section>
+
+  <!-- MODALS (filled so registration_engine can work) -->
+  <section id="register-screen" class="modal modal-hidden">
+    <div class="modal-card register-card">
+      <div class="modal-title">Register</div>
+
+      <input id="reg-first-name" type="text" placeholder="First name" />
+      <input id="reg-last-name" type="text" placeholder="Last name" />
+      <input id="reg-birthdate" type="text" placeholder="DD.MM.YYYY" />
+      <input id="reg-email" type="email" placeholder="E-Mail" />
+      <input id="reg-username" type="text" placeholder="Username" />
+
+      <div style="position:relative;">
+        <input id="reg-password" type="password" placeholder="Password" />
+      </div>
+
+      <div id="reg-rules-username"></div>
+      <div id="reg-rules-password"></div>
+
+      <div id="register-message" class="system-msg"></div>
+
+      <button id="reg-submit">Complete registration</button>
+      <button id="reg-close" type="button">Close</button>
+    </div>
+  </section>
+
+  <section id="forgot-screen" class="modal modal-hidden">
+    <div class="modal-card forgot-card">
+      <div class="modal-title">Forgot password</div>
+
+      <input id="forgot-identity" type="text" placeholder="Email or username" />
+      <div id="forgot-message" class="system-msg"></div>
+
+      <button id="forgot-submit">Request link</button>
+      <button id="forgot-close" type="button">Close</button>
+    </div>
+  </section>
+
+  <section id="legal-screen" class="modal modal-hidden">
+    <button id="legal-close" type="button">Close</button>
+    <h2 id="legal-title"></h2>
+    <div id="legal-body"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <a id="link-imprint">Imprint</a>
+    <a id="link-terms">Terms</a>
+    <a id="link-support">Support</a>
+    <a id="link-privacy-footer">Privacy</a>
+  </footer>
 
 </body>
 </html>
-<script>
-/* EPTEC TRANSPARENCY APPEND — SAFE & OPTIONAL */
-window.EPTEC_TRANSPARENCY = {
-  enabled: false,          // default OFF
-  mode: "passive",         // "passive" | "ui" | "backend"
-  documents: [
-    "terms",
-    "privacy",
-    "deletion",
-    "backup",
-    "access-log"
-  ],
-  hasBackend: false
-};
-</script>
-<script src="scripts/transparency_ui.js"></script>
