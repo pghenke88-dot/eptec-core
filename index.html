@@ -16,26 +16,28 @@
        -----------------------------------------------------
        1) ui_state            -> Store
        2) ui_controller       -> Rendering
-       3) sounds              -> SoundEngine
-       4) ui_password_tools   -> placeholders + 👁 toggles
-       5) mock_backend        -> phase-1 backend
-       6) logic               -> kernel / dramaturgy
-       7) state_manager       -> products/codes/persistence adapter
-       8) registration_engine -> register + forgot flows
-       9) main                -> orchestration
+       3) sounds              -> SoundEngine (with stopAll/stopTunnel)
+       4) stage_director      -> Timing + audio switchpoints (tunnel length, stop tunnel at doors)
+       5) ui_password_tools   -> placeholders + 👁 toggles (login + master)
+       6) mock_backend        -> phase-1 backend
+       7) logic               -> kernel / dramaturgy
+       8) state_manager       -> products/codes/persistence adapter
+       9) registration_engine -> register + forgot flows
+       10) main               -> orchestration (events only)
        ===================================================== -->
-  <script src="scripts/ui_state.js?v=fixA" defer></script>
-  <script src="scripts/ui_controller.js?v=fixA" defer></script>
+  <script src="scripts/ui_state.js?v=fixB" defer></script>
+  <script src="scripts/ui_controller.js?v=fixB" defer></script>
 
-  <script src="scripts/sounds.js?v=fixA" defer></script>
-  <script src="scripts/ui_password_tools.js?v=fixA" defer></script>
+  <script src="scripts/sounds.js?v=fixB" defer></script>
+  <script src="scripts/stage_director.js?v=fixB" defer></script>
+  <script src="scripts/ui_password_tools.js?v=fixB" defer></script>
 
-  <script src="scripts/mock_backend.js?v=fixA" defer></script>
-  <script src="scripts/logic.js?v=fixA" defer></script>
-  <script src="scripts/state_manager.js?v=fixA" defer></script>
+  <script src="scripts/mock_backend.js?v=fixB" defer></script>
+  <script src="scripts/logic.js?v=fixB" defer></script>
+  <script src="scripts/state_manager.js?v=fixB" defer></script>
 
-  <script src="scripts/registration_engine.js?v=fixA" defer></script>
-  <script src="scripts/main.js?v=fixA" defer></script>
+  <script src="scripts/registration_engine.js?v=fixB" defer></script>
+  <script src="scripts/main.js?v=fixB" defer></script>
 </head>
 
 <body>
@@ -48,10 +50,7 @@
     <div class="stream"></div>
 
     <div class="login-box">
-
       <input id="login-username" type="text" placeholder="Username" />
-
-      <!-- wrapper is optional; ui_password_tools will create one if missing -->
       <input id="login-password" type="password" placeholder="Password" autocomplete="off" />
 
       <button id="btn-login">Login</button>
@@ -63,7 +62,6 @@
       <!-- Master Start -->
       <input id="admin-code" type="password" placeholder="Master password" autocomplete="off" />
       <button id="admin-submit">Enter</button>
-
     </div>
 
     <!-- Language -->
@@ -150,14 +148,9 @@
   <!-- =========================================================
        MODALS
        ========================================================= -->
-
-  <!-- REGISTER (keep empty if your registration_engine injects, or fill later) -->
   <section id="register-screen" class="modal modal-hidden"></section>
-
-  <!-- FORGOT -->
   <section id="forgot-screen" class="modal modal-hidden"></section>
 
-  <!-- LEGAL -->
   <section id="legal-screen" class="modal modal-hidden">
     <button id="legal-close" type="button">Close</button>
     <h2 id="legal-title"></h2>
