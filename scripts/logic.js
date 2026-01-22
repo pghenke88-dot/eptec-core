@@ -1251,14 +1251,14 @@ PASTE HERE:
 
 ========================================================= */
 /* =========================================================
-   EPTEC APPEND — MASTER PASSWORDS + NO PLACEHOLDERS (SECURITY)
-   Scope:
-   - Start: Master START (change + forgot)
-   - Doors: Master DOOR (same secret, separate UI under each door)
-   - Reset window: token -> new pass (no old pass)
-   - Universal rule: NO placeholders in any password field
-   - Universal rule: NO autofill leaks (best effort)
-   - No-crash, idempotent, works in any file, any load order
+   EPTEC APPEND — MASTER PASSWORDS (SECURE) + SAFE PLACEHOLDERS + EYE TOGGLES
+   Replaces: "MasterPasswords + NoPlaceholders"
+   Goal:
+   - Keep master password system + reset
+   - ALLOW SAFE placeholders (generic words only, never secrets)
+   - Provide 👁 toggles for master fields (start + doors)
+   - Never autofill, never prefill, never store raw passwords
+   - No-crash, idempotent, any load order
    ========================================================= */
 (() => {
   "use strict";
@@ -1267,35 +1267,68 @@ PASTE HERE:
   const $ = (id) => document.getElementById(id);
 
   /* -----------------------------
-     A) UNIVERSAL SECURITY RULES
+     A) SAFE PLACEHOLDER POLICY
+     - Password inputs MAY have placeholders,
+       but ONLY generic labels (e.g. "Passwort", "Masterpasswort")
+     - Never inject real passwords
      ----------------------------- */
 
-  // Remove placeholders from ALL password inputs (global, permanent)
-  function stripPasswordPlaceholders(root = document) {
+  function currentLang() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    const l = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "en").toLowerCase();
+    return l === "de" ? "de" : "en";
+  }
+
+  function phWord(kind) {
+    // kind: "password" | "master"
+    const de = { password: "Passwort", master: "Masterpasswort" };
+    const en = { password: "Password", master: "Master password" };
+    const d = currentLang() === "de" ? de : en;
+    return d[kind] || d.password;
+  }
+
+  function enforcePasswordInputHygiene(root = document) {
     safe(() => {
       const list = Array.from(root.querySelectorAll("input[type='password']"));
       for (const inp of list) {
-        // no placeholder
-        if (inp.hasAttribute("placeholder")) inp.setAttribute("placeholder", "");
-        // optionally reduce browser hints
+        // Never prefill anything
+        if (document.activeElement !== inp && typeof inp.value === "string" && inp.value) inp.value = "";
+
+        // Best effort: avoid browser autofill leaks
         if (!inp.hasAttribute("autocomplete")) inp.setAttribute("autocomplete", "off");
-        // never prefill
-        if (typeof inp.value === "string" && inp.value.length && inp.value !== "") {
-          // do not wipe user-entered while focused
-          if (document.activeElement !== inp) inp.value = "";
+
+        // Apply SAFE placeholder labels (generic only)
+        // Master fields we know:
+        // - admin-code (start master)
+        // - door1-master / door2-master (doors master)
+        const id = String(inp.id || "");
+
+        if (id === "admin-code" || id === "door1-master" || id === "door2-master") {
+          inp.setAttribute("placeholder", phWord("master"));
+        } else {
+          // login-password etc.
+          inp.setAttribute("placeholder", phWord("password"));
         }
       }
     });
   }
 
-  // Enforce the rule on DOM changes too (so newly added fields are also cleaned)
-  function observePasswordFields() {
-    const mo = new MutationObserver(() => stripPasswordPlaceholders(document));
-    safe(() => mo.observe(document.documentElement || document.body, { childList: true, subtree: true }));
+  function observePasswordInputs() {
+    // Keep hygiene stable even if other scripts change DOM
+    safe(() => {
+      const mo = new MutationObserver(() => enforcePasswordInputHygiene(document));
+      mo.observe(document.documentElement || document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["type", "placeholder", "autocomplete", "value"]
+      });
+    });
   }
 
   /* -----------------------------
      B) MASTER SECRETS (ROTATABLE)
+     - hashes only in localStorage (phase1)
      ----------------------------- */
 
   const KEY = {
@@ -1306,7 +1339,7 @@ PASTE HERE:
   const DEFAULTS = {
     start: "PatrickGeorgHenke200288",
     door:  "PatrickGeorgHenke6264",
-    email: "" // must be stored by user
+    email: ""
   };
 
   function readJSON(k) {
@@ -1315,11 +1348,8 @@ PASTE HERE:
     const obj = safe(() => JSON.parse(raw));
     return (obj && typeof obj === "object") ? obj : null;
   }
-  function writeJSON(k, v) {
-    safe(() => localStorage.setItem(k, JSON.stringify(v)));
-  }
+  function writeJSON(k, v) { safe(() => localStorage.setItem(k, JSON.stringify(v))); }
 
-  // minimal deterministic hash (placeholder for backend; no crash; no deps)
   function hashMini(s) {
     const str = String(s ?? "");
     let h = 2166136261;
@@ -1346,18 +1376,6 @@ PASTE HERE:
     return s;
   }
 
-  function setEmailIfMissing(typedEmail) {
-    const email = String(typedEmail || "").trim();
-    if (!email) return { ok: false, reason: "EMAIL_EMPTY" };
-    const s = getSecrets();
-    if (!s.email) {
-      s.email = email;
-      writeJSON(KEY.secrets, s);
-      return { ok: true, stored: true, email };
-    }
-    return { ok: true, stored: false, email: s.email };
-  }
-
   function verify(kind /* "start"|"door" */, code) {
     const s = getSecrets();
     const c = String(code || "").trim();
@@ -1366,92 +1384,14 @@ PASTE HERE:
     return kind === "door" ? (h === s.doorHash) : (h === s.startHash);
   }
 
-  function toast(msg, type = "info", ms = 2200) {
-    const m = String(msg || "");
-    const t = String(type || "info");
-    const bridged = safe(() => window.EPTEC_UI?.toast?.(m, t, ms));
-    if (bridged !== undefined) return bridged;
-    console.log(`[TOAST:${t}]`, m);
-  }
-
-  function changeSecret(kind /* "start"|"door" */, oldPass, newPass, confirmPass) {
-    const s = getSecrets();
-    const o = String(oldPass || "").trim();
-    const n = String(newPass || "").trim();
-    const c = String(confirmPass || "").trim();
-
-    if (!o || !n || !c) return { ok: false, reason: "EMPTY_FIELDS" };
-    if (n !== c) return { ok: false, reason: "MISMATCH" };
-    if (n.length < 8) return { ok: false, reason: "TOO_SHORT" };
-
-    const okOld = (kind === "door") ? (hashMini(o) === s.doorHash) : (hashMini(o) === s.startHash);
-    if (!okOld) return { ok: false, reason: "OLD_WRONG" };
-
-    if (kind === "door") s.doorHash = hashMini(n);
-    else s.startHash = hashMini(n);
-
-    writeJSON(KEY.secrets, s);
-    return { ok: true };
-  }
-
   /* -----------------------------
-     C) FORGOT FLOW (EMAIL -> TOKEN -> RESET)
+     C) KERNEL HOOKS (EXTEND, NOT REWRITE)
      ----------------------------- */
 
-  function requestReset(target /* "start"|"door" */, email) {
-    const s = getSecrets();
-    const e = String(email || "").trim();
-    if (!e) return { ok: false, reason: "EMAIL_EMPTY" };
-    if (!s.email) return { ok: false, reason: "NO_EMAIL_STORED" };
-    if (e.toLowerCase() !== s.email.toLowerCase()) return { ok: false, reason: "EMAIL_MISMATCH" };
-
-    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`.toUpperCase();
-    const entry = {
-      token,
-      email: s.email,
-      target: String(target || "start"),
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    };
-    writeJSON(KEY.forgot, entry);
-    return { ok: true, token, entry };
-  }
-
-  function consumeReset(token, newPass, confirmPass) {
-    const entry = readJSON(KEY.forgot);
-    if (!entry || !entry.token) return { ok: false, reason: "NO_REQUEST" };
-
-    const t = String(token || "").trim().toUpperCase();
-    if (!t || t !== String(entry.token).toUpperCase()) return { ok: false, reason: "TOKEN_BAD" };
-
-    const exp = entry.expiresAt ? (new Date(entry.expiresAt).getTime()) : 0;
-    if (exp && Date.now() > exp) return { ok: false, reason: "TOKEN_EXPIRED" };
-
-    const n = String(newPass || "").trim();
-    const c = String(confirmPass || "").trim();
-    if (!n || !c) return { ok: false, reason: "EMPTY_FIELDS" };
-    if (n !== c) return { ok: false, reason: "MISMATCH" };
-    if (n.length < 8) return { ok: false, reason: "TOO_SHORT" };
-
-    const s = getSecrets();
-    const target = String(entry.target || "start");
-    if (target === "door") s.doorHash = hashMini(n);
-    else s.startHash = hashMini(n);
-    writeJSON(KEY.secrets, s);
-
-    safe(() => localStorage.removeItem(KEY.forgot));
-    return { ok: true, target };
-  }
-
-  /* -----------------------------
-     D) KERNEL HOOKS (EXTEND, NOT REWRITE)
-     ----------------------------- */
-
-  // Patch EPTEC_MASTER.Auth verifiers if present (append-only)
   function patchKernelAuth() {
     const master = window.EPTEC_MASTER;
     const auth = master?.Auth;
-    if (!auth || auth.__eptec_master_secret_patched) return;
+    if (!auth || auth.__eptec_master_secret_patched_v2) return;
 
     const origVerifyStart = typeof auth.verifyStartMaster === "function" ? auth.verifyStartMaster.bind(auth) : null;
     const origVerifyDoor  = typeof auth.verifyDoorMaster  === "function" ? auth.verifyDoorMaster.bind(auth)  : null;
@@ -1466,141 +1406,87 @@ PASTE HERE:
       return !!safe(() => origVerifyDoor?.(code));
     };
 
-    auth.__eptec_master_secret_patched = true;
+    auth.__eptec_master_secret_patched_v2 = true;
   }
 
   /* -----------------------------
-     E) UI BINDINGS (IDEMPOTENT)
-     Required IDs (no placeholders in password inputs):
-       Start change:
-         master-start-old
-         master-start-new
-         master-start-new-confirm
-         master-start-change-submit
-       Start forgot:
-         master-start-forgot-email
-         master-start-forgot-submit
-
-       Door1 change:
-         master-door1-old
-         master-door1-new
-         master-door1-new-confirm
-         master-door1-change-submit
-       Door1 forgot:
-         master-door1-forgot-email
-         master-door1-forgot-submit
-
-       Door2 change:
-         master-door2-old
-         master-door2-new
-         master-door2-new-confirm
-         master-door2-change-submit
-       Door2 forgot:
-         master-door2-forgot-email
-         master-door2-forgot-submit
-
-       Reset window (one global):
-         master-reset-token
-         master-reset-new
-         master-reset-new-confirm
-         master-reset-submit
+     D) 👁 EYE TOGGLES FOR MASTER FIELDS
+     - admin-code (start)
+     - door1-master / door2-master (doors)
      ----------------------------- */
 
-  function bindChange(kind, prefix) {
-    const oldI = $(`${prefix}-old`);
-    const newI = $(`${prefix}-new`);
-    const conI = $(`${prefix}-new-confirm`);
-    const btn  = $(`${prefix}-change-submit`);
-    if (!oldI || !newI || !conI || !btn) return;
+  function ensureEye(inputId, eyeId) {
+    const inp = $(inputId);
+    if (!inp) return;
 
-    if (btn.__eptec_bound) return;
-    btn.__eptec_bound = true;
+    // ensure placeholder hygiene
+    enforcePasswordInputHygiene(document);
 
-    btn.addEventListener("click", () => {
-      const res = changeSecret(kind, oldI.value, newI.value, conI.value);
-      if (!res.ok) return toast(`Passwortänderung fehlgeschlagen: ${res.reason}`, "error", 2400);
-      toast("Passwort geändert.", "ok", 2200);
-      oldI.value = ""; newI.value = ""; conI.value = "";
+    let eye = $(eyeId);
+    if (!eye) {
+      const wrap = inp.parentElement;
+      if (!wrap) return;
+
+      // wrap must be relative for absolute eye
+      wrap.style.position = wrap.style.position || "relative";
+
+      eye = document.createElement("button");
+      eye.type = "button";
+      eye.id = eyeId;
+      eye.textContent = "👁️";
+      eye.setAttribute("aria-label", "Show/Hide");
+      eye.style.position = "absolute";
+      eye.style.right = "12px";
+      eye.style.top = "50%";
+      eye.style.transform = "translateY(-50%)";
+      eye.style.background = "transparent";
+      eye.style.border = "0";
+      eye.style.cursor = "pointer";
+      eye.style.opacity = "0.65";
+      eye.style.fontSize = "16px";
+      eye.style.lineHeight = "1";
+
+      wrap.appendChild(eye);
+
+      // space for eye
+      if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
+    }
+
+    if (eye.__eptec_eye_bound) return;
+    eye.__eptec_eye_bound = true;
+
+    eye.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      inp.type = (inp.type === "password") ? "text" : "password";
+      eye.style.opacity = (inp.type === "password") ? "0.65" : "1";
     });
   }
 
-  function bindForgot(target, emailId, submitId) {
-    const emailI = $(emailId);
-    const btn = $(submitId);
-    if (!emailI || !btn) return;
+  /* -----------------------------
+     BOOT
+     ----------------------------- */
 
-    if (btn.__eptec_bound) return;
-    btn.__eptec_bound = true;
-
-    btn.addEventListener("click", () => {
-      const typed = String(emailI.value || "").trim();
-
-      // ensure email stored (requirement)
-      const stored = setEmailIfMissing(typed);
-      if (!stored.ok) return toast("Bitte zuerst eine E-Mail hinterlegen.", "error", 2400);
-
-      const s = getSecrets();
-      const r = requestReset(target, typed);
-      if (!r.ok) return toast(`Reset nicht möglich: ${r.reason}`, "error", 2400);
-
-      // phase1 simulation: token printed (real email later)
-      console.log("EPTEC RESET TOKEN:", r.token);
-      toast(`Reset-Link erstellt. Token: ${r.token}`, "ok", 4500);
-
-      // optional auto-fill token field
-      const t = $("master-reset-token");
-      if (t) t.value = r.token;
-    });
-  }
-
-  function bindResetWindow() {
-    const tok = $("master-reset-token");
-    const n = $("master-reset-new");
-    const c = $("master-reset-new-confirm");
-    const btn = $("master-reset-submit");
-    if (!tok || !n || !c || !btn) return;
-
-    if (btn.__eptec_bound) return;
-    btn.__eptec_bound = true;
-
-    btn.addEventListener("click", () => {
-      const r = consumeReset(tok.value, n.value, c.value);
-      if (!r.ok) return toast(`Reset fehlgeschlagen: ${r.reason}`, "error", 2400);
-      toast(`Neues Passwort gesetzt (${r.target}).`, "ok", 2400);
-      tok.value = ""; n.value = ""; c.value = "";
-    });
-  }
-
-  function init() {
+  function boot() {
     // ensure secrets exist
     getSecrets();
 
-    // enforce security rule: no placeholders in password fields
-    stripPasswordPlaceholders(document);
-    observePasswordFields();
+    // allow SAFE placeholders (generic words only)
+    enforcePasswordInputHygiene(document);
+    observePasswordInputs();
 
-    // patch kernel auth verifiers if present
+    // patch kernel auth verifiers
     patchKernelAuth();
 
-    // start master change + forgot
-    bindChange("start", "master-start");
-    bindForgot("start", "master-start-forgot-email", "master-start-forgot-submit");
+    // eye toggles (master fields)
+    ensureEye("admin-code", "eye-admin-code");
+    ensureEye("door1-master", "eye-door1-master");
+    ensureEye("door2-master", "eye-door2-master");
 
-    // door master change + forgot (same secret for both doors, separate UI blocks)
-    bindChange("door", "master-door1");
-    bindForgot("door", "master-door1-forgot-email", "master-door1-forgot-submit");
-
-    bindChange("door", "master-door2");
-    bindForgot("door", "master-door2-forgot-email", "master-door2-forgot-submit");
-
-    // reset window
-    bindResetWindow();
-
-    console.log("EPTEC APPEND: MasterPasswords + NoPlaceholders active");
+    safe(() => console.log("EPTEC APPEND: MasterPasswords v2 (safe placeholders + eye toggles) active"));
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 
 })();
 /* =========================================================
