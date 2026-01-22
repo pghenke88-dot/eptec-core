@@ -1,10 +1,13 @@
 {
   "brand": "EPTEC",
   "system": "Business-Guard",
+
   "language": "日本語",
-  "lang": "日本語",
-  "agb_btn": "利用規約と法的情報",
+  "lang": "jp",
+
+  "agb_btn": "利用規約および法的情報",
   "status_msg": "システムステータスを確認",
+
   "plans": {
     "f1": {
       "price_basis": "19.90",
@@ -16,60 +19,69 @@
     }
   },
 
-  "app_name": "",
-  "login_username": "",
-  "login_password": "",
-  "login_btn": "",
-  "register_btn": "",
-  "forgot_btn": "",
+  "app_name": "EPTEC Business-Guard",
 
-  "admin_code": "",
-  "admin_submit": "",
-  "admin_hint": "",
+  "login_username": "ユーザー名",
+  "login_password": "パスワード",
+  "login_btn": "ログイン",
+  "register_btn": "登録",
+  "forgot_btn": "パスワードを忘れた場合",
 
-  "register_title": "",
-  "register_first_name": "",
-  "register_last_name": "",
-  "register_birthdate": "",
-  "register_email": "",
-  "register_username_rules": "",
-  "register_password_rules": "",
-  "register_submit": "",
-  "register_submit_locked": "",
-  "register_ready": "",
-  "register_not_ready": "",
-  "register_username_taken": "",
-  "register_username_available": "",
-  "register_suggestion_title": "",
-  "register_suggestion_1": "",
-  "register_suggestion_2": "",
-  "register_verification_sent": "",
-  "register_verification_mail_subject": "",
-  "register_verification_mail_body": "",
-  "register_verified": "",
+  "admin_code": "管理コード",
+  "admin_submit": "確認",
+  "admin_hint": "管理者アクセス用のマスターコードを入力してください。",
 
-  "forgot_title": "",
-  "forgot_hint": "",
-  "forgot_submit": "",
-  "forgot_mail_sent": "",
-  "forgot_new_password": "",
-  "forgot_confirm": "",
-  "forgot_done": "",
+  "register_title": "アカウント作成",
+  "register_first_name": "名",
+  "register_last_name": "姓",
+  "register_birthdate": "生年月日",
+  "register_email": "メールアドレス",
 
-  "legal_imprint": "",
-  "legal_terms": "",
+  "register_username_rules": "ユーザー名：6文字以上、大文字1文字、特殊文字（._-）を含む。",
+  "register_password_rules": "パスワード：5文字以上、大文字1文字、特殊文字を含む。",
 
-  "lang_choose": "",
-  "lang_active": "",
+  "register_submit": "登録を完了する",
+  "register_submit_locked": "すべての必須項目を入力してください。",
+  "register_ready": "登録可能です。",
+  "register_not_ready": "入力内容を確認してください。",
 
-  "system_ok": "",
-  "system_cancel": "",
-  "system_close": "",
-  "system_loading": "",
-  "system_error": "",
-  "login_error_invalid": "",
+  "register_username_taken": "このユーザー名は既に使用されています。",
+  "register_username_available": "このユーザー名は使用可能です。",
 
-  "register_privacy_prefix": "登録することで、当社の",
+  "register_suggestion_title": "提案：",
+  "register_suggestion_1": "提案 1",
+  "register_suggestion_2": "提案 2",
+
+  "register_verification_sent": "確認メールを送信しました（シミュレーション）。",
+  "register_verification_mail_subject": "EPTEC アカウント確認",
+  "register_verification_mail_body": "登録ありがとうございます。リンクを開いてアカウントを確認してください。",
+
+  "register_verified": "アカウントが確認されました。ログインできます。",
+
+  "forgot_title": "パスワードの再設定",
+  "forgot_hint": "メールアドレスまたはユーザー名を入力してください。",
+  "forgot_submit": "リンクを送信",
+  "forgot_mail_sent": "アカウントが存在する場合、リンクを送信しました（シミュレーション）。",
+  "forgot_new_password": "新しいパスワード",
+  "forgot_confirm": "パスワードを確認",
+  "forgot_done": "パスワードが変更されました。ログインできます。",
+
+  "legal_imprint": "会社情報",
+  "legal_terms": "法的情報",
+
+  "lang_choose": "言語を選択",
+  "lang_active": "現在の言語",
+
+  "system_ok": "OK",
+  "system_cancel": "キャンセル",
+  "system_close": "閉じる",
+  "system_loading": "読み込み中…",
+  "system_error": "エラーが発生しました。",
+
+  "login_error_invalid": "ユーザー名またはパスワードが正しくありません。",
+
+  "register_privacy_prefix": "登録することで、",
   "register_privacy_link": "プライバシーポリシー",
   "footer_privacy": "プライバシー"
 }
+
