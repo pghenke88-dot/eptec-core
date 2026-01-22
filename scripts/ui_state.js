@@ -1,22 +1,25 @@
 /**
  * scripts/ui_state.js
- * EPTEC UI-STATE — HARMONY FINAL (Kernel-compatible)
+ * EPTEC UI-STATE — FINAL (i18n.lang ONLY, no alias "lang")
  *
  * - Pure state only (no DOM, no backend, no audio)
  * - Provides BOTH APIs:
  *   1) Kernel-style store: get() / set() / subscribe()
  *   2) Legacy-style: state (getter) / onChange(fn)
  *
- * - Canonical views (legacy):
+ * - Canonical legacy views:
  *   "meadow" | "tunnel" | "doors" | "room1" | "room2"
  *
- * - Also accepts logic-scene names safely:
+ * - Accepts logic-scene names safely:
  *   "start" -> meadow
  *   "viewdoors" -> doors
- *   "whiteout" -> (keeps view, uses transition.whiteout)
+ *   "whiteout" -> keeps view (overlay via transition.whiteout)
  *
  * - Language persisted:
  *   localStorage key: EPTEC_LANG
+ *
+ * HARD RULE:
+ * - ONLY i18n.lang is used (no state.lang mirror, no aliases).
  */
 
 (() => {
@@ -38,12 +41,15 @@
 
   function normLang(raw) {
     const s = String(raw || "en").toLowerCase().trim();
+
+    // Canonical codes used by your system/UI rail:
+    // en de es fr it pt nl ru uk ar cn jp
     if (s === "ua") return "uk";
-    if (s === "jp") return "jp"; // your UI uses jp key in logic appends
-    if (s === "ja") return "jp";
-    if (s === "cn") return "cn";
     if (s === "zh") return "cn";
-    return s || "en";
+    if (s === "ja") return "jp";
+
+    if (["en","de","es","fr","it","pt","nl","ru","uk","ar","cn","jp"].includes(s)) return s;
+    return "en";
   }
 
   function loadLang() {
@@ -58,7 +64,6 @@
     try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
   }
 
-  // Legacy view normalization (meadow/tunnel/doors/room1/room2)
   function normView(raw) {
     const x = String(raw || "meadow").trim().toLowerCase();
 
@@ -76,12 +81,11 @@
 
     // logic-scene aliases
     if (x === "viewdoors") return "doors";
-    if (x === "whiteout") return "doors"; // overlay via transition; keep doors as stable base
+    if (x === "whiteout") return "doors";
 
     return "meadow";
   }
 
-  // If logic.js uses scene keys, we keep them AND set legacy view consistently
   function normScene(raw) {
     const x = String(raw || "").trim().toLowerCase();
     if (!x) return "";
@@ -95,10 +99,7 @@
   }
 
   const DEFAULTS = {
-    // legacy rendering expects view
     view: "meadow",
-
-    // logic.js may also set scene (we allow it)
     scene: "",
 
     modal: null,
@@ -109,7 +110,6 @@
       dir: "ltr"
     },
 
-    // keep as-is; logic.js has its own modes, but this is harmless
     modes: { demo: false, admin: false, vip: false },
 
     transition: { tunnelActive: false, whiteout: false, last: null }
@@ -128,8 +128,7 @@
     // scene (optional)
     n.scene = normScene(n.scene);
 
-    // view (legacy)
-    // if scene exists, derive best compatible view baseline
+    // view baseline from scene
     if (n.scene) {
       if (n.scene === "start") n.view = "meadow";
       else if (n.scene === "viewdoors") n.view = "doors";
@@ -142,13 +141,12 @@
       n.view = normView(n.view);
     }
 
-    // language (persisted wins)
+    // language (ONLY i18n.lang)
     n.i18n = isObj(n.i18n) ? n.i18n : {};
     const persisted = loadLang();
-    const lang = normLang(n.i18n.lang || n.lang || persisted || "en");
+    const lang = normLang(n.i18n.lang || persisted || "en");
     n.i18n.lang = lang;
     n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
-    n.lang = lang;
 
     saveLang(lang);
 
@@ -172,7 +170,6 @@
     return snapshot();
   }
 
-  // Kernel-style
   function subscribe(fn) {
     if (typeof fn !== "function") return () => {};
     listeners.add(fn);
@@ -180,7 +177,6 @@
     return () => listeners.delete(fn);
   }
 
-  // Legacy-style alias (kept)
   function onChange(fn) {
     return subscribe(fn);
   }
@@ -188,19 +184,14 @@
   // init with persisted lang immediately
   state = normalize(state);
 
-  // Export as store
   window.EPTEC_UI_STATE = {
-    // kernel
     get,
     set,
     subscribe,
 
-    // legacy
     onChange,
     get state() { return snapshot(); },
 
-    // debug
     snapshot
   };
 })();
-
