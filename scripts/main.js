@@ -1,16 +1,15 @@
 /**
  * scripts/main.js
- * EPTEC MAIN — HARMONY FINAL (Kernel-aware, No-Drama)
+ * EPTEC MAIN — HARD ORCHESTRATOR (PROMISE-FULFILLING)
  *
- * - Keeps: labels, modals, transition FX mirror
- * - Adds: login/admin delegation to EPTEC_MASTER.Entry (if present)
- * - Fixes: password placeholder ("Password"), ambient wind start
- * - Ensures: footer visible (best effort)
- *
- * IMPORTANT:
- * - No business logic here.
- * - No new flows invented.
- * - No rewriting logic.js. We delegate to EPTEC_MASTER when available.
+ * Goals:
+ * - Password placeholders exist (word placeholders only) for:
+ *   login-password, admin-code, door1-master, door2-master (and admin-door if present)
+ * - Register/Forgot open and START their flows (registration_engine does the heavy lifting)
+ * - Login/Admin start triggers Logic (EPTEC_MASTER) AND has a safe fallback:
+ *   tunnel -> doors is forced if Logic doesn't switch to viewdoors in time
+ * - Footer is visible
+ * - No business logic, no rewrites to Logic; only orchestration + UI guarantees
  */
 
 (() => {
@@ -19,6 +18,7 @@
   const $ = (id) => document.getElementById(id);
   const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC MAIN]", e); return undefined; } };
 
+  // ---------- store bridge ----------
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null; }
   function getState() {
     const s = store();
@@ -29,231 +29,239 @@
     if (typeof s?.set === "function") return safe(() => s.set(patch));
     return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
   }
-  function subscribe(fn) {
-    const s = store();
-    if (typeof s?.subscribe === "function") return s.subscribe(fn);
 
-    // fallback polling (rare)
-    let last = "";
-    const t = setInterval(() => {
-      const st = getState();
-      const j = safe(() => JSON.stringify(st)) || "";
-      if (j !== last) { last = j; safe(() => fn(st)); }
-    }, 250);
-    return () => clearInterval(t);
-  }
-
-  // ---------- fallback labels ----------
-  function setTextIfEmpty(id, text) {
-    const el = $(id);
-    if (!el) return;
-    if (String(el.textContent || "").trim()) return;
-    el.textContent = String(text ?? "");
-  }
-  function applyFallbackLabels() {
-    setTextIfEmpty("btn-login", "Login");
-    setTextIfEmpty("btn-demo", "Demo");
-    setTextIfEmpty("btn-register", "Register");
-    setTextIfEmpty("btn-forgot", "Forgot password");
-    setTextIfEmpty("admin-submit", "Enter");
-    setTextIfEmpty("legal-close", "Close");
-    setTextIfEmpty("link-imprint", "Imprint");
-    setTextIfEmpty("link-terms", "Terms");
-    setTextIfEmpty("link-support", "Support");
-    setTextIfEmpty("link-privacy-footer", "Privacy");
-  }
-
-  // ---------- placeholders (you explicitly want the WORD, not a real password) ----------
-  function applyInputPlaceholders() {
-    const u = $("login-username");
-    const p = $("login-password");
-    const a = $("admin-code");
-
-    if (u && !u.getAttribute("placeholder")) u.setAttribute("placeholder", "Username");
-
-    // Your requirement: placeholder text "Password" is allowed (not an actual password).
-    if (p && !p.getAttribute("placeholder")) p.setAttribute("placeholder", "Password");
-
-    // Master password hint (not the real master)
-    if (a && !a.getAttribute("placeholder")) a.setAttribute("placeholder", "Master password");
-  }
-
-  // ---------- ensure footer is not accidentally hidden ----------
-  function ensureFooterVisible() {
-    const f = document.querySelector("footer");
-    if (!f) return;
-    // best effort: if your CSS uses .legal-footer, keep default if present; otherwise enforce visible
-    if (getComputedStyle(f).display === "none") {
-      f.style.display = "block";
-    }
-    // if your style.css expects centered footer via .legal-footer, you may already have it
-  }
-
-  // ---------- UI modal opens only (no duplicated logic) ----------
-  function bindModals() {
-    const regBtn = $("btn-register");
-    const forgotBtn = $("btn-forgot");
-    const legalClose = $("legal-close");
-
-    if (regBtn && !regBtn.__eptec_modal) {
-      regBtn.__eptec_modal = true;
-      regBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        setState({ modal: "register" });
-      });
-    }
-    if (forgotBtn && !forgotBtn.__eptec_modal) {
-      forgotBtn.__eptec_modal = true;
-      forgotBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        setState({ modal: "forgot" });
-      });
-    }
-    if (legalClose && !legalClose.__eptec_modal) {
-      legalClose.__eptec_modal = true;
-      legalClose.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        setState({ modal: null });
-      });
-    }
-  }
-
-  // ---------- login/admin delegation to kernel ----------
+  // ---------- UI helpers ----------
   function showLoginMsg(text, type = "error") {
-    // Prefer EPTEC_UI.showMsg (your UI controller)
-    const ok = safe(() => window.EPTEC_UI?.showMsg?.("login-message", String(text || ""), type));
-    if (ok !== undefined) return;
+    // Prefer UI controller API if present
+    const used = safe(() => window.EPTEC_UI?.showMsg?.("login-message", String(text || ""), type));
+    if (used !== undefined) return;
     const el = $("login-message");
     if (!el) return;
     el.textContent = String(text || "");
     el.classList.add("show");
   }
 
-  function bindAuthButtons() {
-    const btnLogin = $("btn-login");
-    if (btnLogin && !btnLogin.__eptec_login) {
-      btnLogin.__eptec_login = true;
-      btnLogin.addEventListener("click", () => {
+  // ---------- FOOTER: must be visible ----------
+  function ensureFooterVisible() {
+    const f = document.querySelector("footer");
+    if (!f) return;
+    // Best effort: force visible (CSS may hide it)
+    f.style.display = "flex";
+    f.style.gap = f.style.gap || "12px";
+    f.style.justifyContent = f.style.justifyContent || "center";
+    f.style.alignItems = f.style.alignItems || "center";
+  }
+
+  // ---------- PLACEHOLDERS: username + password words ----------
+  // You explicitly want placeholders as WORDS (not real passwords).
+  const PLACEHOLDERS = Object.freeze({
+    "login-username": "Username",
+    "login-password": "Password",
+    "admin-code": "Master password",
+    "door1-master": "Master password",
+    "door2-master": "Master password",
+    "admin-door-code": "Master password" // legacy if present
+  });
+
+  function applyPlaceholdersOnce() {
+    for (const id of Object.keys(PLACEHOLDERS)) {
+      const el = $(id);
+      if (!el) continue;
+      // only set if empty/missing
+      const cur = el.getAttribute("placeholder");
+      if (!cur) el.setAttribute("placeholder", PLACEHOLDERS[id]);
+    }
+  }
+
+  // Some of your other scripts previously removed password placeholders.
+  // We enforce placeholders for *these specific ids* only.
+  function enforcePlaceholdersForever() {
+    applyPlaceholdersOnce();
+
+    // MutationObserver: reapply if something removes them
+    safe(() => {
+      const mo = new MutationObserver(() => applyPlaceholdersOnce());
+      mo.observe(document.documentElement || document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["placeholder"]
+      });
+    });
+  }
+
+  // ---------- AUDIO: wind + clicks ----------
+  function unlockAudioOnce() {
+    safe(() => window.SoundEngine?.unlockAudio?.());
+    safe(() => window.SoundEngine?.startAmbient?.()); // ensure wind
+  }
+
+  // ---------- MODALS: open reliably ----------
+  function openModal(kind /* "register"|"forgot"|"legal"|null */) {
+    setState({ modal: kind || null });
+  }
+
+  function bindModalButtons() {
+    const regBtn = $("btn-register");
+    const forgotBtn = $("btn-forgot");
+
+    if (regBtn && !regBtn.__eptec_bound) {
+      regBtn.__eptec_bound = true;
+      regBtn.addEventListener("click", () => {
         safe(() => window.SoundEngine?.uiConfirm?.());
-
-        const u = String($("login-username")?.value || "").trim();
-        const p = String($("login-password")?.value || "").trim();
-
-        if (!u || !p) {
-          showLoginMsg("Missing credentials.", "error");
-          return;
-        }
-
-        // Delegate to kernel if present
-        const Entry = window.EPTEC_MASTER?.Entry;
-        if (Entry && typeof Entry.userLogin === "function") {
-          Entry.userLogin(u, p);
-          return;
-        }
-
-        // fallback (should be rare): try mock backend and then show doors
-        const res = safe(() => window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p }));
-        if (!res?.ok) {
-          showLoginMsg(res?.message || "Access denied.", "error");
-          return;
-        }
-        // minimal: go to tunnel then doors
-        setState({ view: "tunnel", transition: { tunnelActive: true, whiteout: false, last: "login_fallback" } });
-        setTimeout(() => {
-          setState({ view: "doors", transition: { tunnelActive: false, whiteout: false, last: "doors" } });
-        }, 650);
+        openModal("register");
       });
     }
 
-    const btnAdmin = $("admin-submit");
-    if (btnAdmin && !btnAdmin.__eptec_admin) {
-      btnAdmin.__eptec_admin = true;
-      btnAdmin.addEventListener("click", () => {
+    if (forgotBtn && !forgotBtn.__eptec_bound) {
+      forgotBtn.__eptec_bound = true;
+      forgotBtn.addEventListener("click", () => {
         safe(() => window.SoundEngine?.uiConfirm?.());
-
-        const code = String($("admin-code")?.value || "").trim();
-        if (!code) return;
-
-        const Entry = window.EPTEC_MASTER?.Entry;
-        if (Entry && typeof Entry.authorStartMaster === "function") {
-          Entry.authorStartMaster(code);
-          return;
-        }
-
-        // fallback: try old master check if kernel missing
-        showLoginMsg("Access denied.", "error");
+        openModal("forgot");
       });
     }
   }
 
-  // ---------- transition visuals mirror + audio scene policy ----------
-  function bindTransitionFX() {
-    const tunnel = $("tunnel-view");
-    const flash = $("eptec-white-flash");
-    if (!tunnel && !flash) return;
+  // ---------- LOGIN / ADMIN: delegate to kernel + safe fallback ----------
+  function forceDoorsAfterTunnelFallback() {
+    // If logic doesn't switch to viewdoors, we force state to show doors after a delay.
+    // This does not invent new logic: it just prevents black-hanging.
+    setTimeout(() => {
+      const st = getState();
+      const scene = String(st.scene || "");
+      const view = String(st.view || "");
+      const tr = st.transition || {};
 
-    let lastScene = null;
+      // If we are still in tunnel after ~700ms, force doors/viewdoors
+      const stillTunnel =
+        scene === "tunnel" ||
+        view === "tunnel" ||
+        !!tr.tunnelActive;
 
-    function apply(st) {
-      const tr = st?.transition || {};
-      const tOn = !!tr.tunnelActive;
-      const wOn = !!tr.whiteout;
-
-      // Visuals
-      if (tunnel) {
-        tunnel.classList.toggle("tunnel-active", tOn);
-        tunnel.classList.toggle("tunnel-hidden", !tOn);
+      if (stillTunnel) {
+        setState({
+          scene: "viewdoors",
+          view: "doors",
+          transition: { tunnelActive: false, whiteout: false, last: "forced_doors" }
+        });
+        safe(() => window.SoundEngine?.startAmbient?.());
       }
-      if (flash) {
-        flash.classList.toggle("white-flash-active", wOn);
-        flash.classList.toggle("whiteout-hidden", !wOn);
+    }, 750);
+  }
+
+  function bindLogin() {
+    const btn = $("btn-login");
+    if (!btn || btn.__eptec_login) return;
+    btn.__eptec_login = true;
+
+    btn.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      // clear old msg
+      safe(() => window.EPTEC_UI?.hideMsg?.("login-message"));
+
+      const u = String($("login-username")?.value || "").trim();
+      const p = String($("login-password")?.value || "").trim();
+
+      if (!u || !p) {
+        showLoginMsg("Missing credentials.", "error");
+        return;
       }
 
-      // Audio (best effort):
-      // - Tunnel: stop ambient, play tunnel
-      // - Otherwise: start ambient (wind) after unlock
-      const scene = String(st?.scene || st?.view || "");
-      if (scene && scene !== lastScene) lastScene = scene;
-
-      if (tOn) {
-        safe(() => window.SoundEngine?.stopAmbient?.());
-        safe(() => window.SoundEngine?.tunnelFall?.());
-      } else {
-        // in calm scenes, keep ambient running (after user unlocked)
-        if (scene === "start" || scene === "meadow" || scene === "viewdoors" || scene === "doors" || scene === "room1" || scene === "room2") {
-          safe(() => window.SoundEngine?.startAmbient?.());
-        }
+      // Prefer kernel Entry.userLogin
+      const Entry = window.EPTEC_MASTER?.Entry;
+      if (Entry && typeof Entry.userLogin === "function") {
+        Entry.userLogin(u, p);
+        forceDoorsAfterTunnelFallback();
+        return;
       }
+
+      // Fallback: try mock backend
+      const res = safe(() => window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p }));
+      if (!res?.ok) {
+        showLoginMsg(res?.message || "Access denied.", "error");
+        return;
+      }
+
+      // Fallback tunnel -> doors
+      setState({ view: "tunnel", transition: { tunnelActive: true, whiteout: false, last: "login_fallback" } });
+      safe(() => window.SoundEngine?.tunnelFall?.());
+      forceDoorsAfterTunnelFallback();
+    });
+  }
+
+  function bindAdminStart() {
+    const btn = $("admin-submit");
+    if (!btn || btn.__eptec_admin) return;
+    btn.__eptec_admin = true;
+
+    btn.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+
+      const code = String($("admin-code")?.value || "").trim();
+      if (!code) return;
+
+      const Entry = window.EPTEC_MASTER?.Entry;
+      if (Entry && typeof Entry.authorStartMaster === "function") {
+        Entry.authorStartMaster(code);
+        forceDoorsAfterTunnelFallback();
+        return;
+      }
+
+      showLoginMsg("System not ready (logic missing).", "error");
+    });
+  }
+
+  // ---------- DOORS: click -> let kernel handle; add safe fallback binding ----------
+  function bindDoorClicksFallback() {
+    const d1 = $("door-construction");
+    const d2 = $("door-controlling");
+
+    const Doors = window.EPTEC_MASTER?.Doors;
+    if (!Doors || typeof Doors.clickDoor !== "function") return;
+
+    if (d1 && !d1.__eptec_door) {
+      d1.__eptec_door = true;
+      d1.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        Doors.clickDoor("door1");
+      });
     }
 
-    apply(getState());
-    subscribe(apply);
+    if (d2 && !d2.__eptec_door) {
+      d2.__eptec_door = true;
+      d2.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        Doors.clickDoor("door2");
+      });
+    }
   }
 
-  // ---------- audio unlock ----------
-  function bindAudioUnlock() {
-    const once = () => {
-      safe(() => window.SoundEngine?.unlockAudio?.());
-      // start ambient on first interaction (wind comes back)
-      safe(() => window.SoundEngine?.startAmbient?.());
-    };
-    document.addEventListener("pointerdown", once, { once: true });
-    document.addEventListener("click", once, { once: true });
-  }
-
+  // ---------- BOOT ----------
   function boot() {
-    applyFallbackLabels();
-    applyInputPlaceholders();
-    ensureFooterVisible();
-
+    // bring UI online
     safe(() => window.EPTEC_UI?.init?.());
 
-    bindModals();
-    bindAuthButtons();
-    bindTransitionFX();
-    bindAudioUnlock();
+    // hard guarantees
+    ensureFooterVisible();
+    enforcePlaceholdersForever();
 
-    console.log("EPTEC MAIN: harmony boot OK");
+    // bindings
+    bindModalButtons();
+    bindLogin();
+    bindAdminStart();
+    bindDoorClicksFallback();
+
+    // audio unlock + wind
+    document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+    document.addEventListener("click", unlockAudioOnce, { once: true });
+
+    // if nothing set yet, show meadow/start baseline
+    const st = getState();
+    if (!st.view && !st.scene) {
+      setState({ view: "meadow", scene: "start", modal: null, transition: { tunnelActive: false, whiteout: false, last: "boot" } });
+    }
+
+    console.log("EPTEC MAIN: promise-fulfilling boot OK");
   }
 
   document.addEventListener("DOMContentLoaded", boot);
