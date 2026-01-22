@@ -1,55 +1,26 @@
 {
-  "brand": "EPTEC",
-  "system": "Business-Guard",
-  "language": "Deutsch",
-  "framework_logic": {
-    "MOD_I": {
-      "title": "Vertragsgrundlagen",
-      "content_ref": "doc/verlage/modul_I_de.md",
-      "checkpoints": [
-        {
-          "id": "CP1_URHEBER",
-          "label": "Urheberrechtsklausel",
-          "ideal_text": "Der Urheber überträgt dem Verlag...",
-          "law_ref": "doc/rechtsprechung/DE/urhg_1.md"
-        }
-      ]
-    }
-  },
-  "plans": {
-    "f1": {
-      "price_basis": "19.90",
-      "price_premium": "34.90"
-    },
-    "f2": {
-      "price_basis": "24.90",
-      "price_premium": "49.90"
-    }
-  }
-}
-{
   "ui": {
     "defaultLang": "en",
     "legal": {
       "imprintId": "link-imprint",
-      "termsId": "link-terms"
+      "termsId": "link-terms",
+      "supportId": "link-support",
+      "privacyId": "link-privacy-footer"
     }
   },
+
   "sounds": {
     "ambient": {
-      "birds": "birds",
-      "wind": "wind",
-      "water": "water"
+      "wind": "wind"
     },
     "ui": {
-      "focus": "ui_focus",
-      "confirm": "ui_confirm",
-      "flag": "flag_click"
+      "confirm": "uiConfirm"
     },
     "transition": {
-      "tunnel": "tunnel_fall"
+      "tunnel": "tunnelFall"
     }
   },
+
   "effects": {
     "whiteFlash": {
       "elementId": "eptec-white-flash",
@@ -63,3 +34,4 @@
     }
   }
 }
+
