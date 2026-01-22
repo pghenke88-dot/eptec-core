@@ -16,6 +16,7 @@ export const db = new sqlite3.Database(DB_FILE);
  */
 export function initDb() {
   db.serialize(() => {
+    // Create 'users' table if not exists
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +32,7 @@ export function initDb() {
       );
     `);
 
+    // Create 'tokens' table if not exists
     db.run(`
       CREATE TABLE IF NOT EXISTS tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,6 +46,7 @@ export function initDb() {
       );
     `);
 
+    // Indexes for faster lookups
     db.run(`CREATE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
   });
@@ -56,7 +59,7 @@ export function getOne(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) reject(err);
-      else resolve(row || null);
+      else resolve(row || null); // return null if no row found
     });
   });
 }
