@@ -12,28 +12,27 @@
   <link rel="stylesheet" href="assets/imagine.css" />
 
   <!-- =====================================================
-       SCRIPT ORDER — CLEAN / HARMONY (NO EXTRA TOOLS)
+       SCRIPT ORDER — HARMONY FINAL (NO EXTRA TOOLS)
        -----------------------------------------------------
-       1) ui_state            -> single store
-       2) ui_controller       -> single renderer
+       1) ui_state            -> store
+       2) ui_controller       -> ONLY renderer
        3) sounds              -> SoundEngine
-       4) mock_backend        -> phase-1 backend
-       5) logic               -> authority (tunnel/doors/rooms)
-       6) state_manager       -> business state adapter (EPTEC_FEED)
-       7) registration_engine -> validation + register/forgot flows
-       8) main                -> wiring + UX (eye + placeholders) + sound lifecycle
+       4) mock_backend        -> backend mock
+       5) logic               -> AUTHORITY (flow + dramaturgy)
+       6) state_manager       -> EPTEC_FEED adapter (keeps as-is)
+       7) registration_engine -> validation + register/forgot
+       8) main                -> wiring + UX + sound lifecycle (NO rendering)
        ===================================================== -->
-  <script src="scripts/ui_state.js?v=H1" defer></script>
-  <script src="scripts/ui_controller.js?v=H1" defer></script>
+  <script src="scripts/ui_state.js?v=H2" defer></script>
+  <script src="scripts/ui_controller.js?v=H2" defer></script>
+  <script src="scripts/sounds.js?v=H2" defer></script>
 
-  <script src="scripts/sounds.js?v=H1" defer></script>
+  <script src="scripts/mock_backend.js?v=H2" defer></script>
+  <script src="scripts/logic.js?v=H2" defer></script>
+  <script src="scripts/state_manager.js?v=H2" defer></script>
 
-  <script src="scripts/mock_backend.js?v=H1" defer></script>
-  <script src="scripts/logic.js?v=H1" defer></script>
-  <script src="scripts/state_manager.js?v=H1" defer></script>
-
-  <script src="scripts/registration_engine.js?v=H1" defer></script>
-  <script src="scripts/main.js?v=H1" defer></script>
+  <script src="scripts/registration_engine.js?v=H2" defer></script>
+  <script src="scripts/main.js?v=H2" defer></script>
 </head>
 
 <body>
@@ -49,7 +48,7 @@
 
       <input id="login-username" type="text" placeholder="Username" />
 
-      <!-- Wrapper is important for 👁 positioning -->
+      <!-- Wrapper for 👁 positioning -->
       <div class="pw-wrap" style="position:relative;">
         <input id="login-password" type="password" placeholder="Passwort" autocomplete="off" />
       </div>
@@ -177,4 +176,3 @@
 
 </body>
 </html>
-
