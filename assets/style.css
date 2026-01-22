@@ -1,7 +1,7 @@
 /* ============================================================
    assets/style.css
-   EPTEC STYLE – komplette, konfliktarme Master-Datei
-   Ziel: ruhige UI, nichts springt, Globe bleibt fix, Header schwarz
+   EPTEC STYLE — FINAL (konfliktarm, harmonisiert mit Index + UI-State + Controller)
+   Ziel: ruhige UI, nichts springt, Globe bleibt fix, Header ruhig, Modals stabil
    ============================================================ */
 
 :root{
@@ -10,10 +10,8 @@
   --oak: #3d2b1f;
   --dark-oak: #261a12;
   --paper: #f4f1ea;
-
   --ui-black: #000;
   --ui-white: #fff;
-
   --msg-bg: rgba(255,255,255,0.92);
   --toast-bg: rgba(255,255,255,0.92);
 }
@@ -28,6 +26,17 @@ html, body{
   overflow: hidden;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: var(--ui-black);
+}
+
+/* ============================================================
+   Scene baseline
+   - Index nutzt: #meadow-view, #doors-view, #room-1-view, #room-2-view, #tunnel-view
+   ============================================================ */
+.scene{
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  inset: 0;
 }
 
 /* ============================================================
@@ -46,27 +55,24 @@ html[dir="ltr"] #language-switcher,
   right: 14px !important;
   left: auto !important;
   bottom: auto !important;
-
-  transform: none !important;      /* kill any accidental transform from other CSS */
+  transform: none !important;
   margin: 0 !important;
-
-  direction: ltr !important;       /* isolate from RTL */
+  direction: ltr !important;
   unicode-bidi: isolate !important;
-
   z-index: 999999 !important;
 }
 
-/* Rail: vertical dropdown BELOW the globe (not sideways) */
+/* Rail: vertical dropdown BELOW the globe */
 html[dir="rtl"] #language-switcher #lang-rail,
 html[dir="ltr"] #language-switcher #lang-rail,
 #language-switcher #lang-rail{
   position: absolute !important;
-  top: 56px !important;            /* below globe */
+  top: 56px !important;
   right: 0 !important;
   left: auto !important;
 
   display: flex !important;
-  flex-direction: column !important;     /* 🔑 downwards */
+  flex-direction: column !important;
   align-items: flex-end !important;
   gap: 8px !important;
 
@@ -106,15 +112,15 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 }
 
 /* ============================================================
-   HEADER (Contract Office) – schwarz, weiter unten, ruhig
+   HEADER (optional)
    ============================================================ */
 .app-header{
   position: fixed;
-  top: 32px;                 /* 2–3cm nach unten, damit Globe-Rail nicht kollidiert */
+  top: 32px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  z-index: 10;               /* bewusst unter der Globe-Leiste */
+  z-index: 10;              /* bewusst unter Globe */
   pointer-events: none;
 }
 
@@ -142,21 +148,25 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 }
 
 /* ============================================================
-   MEADOW STAGE (Layout-only; visuals kommen aus imagine.css/inline)
+   MEADOW STAGE (Layout-only; visuals kommen aus imagine.css)
+   - Index nutzt <section id="meadow-view" class="scene">
    ============================================================ */
-.grassy-meadow{
-  height: 100vh;
-  width: 100vw;
+#meadow-view{
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
+  position: fixed;
+  inset: 0;
 }
 
 /* ============================================================
    ENTRY UI (Login-Box) – stabil, nichts springt
+   Harmonisierung:
+   - Index nutzt .login-box
+   - Diese Styles mappen wir 1:1 auf .login-box
    ============================================================ */
-.entry-ui{
+.entry-ui,
+.login-box{
   position: relative;
   width: min(520px, 92vw);
   padding: 18px;
@@ -177,6 +187,9 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   flex-wrap: wrap;
 }
 
+/* Inputs (Index nutzt plain <input> ohne Klasse) */
+.login-box input,
+.modal-card input,
 .entry-input{
   width: 100%;
   border-radius: 12px;
@@ -188,10 +201,15 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   outline: none;
 }
 
+.login-box input:focus,
+.modal-card input:focus,
 .entry-input:focus{
   border-color: rgba(0,0,0,0.65);
 }
 
+/* Buttons (Index nutzt plain <button> ohne Klasse) */
+.login-box button,
+.modal-card button,
 .entry-btn{
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.55);
@@ -203,6 +221,8 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   min-height: 44px;
 }
 
+.login-box button:hover,
+.modal-card button:hover,
 .entry-btn:hover{
   filter: brightness(1.03);
 }
@@ -211,7 +231,8 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   background: rgba(255,255,255,0.75);
 }
 
-.entry-btn.locked{
+.entry-btn.locked,
+.login-box button.locked{
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -220,9 +241,7 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 .grow-in{ transform: none; }
 .plop-in{ transform: none; }
 
-/* ============================================================
-   ADMIN GATE – bleibt ruhig, kein Shift
-   ============================================================ */
+/* Admin gate row (optional classes; IDs sind entscheidend) */
 .admin-gate{
   display: flex;
   gap: 10px;
@@ -232,45 +251,6 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 
 #admin-code{ flex: 1; }
 #admin-submit{ white-space: nowrap; }
-
-/* ============================================================
-   LEGAL FOOTER – unten mittig
-   ============================================================ */
-.legal-footer{
-  position: fixed;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:10px;
-  padding: 10px 12px;
-  z-index: 20;
-  color: rgba(255,255,255,0.92);
-  font-size: 14px;
-  user-select: none;
-}
-
-.legal-link{
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.legal-sep{
-  opacity: 0.6;
-}
-
-/* ============================================================
-   ✅ PRIVACY HINT (Register Modal)
-   ============================================================ */
-.privacy-hint{
-  font-size: 12px;
-  opacity: 0.8;
-  text-align: center;
-  margin-top: 8px;
-  line-height: 1.3;
-}
 
 /* ============================================================
    MODALS – Fenster im Fenster (Register/Forgot/Legal)
@@ -310,12 +290,6 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   margin-bottom: 4px;
 }
 
-/* Register/Forgot spezifisch */
-.register-card .entry-input,
-.forgot-card .entry-input{
-  background: rgba(255,255,255,0.98);
-}
-
 /* ============================================================
    RULE TEXT + SUGGESTIONS (Registrierung)
    ============================================================ */
@@ -351,11 +325,10 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 .suggestion:hover{ filter: brightness(1.02); }
 
 /* ============================================================
-   SYSTEM MESSAGES + TOAST
-   - Keine Bewegung im Layout: messages sind absolute overlay
+   SYSTEM MESSAGES + TOAST (keine Bewegung im Layout)
    ============================================================ */
 
-/* ✅ login-message is controllable again (shown via .show) */
+/* login-message controlled via .show */
 #login-message{ display: none; }
 #login-message.show{ display: block; }
 
@@ -380,7 +353,7 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 .system-msg.ok{ border-color: rgba(0,160,0,0.35); }
 .system-msg.warn{ border-color: rgba(200,140,0,0.35); }
 
-/* Message-Position über den unteren Buttons */
+/* Position above bottom buttons in modals */
 #register-message{ bottom: 92px; }
 #forgot-message{ bottom: 92px; }
 
@@ -408,54 +381,63 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
 .eptec-toast.ok{ border-color: rgba(0,140,0,.35); }
 
 /* ============================================================
-   ROOMS (aus deiner langen Datei übernommen)
+   DOORS / ROOMS baseline (keine Logik, nur Layout)
    ============================================================ */
-.room-view{
-  display:none;
-  height:100vh;
-  width:100vw;
-  position: fixed;
-  inset: 0;
-  z-index: 500;
+#doors-view{
+  display: none;
+  padding: 24px;
+  justify-content: center;
+  align-items: center;
 }
 
-/* ROOM 1: Workshop */
-.workshop-ambient{
-  height: 100%;
-  display:flex;
-  flex-direction: column;
-  align-items:center;
-  justify-content:center;
-  background: radial-gradient(circle at center, #4a3728 0%, #1a110a 100%);
+.doors-wrapper{
+  width: min(980px, 96vw);
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: wrap;
 }
 
-.wooden-desk{
-  width: 80%;
-  height: 60%;
-  background: var(--oak);
-  border-radius: 20px;
-  border: 8px solid var(--dark-oak);
-  box-shadow: 0 50px 100px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.5);
-  padding: 40px;
-  position: relative;
+.door-block{
+  width: min(440px, 96vw);
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(12px);
+  color: #fff;
 }
 
-.engraved-matrix{
-  background: var(--paper);
-  height: 100%;
-  border-radius: 5px;
-  padding: 30px;
-  color: #222;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
-  font-family: ui-monospace, "Courier New", monospace;
-  overflow-y: auto;
+#room-1-view,
+#room-2-view{
+  display: none;
+  padding: 24px;
+  color: #fff;
 }
-
-/* ROOM 2 placeholder */
-#room-2-view{ color: white; }
 
 /* ============================================================
-   Optional: Portal, Ampel, etc. (aus deiner langen Datei)
+   Whiteout overlay (harmonisiert mit ui_controller + main)
+   ============================================================ */
+.whiteout-hidden{ display:none !important; }
+
+#eptec-white-flash{
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  z-index: 999999;
+  pointer-events: none;
+}
+
+.white-flash-active{
+  display: block !important;
+  opacity: 1;
+  transition: opacity 120ms linear;
+}
+
+/* ============================================================
+   Optional: Portal/Ampel visual elements
    ============================================================ */
 .portal-door{
   width: 220px;
@@ -468,6 +450,7 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   cursor: pointer;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
+
 .portal-door:hover{
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 0 80px var(--gold), inset 0 0 20px var(--gold-glow);
@@ -485,6 +468,7 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   justify-self: center;
   align-self: center;
 }
+
 .ampel-bulb{
   width: 70px;
   height: 70px;
@@ -495,18 +479,22 @@ html[dir="ltr"] #language-switcher.lang-open #lang-rail,
   opacity: 0.2;
   transition: opacity 140ms ease, filter 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
+
 .ampel-bulb.active{
   opacity: 1;
   filter: brightness(1.5);
 }
+
 #bulb-1.active, #bulb-2.active, #bulb-3.active{
   background: #ffcc00;
   box-shadow: 0 0 40px #ffcc00;
 }
+
 #bulb-4.active{
   background: #ff6600;
   box-shadow: 0 0 40px #ff6600;
 }
+
 #bulb-5.active{
   background: #ff0000;
   box-shadow: 0 0 40px #ff0000;
