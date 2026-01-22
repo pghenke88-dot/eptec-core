@@ -1,209 +1,293 @@
 /**
  * scripts/main.js
- * EPTEC MAIN — FINAL ORCHESTRATOR
- * RESPONSIBILITY:
- * - UI wiring only
- * - Scene orchestration
- * - NO business logic
+ * EPTEC MAIN — HARMONY FINAL (NO RENDERING)
+ *
+ * Responsibilities:
+ * - UI wiring only (buttons -> state/logic)
+ * - UX: placeholders + 👁 toggles
+ * - Audio lifecycle: wind/tunnel start/stop by state + user interaction
+ *
+ * IMPORTANT:
+ * - DOES NOT show/hide scenes or modals.
+ *   ui_controller.js is the single renderer.
  */
 
 (() => {
   "use strict";
 
-  /* -------------------------------------------------
-     Helpers
-  ------------------------------------------------- */
-
   const $ = (id) => document.getElementById(id);
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC MAIN]", e); return undefined; } };
 
-  const show = (el) => {
-    if (!el) return;
-    el.classList.remove("modal-hidden", "hidden");
-    el.style.display = "";
-  };
-
-  const hide = (el) => {
-    if (!el) return;
-    el.classList.add("modal-hidden");
-    el.style.display = "none";
-  };
-
-  const ui = () => window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE;
-
-  /* -------------------------------------------------
-     Placeholders (FIX)
-  ------------------------------------------------- */
-
-  function initPlaceholders() {
-    if ($("login-username")) $("login-username").placeholder = "Username";
-    if ($("login-password")) $("login-password").placeholder = "Passwort";
-    if ($("admin-code")) $("admin-code").placeholder = "Masterpasswort";
+  function store() {
+    return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
   }
 
-  /* -------------------------------------------------
-     Footer (FIX)
-  ------------------------------------------------- */
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
 
-  function initFooter() {
+  function setState(patch) {
+    const s = store();
+    if (!s) return;
+    if (typeof s.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+
+    // polling fallback
+    let last = "";
+    const t = setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== last) { last = j; safe(() => fn(st)); }
+    }, 250);
+    return () => clearInterval(t);
+  }
+
+  // ------------------------------------------------------------
+  // Language helper for placeholders (generic words only)
+  // ------------------------------------------------------------
+  function langKey() {
+    const st = getState();
+    const raw = String(st?.i18n?.lang || st?.lang || document.documentElement.lang || "de").toLowerCase();
+    return raw === "en" ? "en" : "de";
+  }
+
+  function ph(kind) {
+    const de = { pass: "Passwort", master: "Masterpasswort" };
+    const en = { pass: "Password", master: "Master password" };
+    const L = langKey() === "en" ? en : de;
+    return kind === "master" ? L.master : L.pass;
+  }
+
+  function applyPlaceholders() {
+    const setPH = (id, val) => {
+      const el = $(id);
+      if (!el) return;
+      // only set if missing/empty
+      const cur = el.getAttribute("placeholder");
+      if (!cur) el.setAttribute("placeholder", val);
+    };
+
+    setPH("login-username", "Username");
+    setPH("login-password", ph("pass"));
+    setPH("admin-code", ph("master"));
+    setPH("door1-master", ph("master"));
+    setPH("door2-master", ph("master"));
+  }
+
+  // ------------------------------------------------------------
+  // 👁 Eye toggles (stable, no observers, no freezes)
+  // ------------------------------------------------------------
+  function ensureEye(inputId, eyeId) {
+    const inp = $(inputId);
+    if (!inp) return;
+
+    // Expect wrapper exists (we added pw-wrap in index)
+    const wrap = inp.closest(".pw-wrap") || inp.parentElement;
+    if (!wrap) return;
+
+    wrap.style.position = wrap.style.position || "relative";
+
+    if ($(eyeId)) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = eyeId;
+    btn.textContent = "👁️";
+    btn.setAttribute("aria-label", "Show/Hide");
+    btn.style.position = "absolute";
+    btn.style.right = "10px";
+    btn.style.top = "50%";
+    btn.style.transform = "translateY(-50%)";
+    btn.style.background = "transparent";
+    btn.style.border = "0";
+    btn.style.cursor = "pointer";
+    btn.style.opacity = "0.75";
+    btn.style.fontSize = "16px";
+    btn.style.lineHeight = "1";
+
+    // reserve space
+    if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
+
+    btn.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      inp.type = (inp.type === "password") ? "text" : "password";
+      btn.style.opacity = (inp.type === "password") ? "0.75" : "1";
+    });
+
+    wrap.appendChild(btn);
+  }
+
+  function initEyes() {
+    ensureEye("login-password", "eye-login-password");
+    ensureEye("admin-code", "eye-admin-code");
+    ensureEye("door1-master", "eye-door1-master");
+    ensureEye("door2-master", "eye-door2-master");
+  }
+
+  // ------------------------------------------------------------
+  // Footer visible (best effort)
+  // ------------------------------------------------------------
+  function ensureFooterVisible() {
     const footer = document.querySelector("footer");
     if (footer) footer.style.display = "flex";
   }
 
-  /* -------------------------------------------------
-     Sounds
-  ------------------------------------------------- */
+  // ------------------------------------------------------------
+  // Audio lifecycle (no background click requirement)
+  // ------------------------------------------------------------
+  let audioUnlocked = false;
+  let lastView = null;
 
-  function startMeadowSound() {
-    if (window.SoundEngine) {
-      SoundEngine.unlockAudio();
-      SoundEngine.startAmbient(); // 🌬 Wind
-    }
+  function unlockAudioOnce() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    safe(() => window.SoundEngine?.unlockAudio?.());
   }
 
-  function startTunnelSound() {
-    if (window.SoundEngine) {
-      SoundEngine.tunnelFall();
-    }
+  function startWind() {
+    unlockAudioOnce();
+    safe(() => window.SoundEngine?.startAmbient?.());
   }
 
-  /* -------------------------------------------------
-     Scene Rendering
-  ------------------------------------------------- */
-
-  function hideAllScenes() {
-    [
-      "meadow-view",
-      "tunnel-view",
-      "doors-view",
-      "room-1-view",
-      "room-2-view"
-    ].forEach(id => hide($(id)));
+  function stopTunnel() {
+    safe(() => window.SoundEngine?.stopTunnel?.());
+    // fallback: stopAll if present
+    safe(() => window.SoundEngine?.stopAll?.());
   }
 
-  function render(state) {
-    hideAllScenes();
-
-    switch (state.view) {
-      case "meadow":
-        show($("meadow-view"));
-        startMeadowSound();
-        break;
-
-      case "tunnel":
-        show($("tunnel-view"));
-        startTunnelSound();
-        break;
-
-      case "doors":
-        show($("doors-view"));
-        break;
-
-      case "room1":
-        show($("room-1-view"));
-        break;
-
-      case "room2":
-        show($("room-2-view"));
-        break;
-
-      default:
-        show($("meadow-view"));
-    }
-
-    // Modals
-    hide($("register-screen"));
-    hide($("forgot-screen"));
-
-    if (state.modal === "register") show($("register-screen"));
-    if (state.modal === "forgot") show($("forgot-screen"));
+  function startTunnel() {
+    unlockAudioOnce();
+    safe(() => window.SoundEngine?.stopAmbient?.());
+    safe(() => window.SoundEngine?.tunnelFall?.());
   }
 
-  /* -------------------------------------------------
-     Bindings
-  ------------------------------------------------- */
+  // Start wind on real UI interaction (buttons/inputs), not background
+  function bindUserInteractionAudio() {
+    const ids = [
+      "login-username","login-password","admin-code",
+      "btn-login","btn-register","btn-forgot","admin-submit",
+      "door1-present","door1-vip","door1-master","door1-present-apply","door1-vip-apply","door1-master-apply",
+      "door2-present","door2-vip","door2-master","door2-present-apply","door2-vip-apply","door2-master-apply"
+    ];
 
-  function bindLogin() {
-    const btn = $("btn-login");
-    if (!btn) return;
+    ids.forEach((id) => {
+      const el = $(id);
+      if (!el || el.__eptec_audio_bind) return;
+      el.__eptec_audio_bind = true;
 
-    btn.onclick = () => {
-      const u = $("login-username")?.value.trim();
-      const p = $("login-password")?.value.trim();
+      el.addEventListener("pointerdown", () => startWind(), { passive: true });
+      el.addEventListener("focus", () => startWind(), { passive: true });
+    });
+  }
 
-      if (!u || !p) {
-        $("login-message").textContent = "Missing credentials";
-        $("login-message").classList.add("show");
-        return;
+  // React to state changes (sound starts/stops at switchpoints)
+  function onState(st) {
+    const view = String(st?.view || "").toLowerCase();
+    if (!view || view === lastView) return;
+
+    if (view === "tunnel") {
+      startTunnel();
+    } else {
+      // leaving tunnel
+      if (lastView === "tunnel") stopTunnel();
+
+      // meadow/doors/rooms = ambient
+      if (view === "meadow" || view === "doors" || view === "room1" || view === "room2") {
+        startWind();
       }
+    }
 
-      window.SoundEngine?.uiConfirm?.();
-      window.Logic?.login(u, p);
-    };
+    lastView = view;
   }
 
-  function bindRegister() {
-    const btn = $("btn-register");
-    if (!btn) return;
+  // ------------------------------------------------------------
+  // Button bindings (no rendering)
+  // ------------------------------------------------------------
+  function bindButtons() {
+    // Register modal
+    const regBtn = $("btn-register");
+    if (regBtn && !regBtn.__eptec_bound) {
+      regBtn.__eptec_bound = true;
+      regBtn.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        setState({ modal: "register" });
+      });
+    }
 
-    btn.onclick = () => {
-      window.SoundEngine?.uiConfirm?.();
-      ui()?.set({ modal: "register" });
-    };
+    // Forgot modal
+    const forgotBtn = $("btn-forgot");
+    if (forgotBtn && !forgotBtn.__eptec_bound) {
+      forgotBtn.__eptec_bound = true;
+      forgotBtn.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        setState({ modal: "forgot" });
+      });
+    }
+
+    // Admin enter (delegated to your logic)
+    const adminBtn = $("admin-submit");
+    if (adminBtn && !adminBtn.__eptec_bound) {
+      adminBtn.__eptec_bound = true;
+      adminBtn.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        const code = String($("admin-code")?.value || "").trim();
+        safe(() => window.Logic?.adminEnter?.(code));
+      });
+    }
+
+    // Login (delegated to your logic; keep your validation)
+    const loginBtn = $("btn-login");
+    if (loginBtn && !loginBtn.__eptec_bound) {
+      loginBtn.__eptec_bound = true;
+      loginBtn.addEventListener("click", () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+
+        const u = String($("login-username")?.value || "").trim();
+        const p = String($("login-password")?.value || "").trim();
+
+        if (!u || !p) {
+          const msg = $("login-message");
+          if (msg) {
+            msg.textContent = "Missing credentials";
+            msg.classList.add("show");
+          }
+          return;
+        }
+
+        safe(() => window.Logic?.login?.(u, p));
+      });
+    }
   }
 
-  function bindForgot() {
-    const btn = $("btn-forgot");
-    if (!btn) return;
-
-    btn.onclick = () => {
-      window.SoundEngine?.uiConfirm?.();
-      ui()?.set({ modal: "forgot" });
-    };
-  }
-
-  function bindAdmin() {
-    const btn = $("admin-submit");
-    if (!btn) return;
-
-    btn.onclick = () => {
-      const code = $("admin-code")?.value.trim();
-      window.SoundEngine?.uiConfirm?.();
-      window.Logic?.adminEnter(code);
-    };
-  }
-
-  /* -------------------------------------------------
-     State Subscription
-  ------------------------------------------------- */
-
-  function bindState() {
-    const state = ui();
-    if (!state?.subscribe) return;
-
-    state.subscribe(render);
-    render(state.get());
-  }
-
-  /* -------------------------------------------------
-     Boot
-  ------------------------------------------------- */
-
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
   function boot() {
-    initPlaceholders();
-    initFooter();
+    ensureFooterVisible();
+    applyPlaceholders();
+    initEyes();
 
-    bindLogin();
-    bindRegister();
-    bindForgot();
-    bindAdmin();
-    bindState();
+    bindUserInteractionAudio();
+    bindButtons();
 
-    // Audio unlock fallback
-    document.addEventListener("pointerdown", () => {
-      window.SoundEngine?.unlockAudio?.();
-    }, { once: true });
+    // re-apply placeholder words when language changes
+    subscribe(() => applyPlaceholders());
 
-    console.log("EPTEC MAIN: FULL ORCHESTRATION ACTIVE");
+    // sound switchpoints by state
+    subscribe(onState);
+    onState(getState());
+
+    // initial audio unlock on first real interaction
+    document.addEventListener("pointerdown", unlockAudioOnce, { once: true, passive: true });
+
+    console.log("EPTEC MAIN: HARMONY FINAL (no rendering) active");
   }
 
   document.addEventListener("DOMContentLoaded", boot);
