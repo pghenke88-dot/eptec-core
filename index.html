@@ -12,32 +12,28 @@
   <link rel="stylesheet" href="assets/imagine.css" />
 
   <!-- =====================================================
-       SCRIPT ORDER — CANONICAL (CACHE BUSTED)
+       SCRIPT ORDER — CLEAN / HARMONY (NO EXTRA TOOLS)
        -----------------------------------------------------
-       1) ui_state            -> Store
-       2) ui_controller       -> Rendering
-       3) sounds              -> SoundEngine (with stopAll/stopTunnel)
-       4) stage_director      -> Timing + audio switchpoints (tunnel length, stop tunnel at doors)
-       5) ui_password_tools   -> placeholders + 👁 toggles (login + master)
-       6) mock_backend        -> phase-1 backend
-       7) logic               -> kernel / dramaturgy
-       8) state_manager       -> products/codes/persistence adapter
-       9) registration_engine -> register + forgot flows
-       10) main               -> orchestration (events only)
+       1) ui_state            -> single store
+       2) ui_controller       -> single renderer
+       3) sounds              -> SoundEngine
+       4) mock_backend        -> phase-1 backend
+       5) logic               -> authority (tunnel/doors/rooms)
+       6) state_manager       -> business state adapter (EPTEC_FEED)
+       7) registration_engine -> validation + register/forgot flows
+       8) main                -> wiring + UX (eye + placeholders) + sound lifecycle
        ===================================================== -->
-  <script src="scripts/ui_state.js?v=fixB" defer></script>
-  <script src="scripts/ui_controller.js?v=fixB" defer></script>
+  <script src="scripts/ui_state.js?v=H1" defer></script>
+  <script src="scripts/ui_controller.js?v=H1" defer></script>
 
-  <script src="scripts/sounds.js?v=fixB" defer></script>
-  <script src="scripts/stage_director.js?v=fixB" defer></script>
-  <script src="scripts/ui_password_tools.js?v=fixB" defer></script>
+  <script src="scripts/sounds.js?v=H1" defer></script>
 
-  <script src="scripts/mock_backend.js?v=fixB" defer></script>
-  <script src="scripts/logic.js?v=fixB" defer></script>
-  <script src="scripts/state_manager.js?v=fixB" defer></script>
+  <script src="scripts/mock_backend.js?v=H1" defer></script>
+  <script src="scripts/logic.js?v=H1" defer></script>
+  <script src="scripts/state_manager.js?v=H1" defer></script>
 
-  <script src="scripts/registration_engine.js?v=fixB" defer></script>
-  <script src="scripts/main.js?v=fixB" defer></script>
+  <script src="scripts/registration_engine.js?v=H1" defer></script>
+  <script src="scripts/main.js?v=H1" defer></script>
 </head>
 
 <body>
@@ -50,8 +46,13 @@
     <div class="stream"></div>
 
     <div class="login-box">
+
       <input id="login-username" type="text" placeholder="Username" />
-      <input id="login-password" type="password" placeholder="Password" autocomplete="off" />
+
+      <!-- Wrapper is important for 👁 positioning -->
+      <div class="pw-wrap" style="position:relative;">
+        <input id="login-password" type="password" placeholder="Passwort" autocomplete="off" />
+      </div>
 
       <button id="btn-login">Login</button>
       <div id="login-message" class="system-msg"></div>
@@ -60,8 +61,11 @@
       <button id="btn-forgot">Forgot password</button>
 
       <!-- Master Start -->
-      <input id="admin-code" type="password" placeholder="Master password" autocomplete="off" />
+      <div class="pw-wrap" style="position:relative; margin-top:6px;">
+        <input id="admin-code" type="password" placeholder="Masterpasswort" autocomplete="off" />
+      </div>
       <button id="admin-submit">Enter</button>
+
     </div>
 
     <!-- Language -->
@@ -100,7 +104,7 @@
   <section id="doors-view" class="scene modal-hidden">
     <div class="doors-wrapper">
 
-      <!-- DOOR 1 — CONSTRUCTION -->
+      <!-- DOOR 1 -->
       <div class="door-block" id="door-construction" data-logic-id="doors.door1">
         <h2>Construction</h2>
 
@@ -110,11 +114,13 @@
         <input id="door1-vip" type="text" placeholder="VIP Code" />
         <button id="door1-vip-apply">Apply</button>
 
-        <input id="door1-master" type="password" placeholder="Master password" autocomplete="off" />
+        <div class="pw-wrap" style="position:relative;">
+          <input id="door1-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        </div>
         <button id="door1-master-apply">Enter</button>
       </div>
 
-      <!-- DOOR 2 — CONTROLLING -->
+      <!-- DOOR 2 -->
       <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
         <h2>Contract Controlling</h2>
 
@@ -124,7 +130,9 @@
         <input id="door2-vip" type="text" placeholder="VIP Code" />
         <button id="door2-vip-apply">Apply</button>
 
-        <input id="door2-master" type="password" placeholder="Master password" autocomplete="off" />
+        <div class="pw-wrap" style="position:relative;">
+          <input id="door2-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
+        </div>
         <button id="door2-master-apply">Enter</button>
       </div>
 
@@ -169,3 +177,4 @@
 
 </body>
 </html>
+
