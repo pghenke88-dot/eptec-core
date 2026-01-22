@@ -5,174 +5,176 @@
   <title>EPTEC</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Styles -->
+  <!-- =========================
+       STYLES (NO SIDE EFFECTS)
+       ========================= -->
   <link rel="stylesheet" href="assets/style.css" />
   <link rel="stylesheet" href="assets/ui_elements.css" />
   <link rel="stylesheet" href="assets/hidden.css" />
   <link rel="stylesheet" href="assets/imagine.css" />
 
   <!-- =====================================================
-       SCRIPT ORDER — HARMONY FINAL (NO EXTRA TOOLS)
-       -----------------------------------------------------
-       1) ui_state            -> store
-       2) ui_controller       -> ONLY renderer
-       3) sounds              -> SoundEngine
-       4) mock_backend        -> backend mock
-       5) logic               -> AUTHORITY (flow + dramaturgy)
-       6) state_manager       -> EPTEC_FEED adapter (keeps as-is)
-       7) registration_engine -> validation + register/forgot
-       8) main                -> wiring + UX + sound lifecycle (NO rendering)
+       SCRIPT ORDER — ABSOLUTE FINAL
+       =====================================================
+       RULES:
+       - State FIRST
+       - Render BEFORE logic
+       - Backend BEFORE logic
+       - Logic BEFORE main
+       - main is LAST
        ===================================================== -->
-  <script src="scripts/ui_state.js?v=H2" defer></script>
-  <script src="scripts/ui_controller.js?v=H2" defer></script>
-  <script src="scripts/sounds.js?v=H2" defer></script>
 
-  <script src="scripts/mock_backend.js?v=H2" defer></script>
-  <script src="scripts/logic.js?v=H2" defer></script>
-  <script src="scripts/state_manager.js?v=H2" defer></script>
+  <!-- 1) GLOBAL STATE -->
+  <script src="scripts/ui_state.js" defer></script>
 
-  <script src="scripts/registration_engine.js?v=H2" defer></script>
-  <script src="scripts/main.js?v=H2" defer></script>
+  <!-- 2) PURE RENDERER (NO LOGIC) -->
+  <script src="scripts/ui_controller.js" defer></script>
+
+  <!-- 3) AUDIO (PASSIVE, SAFE) -->
+  <script src="scripts/sounds.js" defer></script>
+
+  <!-- 4) BACKEND (MOCK / REAL SAFE) -->
+  <script src="scripts/mock_backend.js" defer></script>
+  <script src="scripts/api_client.js" defer></script>
+
+  <!-- 5) DOMAIN LOGIC (AUTHORITY) -->
+  <script src="scripts/logic.js" defer></script>
+  <script src="scripts/state_manager.js" defer></script>
+
+  <!-- 6) UI SUBSYSTEMS -->
+  <script src="scripts/registration_engine.js" defer></script>
+  <script src="scripts/transparency_ui.js" defer></script>
+
+  <!-- 7) APPLICATION WIRING (LAST!) -->
+  <script src="scripts/main.js" defer></script>
 </head>
 
 <body>
 
-  <!-- =========================================================
-       START / MEADOW
-       ========================================================= -->
-  <section id="meadow-view" class="scene grassy-meadow">
-    <div class="sun"></div>
-    <div class="stream"></div>
+<!-- =========================================================
+     MEADOW / START
+     ========================================================= -->
+<section id="meadow-view" class="scene grassy-meadow">
+  <div class="sun"></div>
+  <div class="stream"></div>
 
-    <div class="login-box">
+  <div class="login-box">
 
-      <input id="login-username" type="text" placeholder="Username" />
+    <input id="login-username" type="text" />
 
-      <!-- Wrapper for 👁 positioning -->
-      <div class="pw-wrap" style="position:relative;">
-        <input id="login-password" type="password" placeholder="Passwort" autocomplete="off" />
-      </div>
-
-      <button id="btn-login">Login</button>
-      <div id="login-message" class="system-msg"></div>
-
-      <button id="btn-register">Register</button>
-      <button id="btn-forgot">Forgot password</button>
-
-      <!-- Master Start -->
-      <div class="pw-wrap" style="position:relative; margin-top:6px;">
-        <input id="admin-code" type="password" placeholder="Masterpasswort" autocomplete="off" />
-      </div>
-      <button id="admin-submit">Enter</button>
-
+    <div class="pw-wrap" style="position:relative;">
+      <input id="login-password" type="password" autocomplete="off" />
     </div>
 
-    <!-- Language -->
-    <div id="language-switcher">
-      <button id="lang-toggle">🌍</button>
-      <div id="lang-rail">
-        <button class="lang-item" data-lang="EN">EN</button>
-        <button class="lang-item" data-lang="DE">DE</button>
-        <button class="lang-item" data-lang="ES">ES</button>
-        <button class="lang-item" data-lang="FR">FR</button>
-        <button class="lang-item" data-lang="IT">IT</button>
-        <button class="lang-item" data-lang="PT">PT</button>
-        <button class="lang-item" data-lang="NL">NL</button>
-        <button class="lang-item" data-lang="RU">RU</button>
-        <button class="lang-item" data-lang="UK">UK</button>
-        <button class="lang-item" data-lang="AR">AR</button>
-        <button class="lang-item" data-lang="CN">CN</button>
-        <button class="lang-item" data-lang="JP">JP</button>
+    <button id="btn-login">Login</button>
+    <div id="login-message" class="system-msg"></div>
+
+    <button id="btn-register">Register</button>
+    <button id="btn-forgot">Forgot password</button>
+
+    <!-- ADMIN START -->
+    <div class="pw-wrap" style="position:relative; margin-top:6px;">
+      <input id="admin-code" type="password" autocomplete="off" />
+    </div>
+    <button id="admin-submit">Enter</button>
+  </div>
+
+  <!-- LANGUAGE -->
+  <div id="language-switcher">
+    <button id="lang-toggle">🌍</button>
+    <div id="lang-rail">
+      <button class="lang-item" data-lang="en">EN</button>
+      <button class="lang-item" data-lang="de">DE</button>
+      <button class="lang-item" data-lang="es">ES</button>
+      <button class="lang-item" data-lang="fr">FR</button>
+      <button class="lang-item" data-lang="it">IT</button>
+      <button class="lang-item" data-lang="pt">PT</button>
+      <button class="lang-item" data-lang="nl">NL</button>
+      <button class="lang-item" data-lang="ru">RU</button>
+      <button class="lang-item" data-lang="uk">UK</button>
+      <button class="lang-item" data-lang="ar">AR</button>
+      <button class="lang-item" data-lang="cn">CN</button>
+      <button class="lang-item" data-lang="jp">JP</button>
+    </div>
+  </div>
+
+  <div id="system-clock"></div>
+</section>
+
+<!-- =========================================================
+     TUNNEL
+     ========================================================= -->
+<section id="tunnel-view" class="scene tunnel-hidden">
+  <div class="tunnel-wall"></div>
+</section>
+<div id="eptec-white-flash" class="whiteout-hidden"></div>
+
+<!-- =========================================================
+     DOORS
+     ========================================================= -->
+<section id="doors-view" class="scene modal-hidden">
+  <div class="doors-wrapper">
+
+    <div class="door-block" id="door-construction" data-logic-id="doors.door1">
+      <h2>Construction</h2>
+
+      <input id="door1-present" type="text" />
+      <button id="door1-present-apply">Apply</button>
+
+      <input id="door1-vip" type="text" />
+      <button id="door1-vip-apply">Apply</button>
+
+      <div class="pw-wrap">
+        <input id="door1-master" type="password" autocomplete="off" />
       </div>
+      <button id="door1-master-apply">Enter</button>
     </div>
 
-    <div id="system-clock"></div>
-  </section>
+    <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
+      <h2>Contract Controlling</h2>
 
-  <!-- =========================================================
-       TUNNEL / WHITEOUT
-       ========================================================= -->
-  <section id="tunnel-view" class="scene tunnel-hidden">
-    <div class="tunnel-wall"></div>
-  </section>
-  <div id="eptec-white-flash" class="whiteout-hidden"></div>
+      <input id="door2-present" type="text" />
+      <button id="door2-present-apply">Apply</button>
 
-  <!-- =========================================================
-       DOORS
-       ========================================================= -->
-  <section id="doors-view" class="scene modal-hidden">
-    <div class="doors-wrapper">
+      <input id="door2-vip" type="text" />
+      <button id="door2-vip-apply">Apply</button>
 
-      <!-- DOOR 1 -->
-      <div class="door-block" id="door-construction" data-logic-id="doors.door1">
-        <h2>Construction</h2>
-
-        <input id="door1-present" type="text" placeholder="Gift Code" />
-        <button id="door1-present-apply">Apply</button>
-
-        <input id="door1-vip" type="text" placeholder="VIP Code" />
-        <button id="door1-vip-apply">Apply</button>
-
-        <div class="pw-wrap" style="position:relative;">
-          <input id="door1-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
-        </div>
-        <button id="door1-master-apply">Enter</button>
+      <div class="pw-wrap">
+        <input id="door2-master" type="password" autocomplete="off" />
       </div>
-
-      <!-- DOOR 2 -->
-      <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
-        <h2>Contract Controlling</h2>
-
-        <input id="door2-present" type="text" placeholder="Gift Code" />
-        <button id="door2-present-apply">Apply</button>
-
-        <input id="door2-vip" type="text" placeholder="VIP Code" />
-        <button id="door2-vip-apply">Apply</button>
-
-        <div class="pw-wrap" style="position:relative;">
-          <input id="door2-master" type="password" placeholder="Masterpasswort" autocomplete="off" />
-        </div>
-        <button id="door2-master-apply">Enter</button>
-      </div>
-
+      <button id="door2-master-apply">Enter</button>
     </div>
-  </section>
 
-  <!-- =========================================================
-       ROOM 1
-       ========================================================= -->
-  <section id="room-1-view" class="scene modal-hidden">
-    <h1>Construction</h1>
-  </section>
+  </div>
+</section>
 
-  <!-- =========================================================
-       ROOM 2
-       ========================================================= -->
-  <section id="room-2-view" class="scene modal-hidden">
-    <h1>Contract Controlling</h1>
-  </section>
+<!-- =========================================================
+     ROOMS
+     ========================================================= -->
+<section id="room-1-view" class="scene modal-hidden"></section>
+<section id="room-2-view" class="scene modal-hidden"></section>
 
-  <!-- =========================================================
-       MODALS
-       ========================================================= -->
-  <section id="register-screen" class="modal modal-hidden"></section>
-  <section id="forgot-screen" class="modal modal-hidden"></section>
+<!-- =========================================================
+     MODALS
+     ========================================================= -->
+<section id="register-screen" class="modal modal-hidden"></section>
+<section id="forgot-screen" class="modal modal-hidden"></section>
 
-  <section id="legal-screen" class="modal modal-hidden">
-    <button id="legal-close" type="button">Close</button>
-    <h2 id="legal-title"></h2>
-    <div id="legal-body"></div>
-  </section>
+<section id="legal-screen" class="modal modal-hidden">
+  <button id="legal-close" type="button">Close</button>
+  <h2 id="legal-title"></h2>
+  <div id="legal-body"></div>
+</section>
 
-  <!-- =========================================================
-       FOOTER
-       ========================================================= -->
-  <footer>
-    <a id="link-imprint">Imprint</a>
-    <a id="link-terms">Terms</a>
-    <a id="link-support">Support</a>
-    <a id="link-privacy-footer">Privacy</a>
-  </footer>
+<!-- =========================================================
+     FOOTER (FIXED & SAFE)
+     ========================================================= -->
+<footer id="eptec-footer">
+  <a id="link-imprint">Imprint</a>
+  <a id="link-terms">Terms</a>
+  <a id="link-support">Support</a>
+  <a id="link-privacy-footer">Privacy</a>
+</footer>
 
 </body>
 </html>
