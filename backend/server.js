@@ -1,20 +1,9 @@
-/**
- * server.js
- * EPTEC Backend — FINAL (Express + SQLite + JWT + Mail)
- *
- * - GitHub Pages friendly (CORS by env)
- * - Rate limit + Helmet
- * - Register + Verify + Login + Forgot + Reset
- * - /api/me protected via authRequired middleware
- */
-
 import "dotenv/config";
 
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-
 import { initDb, getOne, run } from "./db.js";
 import { sendMail } from "./mailer.js";
 import { authRequired } from "./auth.js";
@@ -40,23 +29,26 @@ initDb();
 // Middleware
 // -----------------------------
 app.use(helmet());
-
 app.use(express.json({ limit: "64kb" }));
-app.use(express.urlencoded({ extended: false })); // needed for POST /api/reset form
+app.use(express.urlencoded({ extended: false }));
 
-const originEnv = String(process.env.CORS_ORIGIN || "").trim();
-const corsOrigin =
-  !originEnv || originEnv === "*" ? true : originEnv;
+// CORS-Konfiguration aus Umgebungsvariablen
+const originEnv = process.env.CORS_ORIGIN || "";
+const corsOrigin = !originEnv || originEnv === "*" ? true : originEnv;
 
 app.use(cors({ origin: corsOrigin, credentials: false }));
 
+// Rate Limiting
 app.use(rateLimit({
-  windowMs: 60_000,
-  limit: 120,
+  windowMs: 60_000, // 1 Minute
+  limit: 120, // 120 Anfragen pro Minute
   standardHeaders: "draft-7",
   legacyHeaders: false
 }));
 
+// -----------------------------
+// Funktionen
+// -----------------------------
 function requireField(v) {
   return String(v ?? "").trim().length > 0;
 }
@@ -73,7 +65,6 @@ function escapeHtml(s) {
 function linkBaseOrFallback(req) {
   const base = publicBase();
   if (base) return base;
-  // fallback: derive from request host (works behind a standard proxy)
   const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.headers["x-forwarded-host"] || req.headers.host || "";
   return host ? `${proto}://${host}` : "";
@@ -82,9 +73,11 @@ function linkBaseOrFallback(req) {
 // -----------------------------
 // Routes
 // -----------------------------
+
+// Health Check API
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Username availability (live check)
+// Username Availability Check
 app.get("/api/username-available", async (req, res) => {
   try {
     const u = normalizeUsername(req.query?.u);
@@ -93,7 +86,7 @@ app.get("/api/username-available", async (req, res) => {
     const row = await getOne(`SELECT id FROM users WHERE username = ?`, [u]);
     return res.json({ ok: true, available: !row });
   } catch (e) {
-    console.error(e);
+    console.error("Error checking username:", e);
     return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
@@ -110,7 +103,7 @@ app.get("/api/me", authRequired, async (req, res) => {
     if (!u) return res.status(404).json({ ok: false, code: "NOT_FOUND" });
     return res.json({ ok: true, user: u });
   } catch (e) {
-    console.error(e);
+    console.error("Error fetching user data:", e);
     return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
@@ -118,12 +111,7 @@ app.get("/api/me", authRequired, async (req, res) => {
 // REGISTER
 app.post("/api/register", async (req, res) => {
   try {
-    const firstName = String(req.body?.firstName || "").trim();
-    const lastName  = String(req.body?.lastName || "").trim();
-    const birthdate = String(req.body?.birthdate || "").trim();
-    const email     = normalizeEmail(req.body?.email);
-    const username  = normalizeUsername(req.body?.username);
-    const password  = String(req.body?.password || "");
+    const { firstName, lastName, birthdate, email, username, password } = req.body;
 
     if (!requireField(email) || !requireField(username) || !requireField(password)) {
       return res.status(400).json({ ok: false, code: "MISSING_FIELDS" });
@@ -152,8 +140,6 @@ app.post("/api/register", async (req, res) => {
     );
 
     const userId = ins.lastID;
-
-    // verify token 24h
     const token = randomToken(24);
     const expiresAt = addMinutesISO(24 * 60);
 
@@ -177,7 +163,7 @@ app.post("/api/register", async (req, res) => {
 
     return res.json({ ok: true, code: "REGISTERED" });
   } catch (e) {
-    console.error(e);
+    console.error("Error during registration:", e);
     return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
@@ -215,12 +201,12 @@ app.get("/api/verify", async (req, res) => {
       `<html><body><h2>EPTEC</h2><p>Konto freigeschaltet. Du kannst zurück zur App.</p></body></html>`
     );
   } catch (e) {
-    console.error(e);
+    console.error("Error during verification:", e);
     return res.status(500).send("Server error");
   }
 });
 
-// LOGIN -> JWT
+// LOGIN
 app.post("/api/login", async (req, res) => {
   try {
     const username = normalizeUsername(req.body?.username);
@@ -244,114 +230,8 @@ app.post("/api/login", async (req, res) => {
     const token = jwtSign({ sub: user.id, username: user.username });
     return res.json({ ok: true, code: "LOGGED_IN", token });
   } catch (e) {
-    console.error(e);
+    console.error("Error during login:", e);
     return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
-  }
-});
-
-// FORGOT -> send reset link (privacy safe)
-app.post("/api/forgot", async (req, res) => {
-  try {
-    const identity = String(req.body?.identity || "").trim();
-    if (!identity) return res.status(400).json({ ok: false, code: "MISSING_FIELDS" });
-
-    const isEmail = identity.includes("@");
-    const user = isEmail
-      ? await getOne(`SELECT id, email FROM users WHERE email = ?`, [normalizeEmail(identity)])
-      : await getOne(`SELECT id, email FROM users WHERE username = ?`, [normalizeUsername(identity)]);
-
-    // Privacy-safe response
-    if (!user) return res.json({ ok: true, code: "MAIL_SENT" });
-
-    const token = randomToken(24);
-    const expiresAt = addMinutesISO(30);
-    const ts = nowISO();
-
-    await run(
-      `INSERT INTO tokens (user_id,type,token,expires_at,created_at,used)
-       VALUES (?,?,?,?,?,0)`,
-      [user.id, "reset", token, expiresAt, ts]
-    );
-
-    const base = linkBaseOrFallback(req);
-    const resetLink = `${base}/api/reset?token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: user.email,
-      subject: "Passwort zurücksetzen",
-      text:
-        "Vielen Dank, dass Sie sich melden.\n" +
-        "Klicken Sie auf den Link, um ein neues Passwort zu setzen:\n" +
-        resetLink
-    });
-
-    return res.json({ ok: true, code: "MAIL_SENT" });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
-  }
-});
-
-// RESET (GET form)
-app.get("/api/reset", async (req, res) => {
-  const token = String(req.query?.token || "").trim();
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-
-  return res.send(`
-    <html>
-      <body style="font-family:system-ui;max-width:720px;margin:40px auto;">
-        <h2>EPTEC – Neues Passwort</h2>
-        <form method="POST" action="/api/reset">
-          <input type="hidden" name="token" value="${escapeHtml(token)}" />
-          <label>Neues Passwort:</label><br/>
-          <input name="newPassword" type="password" style="padding:10px;width:100%;max-width:420px" /><br/><br/>
-          <button style="padding:10px 14px;">Passwort setzen</button>
-        </form>
-      </body>
-    </html>
-  `);
-});
-
-// RESET (POST)
-app.post("/api/reset", async (req, res) => {
-  try {
-    const token = String(req.body?.token || "").trim();
-    const newPassword = String(req.body?.newPassword || "");
-
-    if (!token || !newPassword) return res.status(400).send("Missing data");
-    if (!validatePasswordRules(newPassword)) return res.status(400).send("Password rules not met");
-
-    const row = await getOne(
-      `SELECT id AS token_id, user_id, used, expires_at
-       FROM tokens WHERE token = ? AND type = 'reset'`,
-      [token]
-    );
-
-    if (!row) return res.status(400).send("Invalid token");
-    if (row.used) return res.status(200).send("Already used.");
-    if (new Date(row.expires_at).getTime() < Date.now()) return res.status(400).send("Token expired.");
-
-    const passHash = await hashPassword(newPassword);
-
-    await run(`UPDATE tokens SET used = 1 WHERE id = ?`, [row.token_id]);
-    await run(`UPDATE users SET pass_hash = ?, updated_at = ? WHERE id = ?`, [passHash, nowISO(), row.user_id]);
-
-    const user = await getOne(`SELECT email FROM users WHERE id = ?`, [row.user_id]);
-    if (user?.email) {
-      await sendMail({
-        to: user.email,
-        subject: "Passwort geändert",
-        text: "Vielen Dank. Sie können jetzt das neue Passwort verwenden."
-      });
-    }
-
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(
-      `<html><body><h2>EPTEC</h2><p>Passwort geändert. Du kannst zurück zur App.</p></body></html>`
-    );
-  } catch (e) {
-    console.error(e);
-    return res.status(500).send("Server error");
   }
 });
 
@@ -362,4 +242,3 @@ const port = Number(process.env.PORT || 8080);
 app.listen(port, () => {
   console.log(`EPTEC backend listening on :${port}`);
 });
-
