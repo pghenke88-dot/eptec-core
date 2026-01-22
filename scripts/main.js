@@ -1,15 +1,18 @@
 /**
  * scripts/main.js
- * EPTEC MAIN — HARMONY FINAL (NO RENDERING)
+ * EPTEC MAIN — HARMONY FINAL (Logic-first, Renderer-safe)
  *
- * Responsibilities:
- * - UI wiring only (buttons -> state/logic)
- * - UX: placeholders + 👁 toggles
- * - Audio lifecycle: wind/tunnel start/stop by state + user interaction
+ * - NO rendering (ui_controller.js renders)
+ * - NO business logic (logic.js + state_manager.js own that)
+ * - Handles:
+ *   - placeholders (word placeholders only)
+ *   - 👁 eye toggles for login/master fields
+ *   - sound lifecycle (ambient vs tunnel) based on state
+ *   - button wiring (register/forgot/login/admin)
  *
- * IMPORTANT:
- * - DOES NOT show/hide scenes or modals.
- *   ui_controller.js is the single renderer.
+ * Assumes logic.js exposes:
+ * - window.Logic.login(username,password)
+ * - window.Logic.adminEnter(code)
  */
 
 (() => {
@@ -21,25 +24,21 @@
   function store() {
     return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
   }
-
   function getState() {
     const s = store();
     return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
   }
-
   function setState(patch) {
     const s = store();
     if (!s) return;
     if (typeof s.set === "function") return safe(() => s.set(patch));
     return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
   }
-
   function subscribe(fn) {
     const s = store();
     if (typeof s?.subscribe === "function") return s.subscribe(fn);
     if (typeof s?.onChange === "function") return s.onChange(fn);
 
-    // polling fallback
     let last = "";
     const t = setInterval(() => {
       const st = getState();
@@ -49,49 +48,40 @@
     return () => clearInterval(t);
   }
 
-  // ------------------------------------------------------------
-  // Language helper for placeholders (generic words only)
-  // ------------------------------------------------------------
+  // ---------- language-aware placeholders (words only) ----------
   function langKey() {
     const st = getState();
     const raw = String(st?.i18n?.lang || st?.lang || document.documentElement.lang || "de").toLowerCase();
     return raw === "en" ? "en" : "de";
   }
-
-  function ph(kind) {
+  function word(kind) {
     const de = { pass: "Passwort", master: "Masterpasswort" };
     const en = { pass: "Password", master: "Master password" };
     const L = langKey() === "en" ? en : de;
     return kind === "master" ? L.master : L.pass;
   }
 
-  function applyPlaceholders() {
-    const setPH = (id, val) => {
-      const el = $(id);
-      if (!el) return;
-      // only set if missing/empty
-      const cur = el.getAttribute("placeholder");
-      if (!cur) el.setAttribute("placeholder", val);
-    };
-
-    setPH("login-username", "Username");
-    setPH("login-password", ph("pass"));
-    setPH("admin-code", ph("master"));
-    setPH("door1-master", ph("master"));
-    setPH("door2-master", ph("master"));
+  function ensurePlaceholder(id, txt) {
+    const el = $(id);
+    if (!el) return;
+    const cur = el.getAttribute("placeholder");
+    if (!cur) el.setAttribute("placeholder", txt);
   }
 
-  // ------------------------------------------------------------
-  // 👁 Eye toggles (stable, no observers, no freezes)
-  // ------------------------------------------------------------
+  function applyPlaceholders() {
+    ensurePlaceholder("login-password", word("pass"));
+    ensurePlaceholder("admin-code", word("master"));
+    ensurePlaceholder("door1-master", word("master"));
+    ensurePlaceholder("door2-master", word("master"));
+  }
+
+  // ---------- 👁 eye toggles (no observers, no freezes) ----------
   function ensureEye(inputId, eyeId) {
     const inp = $(inputId);
     if (!inp) return;
 
-    // Expect wrapper exists (we added pw-wrap in index)
     const wrap = inp.closest(".pw-wrap") || inp.parentElement;
     if (!wrap) return;
-
     wrap.style.position = wrap.style.position || "relative";
 
     if ($(eyeId)) return;
@@ -112,7 +102,6 @@
     btn.style.fontSize = "16px";
     btn.style.lineHeight = "1";
 
-    // reserve space
     if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
 
     btn.addEventListener("click", () => {
@@ -131,19 +120,15 @@
     ensureEye("door2-master", "eye-door2-master");
   }
 
-  // ------------------------------------------------------------
-  // Footer visible (best effort)
-  // ------------------------------------------------------------
+  // ---------- footer always visible ----------
   function ensureFooterVisible() {
     const footer = document.querySelector("footer");
     if (footer) footer.style.display = "flex";
   }
 
-  // ------------------------------------------------------------
-  // Audio lifecycle (no background click requirement)
-  // ------------------------------------------------------------
+  // ---------- sound lifecycle ----------
   let audioUnlocked = false;
-  let lastView = null;
+  let lastMode = null;
 
   function unlockAudioOnce() {
     if (audioUnlocked) return;
@@ -151,67 +136,80 @@
     safe(() => window.SoundEngine?.unlockAudio?.());
   }
 
-  function startWind() {
+  function startAmbient() {
     unlockAudioOnce();
     safe(() => window.SoundEngine?.startAmbient?.());
   }
 
-  function stopTunnel() {
+  function stopTunnelSound() {
     safe(() => window.SoundEngine?.stopTunnel?.());
-    // fallback: stopAll if present
-    safe(() => window.SoundEngine?.stopAll?.());
+    safe(() => window.SoundEngine?.stopAll?.()); // fallback if implemented
   }
 
-  function startTunnel() {
+  function startTunnelSound() {
     unlockAudioOnce();
     safe(() => window.SoundEngine?.stopAmbient?.());
     safe(() => window.SoundEngine?.tunnelFall?.());
   }
 
-  // Start wind on real UI interaction (buttons/inputs), not background
+  function modeFromState(st) {
+    // Prefer scene keys if logic uses them
+    const scene = String(st?.scene || "").toLowerCase().trim();
+    const view  = String(st?.view || "").toLowerCase().trim();
+    const tr    = st?.transition || {};
+
+    if (scene) return scene; // start|tunnel|viewdoors|room1|room2|whiteout
+    if (view) return view;   // meadow|tunnel|doors|room1|room2
+    if (tr?.tunnelActive) return "tunnel";
+    return "start";
+  }
+
+  function onState(st) {
+    const m = modeFromState(st);
+
+    // normalize: legacy -> logic naming
+    const norm =
+      m === "meadow" ? "start" :
+      m === "doors" ? "viewdoors" :
+      m;
+
+    if (norm === lastMode) return;
+
+    if (norm === "tunnel") {
+      startTunnelSound();
+    } else {
+      // leaving tunnel -> stop tunnel sound
+      if (lastMode === "tunnel") stopTunnelSound();
+
+      // ambient in start/doors/rooms
+      if (norm === "start" || norm === "viewdoors" || norm === "room1" || norm === "room2") {
+        startAmbient();
+      }
+    }
+
+    lastMode = norm;
+  }
+
+  // Wind should start when user interacts with UI elements (not background)
   function bindUserInteractionAudio() {
     const ids = [
       "login-username","login-password","admin-code",
       "btn-login","btn-register","btn-forgot","admin-submit",
-      "door1-present","door1-vip","door1-master","door1-present-apply","door1-vip-apply","door1-master-apply",
-      "door2-present","door2-vip","door2-master","door2-present-apply","door2-vip-apply","door2-master-apply"
+      "door1-present","door1-vip","door1-master",
+      "door2-present","door2-vip","door2-master"
     ];
 
     ids.forEach((id) => {
       const el = $(id);
       if (!el || el.__eptec_audio_bind) return;
       el.__eptec_audio_bind = true;
-
-      el.addEventListener("pointerdown", () => startWind(), { passive: true });
-      el.addEventListener("focus", () => startWind(), { passive: true });
+      el.addEventListener("pointerdown", () => startAmbient(), { passive: true });
+      el.addEventListener("focus", () => startAmbient(), { passive: true });
     });
   }
 
-  // React to state changes (sound starts/stops at switchpoints)
-  function onState(st) {
-    const view = String(st?.view || "").toLowerCase();
-    if (!view || view === lastView) return;
-
-    if (view === "tunnel") {
-      startTunnel();
-    } else {
-      // leaving tunnel
-      if (lastView === "tunnel") stopTunnel();
-
-      // meadow/doors/rooms = ambient
-      if (view === "meadow" || view === "doors" || view === "room1" || view === "room2") {
-        startWind();
-      }
-    }
-
-    lastView = view;
-  }
-
-  // ------------------------------------------------------------
-  // Button bindings (no rendering)
-  // ------------------------------------------------------------
+  // ---------- wiring ----------
   function bindButtons() {
-    // Register modal
     const regBtn = $("btn-register");
     if (regBtn && !regBtn.__eptec_bound) {
       regBtn.__eptec_bound = true;
@@ -221,7 +219,6 @@
       });
     }
 
-    // Forgot modal
     const forgotBtn = $("btn-forgot");
     if (forgotBtn && !forgotBtn.__eptec_bound) {
       forgotBtn.__eptec_bound = true;
@@ -231,7 +228,6 @@
       });
     }
 
-    // Admin enter (delegated to your logic)
     const adminBtn = $("admin-submit");
     if (adminBtn && !adminBtn.__eptec_bound) {
       adminBtn.__eptec_bound = true;
@@ -242,7 +238,6 @@
       });
     }
 
-    // Login (delegated to your logic; keep your validation)
     const loginBtn = $("btn-login");
     if (loginBtn && !loginBtn.__eptec_bound) {
       loginBtn.__eptec_bound = true;
@@ -266,28 +261,26 @@
     }
   }
 
-  // ------------------------------------------------------------
-  // Boot
-  // ------------------------------------------------------------
   function boot() {
     ensureFooterVisible();
+
     applyPlaceholders();
     initEyes();
 
     bindUserInteractionAudio();
     bindButtons();
 
-    // re-apply placeholder words when language changes
+    // re-apply placeholders if language changes (safe)
     subscribe(() => applyPlaceholders());
 
-    // sound switchpoints by state
+    // audio switchpoints by state
     subscribe(onState);
     onState(getState());
 
-    // initial audio unlock on first real interaction
+    // unlock audio on first interaction
     document.addEventListener("pointerdown", unlockAudioOnce, { once: true, passive: true });
 
-    console.log("EPTEC MAIN: HARMONY FINAL (no rendering) active");
+    console.log("EPTEC MAIN: HARMONY FINAL active");
   }
 
   document.addEventListener("DOMContentLoaded", boot);
