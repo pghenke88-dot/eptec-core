@@ -1,4 +1,15 @@
+/**
+ * server.js
+ * EPTEC Backend — FINAL (Express + SQLite + JWT + Mail)
+ *
+ * - GitHub Pages friendly (CORS by env)
+ * - Rate limit + Helmet
+ * - Register + Verify + Login + Forgot + Reset
+ * - /api/me protected via authRequired middleware
+ */
+
 import "dotenv/config";
+
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -7,22 +18,37 @@ import rateLimit from "express-rate-limit";
 import { initDb, getOne, run } from "./db.js";
 import { sendMail } from "./mailer.js";
 import { authRequired } from "./auth.js";
+
 import {
-  nowISO, addMinutesISO,
-  normalizeEmail, normalizeUsername,
-  validateUsernameRules, validatePasswordRules,
-  hashPassword, verifyPassword,
-  randomToken, jwtSign, publicBase
+  nowISO,
+  addMinutesISO,
+  normalizeEmail,
+  normalizeUsername,
+  validateUsernameRules,
+  validatePasswordRules,
+  hashPassword,
+  verifyPassword,
+  randomToken,
+  jwtSign,
+  publicBase
 } from "./security.js";
 
 const app = express();
 initDb();
 
+// -----------------------------
+// Middleware
+// -----------------------------
 app.use(helmet());
-app.use(express.json({ limit: "64kb" }));
 
-const origin = process.env.CORS_ORIGIN || "*";
-app.use(cors({ origin, credentials: false }));
+app.use(express.json({ limit: "64kb" }));
+app.use(express.urlencoded({ extended: false })); // needed for POST /api/reset form
+
+const originEnv = String(process.env.CORS_ORIGIN || "").trim();
+const corsOrigin =
+  !originEnv || originEnv === "*" ? true : originEnv;
+
+app.use(cors({ origin: corsOrigin, credentials: false }));
 
 app.use(rateLimit({
   windowMs: 60_000,
@@ -31,15 +57,39 @@ app.use(rateLimit({
   legacyHeaders: false
 }));
 
-function requireField(v) { return String(v ?? "").trim().length > 0; }
+function requireField(v) {
+  return String(v ?? "").trim().length > 0;
+}
 
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function linkBaseOrFallback(req) {
+  const base = publicBase();
+  if (base) return base;
+  // fallback: derive from request host (works behind a standard proxy)
+  const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "";
+  return host ? `${proto}://${host}` : "";
+}
+
+// -----------------------------
+// Routes
+// -----------------------------
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Username-Availability (für Live-Check im Register-Form)
+// Username availability (live check)
 app.get("/api/username-available", async (req, res) => {
   try {
     const u = normalizeUsername(req.query?.u);
     if (!u) return res.status(400).json({ ok: false, code: "MISSING" });
+
     const row = await getOne(`SELECT id FROM users WHERE username = ?`, [u]);
     return res.json({ ok: true, available: !row });
   } catch (e) {
@@ -56,6 +106,7 @@ app.get("/api/me", authRequired, async (req, res) => {
        FROM users WHERE id = ?`,
       [req.user.id]
     );
+
     if (!u) return res.status(404).json({ ok: false, code: "NOT_FOUND" });
     return res.json({ ok: true, user: u });
   } catch (e) {
@@ -78,14 +129,18 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({ ok: false, code: "MISSING_FIELDS" });
     }
 
-    if (!validateUsernameRules(username)) return res.status(400).json({ ok:false, code:"USERNAME_RULES" });
-    if (!validatePasswordRules(password)) return res.status(400).json({ ok:false, code:"PASSWORD_RULES" });
+    if (!validateUsernameRules(username)) {
+      return res.status(400).json({ ok: false, code: "USERNAME_RULES" });
+    }
+    if (!validatePasswordRules(password)) {
+      return res.status(400).json({ ok: false, code: "PASSWORD_RULES" });
+    }
 
     const existingU = await getOne(`SELECT id FROM users WHERE username = ?`, [username]);
-    if (existingU) return res.status(409).json({ ok:false, code:"USERNAME_TAKEN" });
+    if (existingU) return res.status(409).json({ ok: false, code: "USERNAME_TAKEN" });
 
     const existingE = await getOne(`SELECT id FROM users WHERE email = ?`, [email]);
-    if (existingE) return res.status(409).json({ ok:false, code:"EMAIL_TAKEN" });
+    if (existingE) return res.status(409).json({ ok: false, code: "EMAIL_TAKEN" });
 
     const passHash = await hashPassword(password);
     const ts = nowISO();
@@ -108,7 +163,8 @@ app.post("/api/register", async (req, res) => {
       [userId, "verify", token, expiresAt, ts]
     );
 
-    const verifyLink = `${publicBase()}/api/verify?token=${encodeURIComponent(token)}`;
+    const base = linkBaseOrFallback(req);
+    const verifyLink = `${base}/api/verify?token=${encodeURIComponent(token)}`;
 
     await sendMail({
       to: email,
@@ -122,11 +178,11 @@ app.post("/api/register", async (req, res) => {
     return res.json({ ok: true, code: "REGISTERED" });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok:false, code:"SERVER_ERROR" });
+    return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
 
-// VERIFY (Mail-Link)
+// VERIFY (mail link)
 app.get("/api/verify", async (req, res) => {
   try {
     const token = String(req.query?.token || "").trim();
@@ -137,6 +193,7 @@ app.get("/api/verify", async (req, res) => {
        FROM tokens WHERE token = ? AND type = 'verify'`,
       [token]
     );
+
     if (!row) return res.status(400).send("Invalid token");
     if (row.used) return res.status(200).send("Already verified.");
     if (new Date(row.expires_at).getTime() < Date.now()) return res.status(400).send("Token expired.");
@@ -154,7 +211,9 @@ app.get("/api/verify", async (req, res) => {
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(`<html><body><h2>EPTEC</h2><p>Konto freigeschaltet. Du kannst zurück zur App.</p></body></html>`);
+    return res.send(
+      `<html><body><h2>EPTEC</h2><p>Konto freigeschaltet. Du kannst zurück zur App.</p></body></html>`
+    );
   } catch (e) {
     console.error(e);
     return res.status(500).send("Server error");
@@ -168,24 +227,25 @@ app.post("/api/login", async (req, res) => {
     const password = String(req.body?.password || "");
 
     if (!requireField(username) || !requireField(password)) {
-      return res.status(400).json({ ok:false, code:"MISSING_FIELDS" });
+      return res.status(400).json({ ok: false, code: "MISSING_FIELDS" });
     }
 
     const user = await getOne(
       `SELECT id, username, pass_hash, verified FROM users WHERE username = ?`,
       [username]
     );
-    if (!user) return res.status(401).json({ ok:false, code:"INVALID" });
-    if (!user.verified) return res.status(403).json({ ok:false, code:"NOT_VERIFIED" });
+
+    if (!user) return res.status(401).json({ ok: false, code: "INVALID" });
+    if (!user.verified) return res.status(403).json({ ok: false, code: "NOT_VERIFIED" });
 
     const ok = await verifyPassword(password, user.pass_hash);
-    if (!ok) return res.status(401).json({ ok:false, code:"INVALID" });
+    if (!ok) return res.status(401).json({ ok: false, code: "INVALID" });
 
-    const jwt = jwtSign({ sub: user.id, username: user.username });
-    return res.json({ ok:true, code:"LOGGED_IN", token: jwt });
+    const token = jwtSign({ sub: user.id, username: user.username });
+    return res.json({ ok: true, code: "LOGGED_IN", token });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok:false, code:"SERVER_ERROR" });
+    return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
 
@@ -193,14 +253,15 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/forgot", async (req, res) => {
   try {
     const identity = String(req.body?.identity || "").trim();
-    if (!identity) return res.status(400).json({ ok:false, code:"MISSING_FIELDS" });
+    if (!identity) return res.status(400).json({ ok: false, code: "MISSING_FIELDS" });
 
     const isEmail = identity.includes("@");
     const user = isEmail
       ? await getOne(`SELECT id, email FROM users WHERE email = ?`, [normalizeEmail(identity)])
       : await getOne(`SELECT id, email FROM users WHERE username = ?`, [normalizeUsername(identity)]);
 
-    if (!user) return res.json({ ok:true, code:"MAIL_SENT" });
+    // Privacy-safe response
+    if (!user) return res.json({ ok: true, code: "MAIL_SENT" });
 
     const token = randomToken(24);
     const expiresAt = addMinutesISO(30);
@@ -212,7 +273,8 @@ app.post("/api/forgot", async (req, res) => {
       [user.id, "reset", token, expiresAt, ts]
     );
 
-    const resetLink = `${publicBase()}/api/reset?token=${encodeURIComponent(token)}`;
+    const base = linkBaseOrFallback(req);
+    const resetLink = `${base}/api/reset?token=${encodeURIComponent(token)}`;
 
     await sendMail({
       to: user.email,
@@ -223,10 +285,10 @@ app.post("/api/forgot", async (req, res) => {
         resetLink
     });
 
-    return res.json({ ok:true, code:"MAIL_SENT" });
+    return res.json({ ok: true, code: "MAIL_SENT" });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok:false, code:"SERVER_ERROR" });
+    return res.status(500).json({ ok: false, code: "SERVER_ERROR" });
   }
 });
 
@@ -234,12 +296,13 @@ app.post("/api/forgot", async (req, res) => {
 app.get("/api/reset", async (req, res) => {
   const token = String(req.query?.token || "").trim();
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+
   return res.send(`
     <html>
       <body style="font-family:system-ui;max-width:720px;margin:40px auto;">
         <h2>EPTEC – Neues Passwort</h2>
         <form method="POST" action="/api/reset">
-          <input type="hidden" name="token" value="${token.replace(/"/g, "")}" />
+          <input type="hidden" name="token" value="${escapeHtml(token)}" />
           <label>Neues Passwort:</label><br/>
           <input name="newPassword" type="password" style="padding:10px;width:100%;max-width:420px" /><br/><br/>
           <button style="padding:10px 14px;">Passwort setzen</button>
@@ -248,8 +311,6 @@ app.get("/api/reset", async (req, res) => {
     </html>
   `);
 });
-
-app.use(express.urlencoded({ extended: false }));
 
 // RESET (POST)
 app.post("/api/reset", async (req, res) => {
@@ -271,6 +332,7 @@ app.post("/api/reset", async (req, res) => {
     if (new Date(row.expires_at).getTime() < Date.now()) return res.status(400).send("Token expired.");
 
     const passHash = await hashPassword(newPassword);
+
     await run(`UPDATE tokens SET used = 1 WHERE id = ?`, [row.token_id]);
     await run(`UPDATE users SET pass_hash = ?, updated_at = ? WHERE id = ?`, [passHash, nowISO(), row.user_id]);
 
@@ -284,12 +346,20 @@ app.post("/api/reset", async (req, res) => {
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(`<html><body><h2>EPTEC</h2><p>Passwort geändert. Du kannst zurück zur App.</p></body></html>`);
+    return res.send(
+      `<html><body><h2>EPTEC</h2><p>Passwort geändert. Du kannst zurück zur App.</p></body></html>`
+    );
   } catch (e) {
     console.error(e);
     return res.status(500).send("Server error");
   }
 });
 
+// -----------------------------
+// Boot
+// -----------------------------
 const port = Number(process.env.PORT || 8080);
-app.listen(port, () => console.log(`EPTEC backend listening on :${port}`));
+app.listen(port, () => {
+  console.log(`EPTEC backend listening on :${port}`);
+});
+
