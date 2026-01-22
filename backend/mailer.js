@@ -3,16 +3,10 @@
 
 import nodemailer from "nodemailer";
 
-/**
- * Convert env value to boolean
- */
 function envBool(v) {
   return String(v || "").toLowerCase() === "true";
 }
 
-/**
- * Send mail (or log-only if MAIL_LOG_ONLY=true)
- */
 export async function sendMail({ to, subject, text, html }) {
   if (!to || !subject) {
     throw new Error("MAIL_MISSING_FIELDS");
@@ -20,9 +14,6 @@ export async function sendMail({ to, subject, text, html }) {
 
   const logOnly = envBool(process.env.MAIL_LOG_ONLY);
 
-  // --------------------------------------------------
-  // LOG-ONLY MODE (dev / github pages / demo)
-  // --------------------------------------------------
   if (logOnly) {
     console.log("\n[EPTEC MAIL LOG]");
     console.log("TO:", to);
@@ -33,22 +24,17 @@ export async function sendMail({ to, subject, text, html }) {
     return { ok: true, mode: "log" };
   }
 
-  // --------------------------------------------------
-  // SMTP MODE (production)
-  // --------------------------------------------------
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
-    secure: false, // STARTTLS
+    secure: false,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
     }
   });
 
-  const from =
-    process.env.MAIL_FROM ||
-    "EPTEC <no-reply@eptec.local>";
+  const from = process.env.MAIL_FROM || "EPTEC <no-reply@eptec.local>";
 
   const info = await transporter.sendMail({
     from,
@@ -58,8 +44,6 @@ export async function sendMail({ to, subject, text, html }) {
     html
   });
 
-  return {
-    ok: true,
-    messageId: info.messageId
-  };
+  return { ok: true, messageId: info.messageId };
 }
+
