@@ -398,4 +398,20 @@ html[dir="rtl"] #system-clock {
 .scene #system-clock {
   color: #000 !important;
 }
+/* =========================================================
+   EPTEC DEMO DARK MODE (doors/rooms)
+   activated by: html.demo-dark
+   ========================================================= */
+
+html.demo-dark #doors-view,
+html.demo-dark #room-1-view,
+html.demo-dark #room-2-view{
+  background:#000 !important;
+  color:#fff !important;
+}
+
+/* optional: hide meadow visuals if something leaks */
+html.demo-dark #meadow-view{
+  display:none !important;
+}
 
