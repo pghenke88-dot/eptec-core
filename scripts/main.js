@@ -962,3 +962,56 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — REGISTER/FORGOT MODAL FALLBACK
+   - forces visible modals even if UI controller doesn't render them yet
+   - safe: does not break if UI controller later takes over
+   ========================================================= */
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function show(id) {
+    const el = $(id);
+    if (!el) return false;
+    el.classList.remove("modal-hidden");
+    el.style.display = "block";
+    el.style.pointerEvents = "auto";
+    el.style.zIndex = "9999";
+    return true;
+  }
+
+  function bind(id, fn) {
+    const el = $(id);
+    if (!el || el.__eptec_modal_fallback_bound) return;
+    el.__eptec_modal_fallback_bound = true;
+    el.addEventListener("click", fn);
+  }
+
+  bind("btn-register", () => {
+    safe(() => window.SoundEngine?.uiConfirm?.());
+    // state hint (optional)
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "register" }));
+    // DOM fallback
+    if (!show("register-screen")) console.warn("[MODAL] register-screen missing");
+  });
+
+  bind("btn-forgot", () => {
+    safe(() => window.SoundEngine?.uiConfirm?.());
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "forgot" }));
+    if (!show("forgot-screen")) console.warn("[MODAL] forgot-screen missing");
+  });
+
+  // ESC closes fallback
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const r = $("register-screen");
+    const f = $("forgot-screen");
+    if (r) { r.classList.add("modal-hidden"); r.style.display = "none"; }
+    if (f) { f.classList.add("modal-hidden"); f.style.display = "none"; }
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
+  });
+
+  console.log("EPTEC MAIN APPEND: register/forgot fallback active");
+})();
