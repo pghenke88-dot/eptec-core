@@ -4063,4 +4063,38 @@ PASTE HERE:
     console.info("[EPTEC] ID_REGISTRY initialized (append)");
   }
 })();
+/* =========================================================
+   EPTEC APPEND — TUNNEL DURATION (LONGER)
+   Place at END of scripts/logic.js
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const D = window.EPTEC_MASTER?.Dramaturgy;
+  const T = window.EPTEC_MASTER?.TERMS;
+
+  if (!D || !T?.scenes || D.__eptec_tunnel_patched) return;
+  D.__eptec_tunnel_patched = true;
+
+  // Patch only the timing, keep logic intact
+  const origStartToDoors = D.startToDoors?.bind(D);
+  if (origStartToDoors) {
+    D.startToDoors = function () {
+      // do the same, but with longer tunnel
+      safe(() => this.to(T.scenes.tunnel, { from: "start" }));
+      setTimeout(() => safe(() => this.to(T.scenes.viewdoors, { from: "tunnel" })), 1200); // was ~650
+    };
+  }
+
+  const origDoorsToRoom = D.doorsToRoom?.bind(D);
+  if (origDoorsToRoom) {
+    D.doorsToRoom = function (roomScene) {
+      safe(() => this.to(T.scenes.whiteout, { from: "doors" }));
+      setTimeout(() => safe(() => this.to(roomScene, { from: "whiteout" })), 520); // was ~380
+    };
+  }
+
+  console.log("EPTEC APPEND: Tunnel duration patched.");
+})();
 
