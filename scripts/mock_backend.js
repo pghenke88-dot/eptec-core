@@ -1,3 +1,4 @@
+```js
 /**
  * scripts/mock_backend.js
  * EPTEC Phase-1 Backend (Mock) — FINAL (FULL FEATURES + HARDENED)
@@ -613,7 +614,7 @@
     const u = Safe.lower(username);
     if (!u) return { ok:false, code:"EMPTY" };
     const list = Array.isArray(db.inbox[u]) ? db.inbox[u] : [];
-    return { ok:true, inbox: listlist: undefined, inbox: list.slice(0, 50) };
+    return { ok:true, inbox: list.slice(0, 50) };
   }
 
   function markInboxRead(username, mailId) {
@@ -708,3 +709,5 @@
     clearCountryLock
   };
 })();
+```
+
