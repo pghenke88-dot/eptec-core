@@ -4033,4 +4033,34 @@ PASTE HERE:
     window.EPTEC_ID_REGISTRY.logicIds = Array.isArray(window.EPTEC_ID_REGISTRY.logicIds) ? window.EPTEC_ID_REGISTRY.logicIds : [];
   }
 })();
+/* =========================================================
+   EPTEC APPEND — ID REGISTRY SAFE INIT
+   Purpose:
+   - Prevents "EPTEC_ID_REGISTRY missing"
+   - Guarantees stable view + logic registration
+   - NO overrides, NO side effects
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  if (!window.EPTEC_ID_REGISTRY) {
+    window.EPTEC_ID_REGISTRY = {
+      ids: [],
+      logicIds: [],
+      register(id) {
+        if (id && !this.ids.includes(id)) {
+          this.ids.push(id);
+        }
+      },
+      registerLogic(id) {
+        if (id && !this.logicIds.includes(id)) {
+          this.logicIds.push(id);
+        }
+      }
+    };
+
+    console.info("[EPTEC] ID_REGISTRY initialized (append)");
+  }
+})();
 
