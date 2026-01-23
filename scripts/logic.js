@@ -1259,6 +1259,7 @@ PASTE HERE:
    - Provide 👁 toggles for master fields (start + doors)
    - Never autofill, never prefill, never store raw passwords
    - No-crash, idempotent, any load order
+   - FIX: prevents MutationObserver storms / timeouts (freeze-proof)
    ========================================================= */
 (() => {
   "use strict";
@@ -1267,14 +1268,18 @@ PASTE HERE:
   const $ = (id) => document.getElementById(id);
 
   /* -----------------------------
-     A) SAFE PLACEHOLDER POLICY
+     A) SAFE PLACEHOLDER POLICY (FREEZE-PROOF)
      - Password inputs MAY have placeholders,
        but ONLY generic labels (e.g. "Passwort", "Masterpasswort")
      - Never inject real passwords
+     - Storm-safe: idempotent + throttled + re-entry guarded
      ----------------------------- */
 
   function currentLang() {
-    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    const st =
+      safe(() => window.EPTEC_UI_STATE?.get?.()) ||
+      safe(() => window.EPTEC_UI_STATE?.state) ||
+      {};
     const l = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "en").toLowerCase();
     return l === "de" ? "de" : "en";
   }
@@ -1287,41 +1292,91 @@ PASTE HERE:
     return d[kind] || d.password;
   }
 
+  let __eptec_pw_running = false;
+  let __eptec_pw_scheduled = false;
+  let __eptec_pw_mo = null;
+
   function enforcePasswordInputHygiene(root = document) {
+    if (__eptec_pw_running) return;
+    __eptec_pw_running = true;
+
     safe(() => {
       const list = Array.from(root.querySelectorAll("input[type='password']"));
       for (const inp of list) {
         // Never prefill anything
-        if (document.activeElement !== inp && typeof inp.value === "string" && inp.value) inp.value = "";
-
-        // Best effort: avoid browser autofill leaks
-        if (!inp.hasAttribute("autocomplete")) inp.setAttribute("autocomplete", "off");
-
-        // Apply SAFE placeholder labels (generic only)
-        // Master fields we know:
-        // - admin-code (start master)
-        // - door1-master / door2-master (doors master)
-        const id = String(inp.id || "");
-
-        if (id === "admin-code" || id === "door1-master" || id === "door2-master") {
-          inp.setAttribute("placeholder", phWord("master"));
-        } else {
-          // login-password etc.
-          inp.setAttribute("placeholder", phWord("password"));
+        if (document.activeElement !== inp && typeof inp.value === "string" && inp.value) {
+          inp.value = "";
         }
+
+        // Best effort: avoid browser autofill leaks (idempotent set)
+        const wantAuto = "off";
+        const curAuto = inp.getAttribute("autocomplete");
+        if (curAuto !== wantAuto) inp.setAttribute("autocomplete", wantAuto);
+
+        // SAFE placeholder labels (generic only) — idempotent set
+        const id = String(inp.id || "");
+        const wantPh =
+          (id === "admin-code" || id === "door1-master" || id === "door2-master")
+            ? phWord("master")
+            : phWord("password");
+
+        const curPh = inp.getAttribute("placeholder") || "";
+        if (curPh !== wantPh) inp.setAttribute("placeholder", wantPh);
       }
     });
+
+    __eptec_pw_running = false;
+  }
+
+  function schedulePasswordHygiene(root = document) {
+    if (__eptec_pw_scheduled) return;
+    __eptec_pw_scheduled = true;
+
+    setTimeout(() => {
+      __eptec_pw_scheduled = false;
+      enforcePasswordInputHygiene(root);
+    }, 250);
   }
 
   function observePasswordInputs() {
-    // Keep hygiene stable even if other scripts change DOM
+    // bind only once
+    if (__eptec_pw_mo) return;
+
     safe(() => {
-      const mo = new MutationObserver(() => enforcePasswordInputHygiene(document));
-      mo.observe(document.documentElement || document.body, {
+      __eptec_pw_mo = new MutationObserver((mutations) => {
+        // prevent self-trigger loops
+        if (__eptec_pw_running) return;
+
+        let relevant = false;
+
+        for (const m of mutations) {
+          if (m.type === "childList") {
+            for (const n of m.addedNodes) {
+              if (!n || n.nodeType !== 1) continue;
+              if (n.tagName === "INPUT" && (n.getAttribute("type") || "").toLowerCase() === "password") { relevant = true; break; }
+              if (typeof n.querySelector === "function" && n.querySelector("input[type='password']")) { relevant = true; break; }
+            }
+            if (relevant) break;
+          }
+
+          if (m.type === "attributes") {
+            const t = m.target;
+            if (t && t.tagName === "INPUT") {
+              const type = (t.getAttribute("type") || "").toLowerCase();
+              if (type === "password" || m.attributeName === "type") { relevant = true; break; }
+            }
+          }
+        }
+
+        if (relevant) schedulePasswordHygiene(document);
+      });
+
+      __eptec_pw_mo.observe(document.documentElement || document.body, {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ["type", "placeholder", "autocomplete", "value"]
+        // IMPORTANT: do NOT observe "value" (storms)
+        attributeFilter: ["type", "placeholder", "autocomplete"]
       });
     });
   }
@@ -1424,10 +1479,9 @@ PASTE HERE:
 
     let eye = $(eyeId);
     if (!eye) {
-      const wrap = inp.parentElement;
+      const wrap = inp.closest(".pw-wrap") || inp.parentElement; // ✅ robust
       if (!wrap) return;
 
-      // wrap must be relative for absolute eye
       wrap.style.position = wrap.style.position || "relative";
 
       eye = document.createElement("button");
@@ -1448,7 +1502,6 @@ PASTE HERE:
 
       wrap.appendChild(eye);
 
-      // space for eye
       if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
     }
 
@@ -1467,17 +1520,14 @@ PASTE HERE:
      ----------------------------- */
 
   function boot() {
-    // ensure secrets exist
     getSecrets();
 
     // allow SAFE placeholders (generic words only)
     enforcePasswordInputHygiene(document);
     observePasswordInputs();
 
-    // patch kernel auth verifiers
     patchKernelAuth();
 
-    // eye toggles (master fields)
     ensureEye("admin-code", "eye-admin-code");
     ensureEye("door1-master", "eye-door1-master");
     ensureEye("door2-master", "eye-door2-master");
@@ -1489,6 +1539,7 @@ PASTE HERE:
   else boot();
 
 })();
+
 /* =========================================================
    EPTEC APPEND 1 — GLOBAL I18N TOOL (UNBLOCKABLE) + LOCALE + CLOCK
    - 12 language rail always works, never blocked
