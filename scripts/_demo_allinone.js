@@ -691,3 +691,154 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC DEMO PATCH — DOOR ENTER BUTTONS + ORB SWITCH
+   - Adds 2 demo "ENTER" buttons directly on doors (only in demo)
+   - Door click still works, but buttons make it foolproof
+   - Ensures orb is visible in rooms for demo+author and toggles rooms
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[DEMO_DOORBTN]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function isDemoOrAuthor(st = getState()) { return !!st?.modes?.demo || !!st?.modes?.author; }
+  function isDemo(st = getState()) { return !!st?.modes?.demo; }
+
+  // ---------- ORB ----------
+  function ensureOrb() {
+    let orb = $("author-orb") || document.querySelector("[data-eptec-orb='author']");
+    if (!orb) {
+      orb = document.createElement("div");
+      orb.id = "author-orb";
+      orb.textContent = "◯";
+      document.body.appendChild(orb);
+    }
+
+    // style "hinten", aber klickbar
+    orb.style.position = "fixed";
+    orb.style.right = "18px";
+    orb.style.top = "50%";
+    orb.style.transform = "translateY(-50%)";
+    orb.style.width = "44px";
+    orb.style.height = "44px";
+    orb.style.borderRadius = "999px";
+    orb.style.display = "none";
+    orb.style.alignItems = "center";
+    orb.style.justifyContent = "center";
+    orb.style.cursor = "pointer";
+    orb.style.background = "rgba(255,255,255,0.08)";
+    orb.style.border = "1px solid rgba(255,255,255,0.18)";
+    orb.style.backdropFilter = "blur(6px)";
+    orb.style.color = "#fff";
+    orb.style.zIndex = "9999";
+    // "hinten" optisch:
+    orb.style.opacity = "0.55";
+
+    return orb;
+  }
+
+  function inRoom() {
+    const r1 = $("room-1-view");
+    const r2 = $("room-2-view");
+    return (r1 && r1.style.display === "block") || (r2 && r2.style.display === "block");
+  }
+
+  function showOrbIfNeeded() {
+    const orb = ensureOrb();
+    const st = getState();
+    const show = isDemoOrAuthor(st) && inRoom();
+    orb.style.display = show ? "flex" : "none";
+    orb.style.pointerEvents = show ? "auto" : "none";
+  }
+
+  function bindOrbSwitch() {
+    const orb = ensureOrb();
+    if (orb.__eptec_orb_bound) return;
+    orb.__eptec_orb_bound = true;
+
+    orb.addEventListener("click", () => {
+      const st = getState();
+      if (!isDemoOrAuthor(st)) return;
+
+      safe(() => window.SoundEngine?.uiConfirm?.());
+
+      const r1 = $("room-1-view");
+      const r2 = $("room-2-view");
+      const r1On = r1 && r1.style.display === "block";
+      const r2On = r2 && r2.style.display === "block";
+
+      if (r1On) setState({ scene: "room2", view: "room2" });
+      else if (r2On) setState({ scene: "room1", view: "room1" });
+    });
+  }
+
+  // ---------- DOOR ENTER BUTTONS (Demo only) ----------
+  function ensureDemoDoorButtons() {
+    if (!isDemo()) return;
+
+    const door1 = document.querySelector("[data-logic-id='doors.door1']");
+    const door2 = document.querySelector("[data-logic-id='doors.door2']");
+    if (!door1 || !door2) return;
+
+    function injectButton(doorEl, btnId, label, goScene) {
+      if ($(btnId)) return;
+
+      const btn = document.createElement("button");
+      btn.id = btnId;
+      btn.type = "button";
+      btn.textContent = label;
+      btn.style.marginTop = "10px";
+      btn.style.width = "100%";
+      btn.style.cursor = "pointer";
+      btn.style.padding = "10px 12px";
+      btn.style.borderRadius = "12px";
+      btn.style.border = "1px solid rgba(255,255,255,.22)";
+      btn.style.background = "rgba(0,0,0,.35)";
+      btn.style.color = "#fff";
+
+      btn.addEventListener("click", (e) => {
+        if (!isDemo()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        // Demo darf direkt rein
+        setState({ scene: goScene, view: goScene });
+      }, true);
+
+      doorEl.appendChild(btn);
+    }
+
+    injectButton(door1, "demo-enter-door1", "DEMO: Enter Room 1", "room1");
+    injectButton(door2, "demo-enter-door2", "DEMO: Enter Room 2", "room2");
+  }
+
+  // ---------- BOOT / WATCH ----------
+  function tick() {
+    ensureDemoDoorButtons();
+    bindOrbSwitch();
+    showOrbIfNeeded();
+  }
+
+  function boot() {
+    tick();
+    safe(() => store()?.subscribe?.(() => tick()));
+    setInterval(tick, 600);
+    console.log("EPTEC DEMO PATCH: door enter buttons + orb switch active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
