@@ -300,3 +300,37 @@ html[dir="rtl"] body{
 /* -------------------------------
    END OF FILE
 -------------------------------- */
+/* =========================================================
+   EPTEC PATCH — START TITLE + CENTER LOGIN (RTL-safe)
+   ========================================================= */
+
+#meadow-view{
+  display:flex !important;
+  flex-direction:column;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:16px;
+}
+
+#eptec-title{
+  text-align:center;
+  margin:0 0 8px 0;
+  max-width:min(92vw, 520px);
+  word-break:break-word;
+  line-height:1.15;
+}
+
+/* login box centered and stable width */
+#meadow-view .login-box{
+  width:min(92vw, 420px);
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+}
+
+/* RTL handling (Arabic) */
+html[dir="rtl"] #eptec-title,
+html[dir="rtl"] #meadow-view .login-box{
+  text-align:right;
+}
