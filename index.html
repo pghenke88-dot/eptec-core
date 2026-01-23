@@ -55,6 +55,8 @@
   <script src="./scripts/room1_framework_assistant.js" defer></script>
 
   <script src="./scripts/main.js" defer></script>
+
+  <!-- DEMO (one-file append, AFTER main) -->
   <script src="./scripts/eptec_demo_allinone.js" defer></script>
 </head>
 
@@ -68,44 +70,39 @@
     <div class="sun"></div>
     <div class="stream"></div>
 
-    <!-- ===== FIXED START STACK ===== -->
-    <div id="start-stack">
+    <!-- TITLE STACK -->
+    <h1 id="eptec-title">Contract Office</h1>
+    <h2 id="eptec-subtitle">by Johannes Büngener</h2>
 
-      <!-- TITLE -->
-      <h1 id="eptec-title">Contract Office</h1>
-      <h2 id="eptec-subtitle">by Johannes Büngener</h2>
+    <!-- DATE / TIME -->
+    <div id="system-clock"></div>
 
-      <!-- DATE / TIME -->
-      <div id="system-clock"></div>
+    <!-- LOGIN BOX -->
+    <div class="login-box">
 
-      <!-- LOGIN BOX -->
-      <div class="login-box">
-        <input id="login-username" type="text" />
+      <input id="login-username" type="text" />
 
-        <div class="pw-wrap">
-          <input id="login-password" type="password" autocomplete="off" />
-        </div>
-
-        <button id="btn-login">Login</button>
-        <div id="login-message" class="system-msg"></div>
-
-        <button id="btn-register">Register</button>
-        <button id="btn-forgot">Forgot password</button>
-
-        <!-- DEMO -->
-        <button id="btn-demo" type="button">Demo</button>
-
-        <!-- ADMIN -->
-        <div class="pw-wrap">
-          <input id="admin-code" type="password" autocomplete="off" />
-        </div>
-        <button id="admin-submit">Enter</button>
+      <div class="pw-wrap">
+        <input id="login-password" type="password" autocomplete="off" />
       </div>
 
-    </div>
-    <!-- ===== /START STACK ===== -->
+      <button id="btn-login">Login</button>
+      <div id="login-message" class="system-msg"></div>
 
-    <!-- LANGUAGE SWITCH -->
+      <button id="btn-register">Register</button>
+      <button id="btn-forgot">Forgot password</button>
+
+      <!-- DEMO -->
+      <button id="btn-demo" type="button">Demo</button>
+
+      <!-- ADMIN / MASTER -->
+      <div class="pw-wrap">
+        <input id="admin-code" type="password" autocomplete="off" />
+      </div>
+      <button id="admin-submit">Enter</button>
+    </div>
+
+    <!-- LANGUAGE SWITCHER -->
     <div id="language-switcher">
       <button id="lang-toggle">🌍</button>
       <div id="lang-rail">
@@ -132,7 +129,6 @@
   <section id="tunnel-view" class="scene tunnel-hidden">
     <div class="tunnel-wall"></div>
   </section>
-
   <div id="eptec-white-flash" class="whiteout-hidden"></div>
 
   <!-- =========================================================
@@ -174,11 +170,15 @@
     </div>
   </section>
 
-  <!-- ROOMS -->
+  <!-- =========================================================
+       ROOMS
+       ========================================================= -->
   <section id="room-1-view" class="scene modal-hidden"></section>
   <section id="room-2-view" class="scene modal-hidden"></section>
 
-  <!-- MODALS -->
+  <!-- =========================================================
+       MODALS
+       ========================================================= -->
   <section id="register-screen" class="modal modal-hidden"></section>
   <section id="forgot-screen" class="modal modal-hidden"></section>
 
@@ -188,7 +188,9 @@
     <div id="legal-body"></div>
   </section>
 
-  <!-- FOOTER -->
+  <!-- =========================================================
+       FOOTER
+       ========================================================= -->
   <footer id="eptec-footer">
     <a id="link-imprint">Imprint</a>
     <a id="link-terms">Terms</a>
