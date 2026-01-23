@@ -733,11 +733,17 @@
   else boot();
 })();
 /* =========================================================
-   EPTEC MAIN APPEND — FOOTER I18N + LEGAL OPEN (fallback)
+ /* =========================================================
+   EPTEC MAIN APPEND — FOOTER I18N + LEGAL OPEN/CLOSE (FINAL)
+   - i18n labels
+   - open legal modal
+   - close via button / ESC / backdrop click
+   - no reload needed
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[FOOTER_LEGAL]", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   function langKey() {
@@ -781,38 +787,276 @@
     if ($("link-privacy-footer")) $("link-privacy-footer").textContent = t.privacy;
   }
 
-  function openLegal(key) {
-    // state hint
-    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "legal", legalKey: key }));
+  function setState(patch) {
+    safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+    safe(() => window.EPTEC_MASTER?.UI_STATE?.set?.(patch));
+  }
 
-    // DOM fallback
+  function ensureLegalClickable() {
+    const scr = $("legal-screen");
+    if (!scr) return;
+
+    // make sure modal is actually clickable and above footer
+    scr.style.position = "fixed";
+    scr.style.inset = "0";
+    scr.style.zIndex = "999999";
+    scr.style.pointerEvents = "auto";
+
+    const close = $("legal-close");
+    if (close) {
+      close.style.pointerEvents = "auto";
+      close.style.zIndex = "1000000";
+      close.style.cursor = "pointer";
+    }
+  }
+
+  function openLegal(key) {
+    ensureLegalClickable();
+
     const scr = $("legal-screen");
     const title = $("legal-title");
     const body = $("legal-body");
+
     if (scr) {
       scr.classList.remove("modal-hidden");
-      scr.style.display = "block";
+      scr.style.display = "flex";            // IMPORTANT: modal baseline is flex
       scr.style.pointerEvents = "auto";
     }
+
     if (title) title.textContent = String(key || "").toUpperCase();
     if (body) body.textContent = "Placeholder – legal content wiring pending.";
+
+    setState({ modal: "legal", legalKey: key });
+    safe(() => window.SoundEngine?.uiConfirm?.());
   }
 
-  function bind(id, key) {
+  function closeLegal() {
+    const scr = $("legal-screen");
+    if (!scr) return;
+
+    scr.classList.add("modal-hidden");
+    scr.style.display = "none";
+    scr.style.pointerEvents = "none";
+
+    setState({ modal: null, legalKey: null });
+    safe(() => window.SoundEngine?.uiConfirm?.());
+  }
+
+  function bindLink(id, key) {
     const el = $(id);
     if (!el || el.__eptec_legal_bound) return;
     el.__eptec_legal_bound = true;
     el.style.cursor = "pointer";
-    el.addEventListener("click", () => openLegal(key));
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openLegal(key);
+    }, true);
+  }
+
+  function bindClose() {
+    const btn = $("legal-close");
+    if (btn && !btn.__eptec_close_bound) {
+      btn.__eptec_close_bound = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeLegal();
+      }, true);
+    }
+
+    const scr = $("legal-screen");
+    if (scr && !scr.__eptec_backdrop_bound) {
+      scr.__eptec_backdrop_bound = true;
+      scr.addEventListener("click", (e) => {
+        if (e.target === scr) closeLegal();
+      }, true);
+    }
+
+    if (!document.__eptec_legal_esc_bound) {
+      document.__eptec_legal_esc_bound = true;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeLegal();
+      });
+    }
   }
 
   function boot() {
     applyFooterText();
-    bind("link-imprint", "imprint");
-    bind("link-terms", "terms");
-    bind("link-support", "support");
-    bind("link-privacy-footer", "privacy");
-    safe(() => window.EPTEC_UI_STATE?.subscribe?.(() => applyFooterText()));
+
+    bindLink("link-imprint", "imprint");
+    bindLink("link-terms", "terms");
+    bindLink("link-support", "support");
+    bindLink("link-privacy-footer", "privacy");
+
+    bindClose();
+
+    safe(() => window.EPTEC_UI_STATE?.subscribe?.(() => {
+      applyFooterText();
+      // keep close bindings alive if UI re-renders
+      bindClose();
+    }));
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+
+/* =========================================================
+   EPTEC MAIN APPEND — SOUND ROUTER BY VIEW (Meadow/Tunnel/Doors/Room1/Room2)
+   Place at END of scripts/main.js
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[SOUND_ROUTER]", e); return undefined; } };
+
+  // If you prefer to rely entirely on SoundEngine's own methods,
+  // you can leave these and only use SoundEngine.* below.
+  const FILES = {
+    meadow: "./assets/sounds/wind.mp3",        // TODO: set to your meadow ambient
+    tunnel: "./assets/sounds/tunnel_fall.mp3", // TODO: set to your tunnel fall mp3
+    doors:  "./assets/sounds/doors.mp3",       // TODO: set to your doors ambience
+    room1:  "./assets/sounds/room1.mp3",       // TODO: set to your room1 ambience
+    room2:  "./assets/sounds/room2.mp3"        // TODO: set to your room2 ambience
+  };
+
+  // Fallback audio (only used if SoundEngine lacks needed APIs)
+  const A = {
+    curKey: null,
+    el: null,
+    playLoop(key, vol = 0.35) {
+      if (!FILES[key]) return;
+      if (this.curKey === key && this.el) return;
+
+      this.stop();
+      this.curKey = key;
+
+      const audio = new Audio(FILES[key]);
+      audio.loop = true;
+      audio.volume = vol;
+      audio.preload = "auto";
+
+      // Browser requires user interaction to start audio; errors are fine.
+      this.el = audio;
+      safe(() => audio.play());
+    },
+    playOneShot(key, vol = 1) {
+      if (!FILES[key]) return;
+      const a = new Audio(FILES[key]);
+      a.volume = vol;
+      a.preload = "auto";
+      safe(() => a.play());
+    },
+    stop() {
+      if (!this.el) return;
+      const a = this.el;
+      this.el = null;
+      this.curKey = null;
+      safe(() => { a.pause(); a.currentTime = 0; });
+    }
+  };
+
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
+  }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    let last = "";
+    const t = setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== last) { last = j; safe(() => fn(st)); }
+    }, 250);
+    return () => clearInterval(t);
+  }
+
+  function normView(st) {
+    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
+    if (!raw) return "meadow";
+    if (raw === "start") return "meadow";
+    if (raw === "viewdoors") return "doors";
+    if (raw === "doors") return "doors";
+    return raw; // meadow|tunnel|doors|room1|room2|whiteout...
+  }
+
+  let last = null;
+
+  function applySound(st) {
+    const v = normView(st);
+    if (v === last) return;
+    last = v;
+
+    const SE = window.SoundEngine;
+
+    // Always stop any fallback loop when we switch
+    // (SoundEngine might run its own; fallback only used if needed).
+    A.stop();
+
+    // Try to use SoundEngine if it has these hooks
+    if (SE) {
+      // stop everything before switching (best effort)
+      safe(() => SE.stopAll?.());
+      safe(() => SE.stopTunnel?.());
+      safe(() => SE.stopAmbient?.());
+
+      if (v === "tunnel") {
+        // One-shot fall sound
+        if (SE.tunnelFall) return safe(() => SE.tunnelFall());
+        return A.playOneShot("tunnel", 1);
+      }
+
+      // For non-tunnel views, prefer looping ambience.
+      // If your SoundEngine only has startAmbient (wind), we at least switch tunnel off.
+      if (v === "meadow") {
+        if (SE.startAmbient) return safe(() => SE.startAmbient());
+        return A.playLoop("meadow", 0.35);
+      }
+
+      if (v === "doors") {
+        // If you have a dedicated doors ambience method, use it; else fallback.
+        if (SE.startDoorsAmbient) return safe(() => SE.startDoorsAmbient());
+        return A.playLoop("doors", 0.35);
+      }
+
+      if (v === "room1") {
+        if (SE.startRoom1Ambient) return safe(() => SE.startRoom1Ambient());
+        return A.playLoop("room1", 0.35);
+      }
+
+      if (v === "room2") {
+        if (SE.startRoom2Ambient) return safe(() => SE.startRoom2Ambient());
+        return A.playLoop("room2", 0.35);
+      }
+
+      // default: meadow ambience
+      if (SE.startAmbient) return safe(() => SE.startAmbient());
+      return A.playLoop("meadow", 0.35);
+    }
+
+    // No SoundEngine at all → fallback only
+    if (v === "tunnel") return A.playOneShot("tunnel", 1);
+    if (v === "doors") return A.playLoop("doors", 0.35);
+    if (v === "room1") return A.playLoop("room1", 0.35);
+    if (v === "room2") return A.playLoop("room2", 0.35);
+    return A.playLoop("meadow", 0.35);
+  }
+
+  function boot() {
+    // Apply once and then react to state changes
+    applySound(getState());
+    subscribe(applySound);
+
+    // Make sure audio unlock happens on first interaction
+    document.addEventListener("pointerdown", () => {
+      safe(() => window.SoundEngine?.unlockAudio?.());
+    }, { once: true, passive: true });
+
+    console.log("EPTEC SOUND ROUTER active");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
