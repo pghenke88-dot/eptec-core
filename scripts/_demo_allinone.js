@@ -419,3 +419,116 @@
     Doors.clickDoor.__eptec_demo_nav = true;
   }
 })();
+/* =========================================================
+   EPTEC DEMO FIX — FORCE SCENE SWITCH + DOOR ENTER (DOM routing)
+   Put at END of scripts/eptec_demo_allinone.js
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[DEMO_FIX]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function isDemo() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    return !!st?.modes?.demo;
+  }
+
+  // Hard DOM show/hide (independent from UI controller)
+  function showOnly(idToShow) {
+    const ids = ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"];
+    ids.forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      if (id === idToShow) {
+        el.classList.remove("modal-hidden","tunnel-hidden","hidden");
+        el.style.display = "block";
+        el.style.pointerEvents = "auto";
+      } else {
+        el.classList.add("hidden");
+        el.style.display = "none";
+        el.style.pointerEvents = "none";
+      }
+    });
+  }
+
+  function goDoors()  { showOnly("doors-view"); }
+  function goRoom1()  { showOnly("room-1-view"); }
+  function goRoom2()  { showOnly("room-2-view"); }
+  function goStart()  { showOnly("meadow-view"); }
+
+  // Bind door click explicitly for demo
+  function bindDoors() {
+    const d1 = document.querySelector("[data-logic-id='doors.door1']");
+    const d2 = document.querySelector("[data-logic-id='doors.door2']");
+    if (d1 && !d1.__eptec_demo_enter) {
+      d1.__eptec_demo_enter = true;
+      d1.style.cursor = "pointer";
+      d1.addEventListener("click", (e) => {
+        if (!isDemo()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        goRoom1();
+      }, true);
+    }
+    if (d2 && !d2.__eptec_demo_enter) {
+      d2.__eptec_demo_enter = true;
+      d2.style.cursor = "pointer";
+      d2.addEventListener("click", (e) => {
+        if (!isDemo()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        goRoom2();
+      }, true);
+    }
+  }
+
+  // Detect demo start and force doors visible
+  function watchDemo() {
+    // subscribe if available
+    const sub = safe(() => window.EPTEC_UI_STATE?.subscribe?.((st) => {
+      if (st?.modes?.demo) {
+        // demo active -> ensure doors/handlers
+        bindDoors();
+        // if we are still seeing start, force doors
+        // (demo start path should land at doors)
+        goDoors();
+      }
+    }));
+    if (typeof sub === "function") return;
+
+    // fallback poll
+    let lastDemo = false;
+    setInterval(() => {
+      const d = isDemo();
+      if (d && !lastDemo) {
+        bindDoors();
+        goDoors();
+      }
+      lastDemo = d;
+    }, 300);
+  }
+
+  // Boot
+  function boot() {
+    bindDoors();
+    watchDemo();
+
+    // If you are already in demo when page loads, force doors
+    if (isDemo()) goDoors();
+
+    // Optional: allow demo user to return to doors by pressing ESC in rooms
+    document.addEventListener("keydown", (e) => {
+      if (!isDemo()) return;
+      if (e.key === "Escape") goDoors();
+    });
+
+    console.log("EPTEC DEMO FIX: DOM routing active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
