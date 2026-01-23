@@ -335,73 +335,60 @@ html[dir="rtl"] #meadow-view .login-box{
   text-align:right;
 }
 /* =========================================================
-   EPTEC START HEADER STACK — FINAL
+   EPTEC TITLE / CLOCK — FINAL COLOR + LAYOUT FIX
    ========================================================= */
 
+/* Container-Sicherheit */
 #meadow-view {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* ---------- TITLE ---------- */
+/* ===== TITEL ===== */
 #eptec-title {
-  display: block;
-
-  margin-top: 48px;
-  margin-bottom: 10px;
-
-  text-align: center;
+  margin-top: 6vh;
+  margin-bottom: 0.5rem;
   font-size: 2.4rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-
-  color: #ffffff;
-  z-index: 10;
+  font-weight: 700;
+  color: #1f2933; /* dunkel anthrazit, NICHT weiß */
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* ---------- SUBTITLE ---------- */
+/* ===== UNTERTITEL ===== */
 #eptec-subtitle {
-  display: block;
-
-  margin-bottom: 18px;
-
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #374151; /* dunkles grau */
   text-align: center;
-  font-size: 1.15rem;
-  font-weight: 400;
-
-  color: #ffffff;
-  opacity: 0.85;
-  z-index: 10;
 }
 
-/* ---------- CLOCK (BETWEEN TITLE AND LOGIN) ---------- */
+/* ===== DATUM & UHRZEIT ===== */
 #system-clock {
-  display: block;
-
-  margin-bottom: 36px; /* Abstand zur Login-Box */
-
-  text-align: center;
+  margin-bottom: 2.2rem;
   font-size: 0.95rem;
-
-  color: #ffffff;
-  opacity: 0.85;
-  z-index: 10;
+  font-weight: 500;
+  color: #000000; /* explizit schwarz */
+  text-align: center;
 }
 
-/* ---------- LOGIN BOX ---------- */
-#meadow-view .login-box {
+/* ===== LOGIN BOX ===== */
+.login-box {
   position: relative;
-
-  margin-left: auto;
-  margin-right: auto;
-
-  z-index: 10;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
-/* ---------- LANGUAGE SWITCHER FIX ---------- */
-#language-switcher {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 20;
+/* Sicherheit gegen fremde Styles */
+.login-box,
+#eptec-title,
+#eptec-subtitle,
+#system-clock {
+  z-index: 2;
 }
 
