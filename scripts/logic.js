@@ -4023,4 +4023,14 @@ PASTE HERE:
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* EPTEC APPEND — ID REGISTRY INIT (silences warning, no behavior change) */
+(() => {
+  "use strict";
+  if (!window.EPTEC_ID_REGISTRY) {
+    window.EPTEC_ID_REGISTRY = { ids: [], logicIds: [] };
+  } else {
+    window.EPTEC_ID_REGISTRY.ids = Array.isArray(window.EPTEC_ID_REGISTRY.ids) ? window.EPTEC_ID_REGISTRY.ids : [];
+    window.EPTEC_ID_REGISTRY.logicIds = Array.isArray(window.EPTEC_ID_REGISTRY.logicIds) ? window.EPTEC_ID_REGISTRY.logicIds : [];
+  }
+})();
 
