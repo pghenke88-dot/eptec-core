@@ -335,73 +335,63 @@ html[dir="rtl"] #meadow-view .login-box{
   text-align:right;
 }
 /* =========================================================
-   EPTEC FINAL STARTSCREEN LAYOUT
-   - Fixed vertical stack: Title → Clock → Login
-   - Language switch fixed top-right
-   - RTL safe, freeze safe, append-only
+   EPTEC FINAL TITLE + SUBTITLE + CLOCK STACK
    ========================================================= */
 
-/* ---------- START / MEADOW STACK ---------- */
+/* Vertikaler Fix-Stack */
 #meadow-view{
   display:flex !important;
   flex-direction:column;
   align-items:center !important;
   justify-content:flex-start !important;
-  position:relative;
   padding-top:6vh;
   text-align:center;
   min-height:100vh;
 }
 
-/* ---------- TITLE ---------- */
+/* Haupttitel */
 #eptec-title{
-  font-size:clamp(26px, 4vw, 42px);
+  font-size:clamp(28px, 4.5vw, 44px);
   font-weight:600;
-  line-height:1.15;
-  margin:0 0 12px 0;
-  max-width:min(92vw, 560px);
+  margin:0;
   color:#ffffff;
   text-shadow:0 2px 10px rgba(0,0,0,.6);
-  word-break:break-word;
-  z-index:3;
+  line-height:1.15;
 }
 
-/* ---------- CLOCK ---------- */
+/* Untertitel */
+#eptec-subtitle{
+  font-size:clamp(14px, 2.2vw, 18px);
+  font-weight:400;
+  margin:6px 0 18px 0;   /* Abstand unter Titel */
+  color:rgba(255,255,255,.85);
+  letter-spacing:.02em;
+}
+
+/* Datum / Uhrzeit */
 #system-clock{
-  margin:0 0 28px 0;
+  margin:0 0 36px 0;     /* 2–3 Zeilen Abstand vor Login */
   font-size:14px;
-  opacity:.85;
-  color:#ffffff;
-  z-index:3;
+  color:rgba(255,255,255,.8);
 }
 
-/* ---------- LOGIN BOX ---------- */
+/* Login-Box stabil */
 #meadow-view .login-box{
   width:min(92vw, 420px);
   max-width:420px;
   margin:0 auto;
   display:flex;
   flex-direction:column;
-  align-items:stretch;
   gap:10px;
-
-  padding:22px 22px 20px;
-  border-radius:16px;
-
-  background:rgba(0,0,0,.45);
-  backdrop-filter:blur(6px);
-
-  z-index:2;
 }
 
-/* Inputs & Buttons always full width */
+/* Inputs & Buttons volle Breite */
 #meadow-view .login-box input,
 #meadow-view .login-box button{
   width:100%;
-  box-sizing:border-box;
 }
 
-/* ---------- LANGUAGE SWITCHER (WORLD ICON) ---------- */
+/* Weltkugel fix oben rechts */
 #language-switcher{
   position:fixed !important;
   top:14px !important;
@@ -409,19 +399,8 @@ html[dir="rtl"] #meadow-view .login-box{
   z-index:99999 !important;
 }
 
-/* Prevent flex / center influence */
-#language-switcher,
-#language-switcher *{
-  text-align:left;
-}
-
-/* RTL-safe: keep globe top-right */
+/* RTL-sicher */
 html[dir="rtl"] #language-switcher{
   right:14px !important;
   left:auto !important;
-}
-
-/* ---------- FOOTER STAYS AT BOTTOM ---------- */
-#eptec-footer{
-  margin-top:auto;
 }
