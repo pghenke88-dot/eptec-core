@@ -1086,3 +1086,23 @@
   // Optional: username placeholder
   setPH("login-username", "Username");
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — DOORS LABEL FIX (VIP + Gift, no Present wording)
+   Place at END of scripts/main.js
+   ========================================================= */
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const setPH = (id, txt) => { const el=$(id); if (el) el.setAttribute("placeholder", txt); };
+
+  // Keep IDs, fix wording:
+  // doorX-present => VIP Code
+  // doorX-vip     => Gift Code
+  setPH("door1-present", "VIP Code");
+  setPH("door2-present", "VIP Code");
+
+  setPH("door1-vip", "Gift Code");
+  setPH("door2-vip", "Gift Code");
+
+  console.log("EPTEC MAIN APPEND: Doors placeholders fixed (VIP/Gift).");
+})();
