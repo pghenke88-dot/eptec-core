@@ -387,3 +387,35 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC DEMO APPEND — ENSURE DOOR CLICK ENTERS ROOMS
+   (Navigation allowed in demo)
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function isDemo() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    return !!st?.modes?.demo;
+  }
+
+  const Doors = window.EPTEC_MASTER?.Doors;
+  const TERMS = window.EPTEC_MASTER?.TERMS;
+
+  if (!Doors || !TERMS?.doors) return;
+
+  // Patch clickDoor so demo always can navigate
+  if (Doors.clickDoor && !Doors.clickDoor.__eptec_demo_nav) {
+    const orig = Doors.clickDoor.bind(Doors);
+    Doors.clickDoor = function(doorKey) {
+      if (isDemo()) {
+        // allow navigation in demo
+        if (doorKey === TERMS.doors.door1) return window.EPTEC_MASTER?.Dramaturgy?.doorsToRoom?.(TERMS.scenes.room1);
+        if (doorKey === TERMS.doors.door2) return window.EPTEC_MASTER?.Dramaturgy?.doorsToRoom?.(TERMS.scenes.room2);
+      }
+      return orig(doorKey);
+    };
+    Doors.clickDoor.__eptec_demo_nav = true;
+  }
+})();
