@@ -1259,20 +1259,23 @@ PASTE HERE:
    - Provide 👁 toggles for master fields (start + doors)
    - Never autofill, never prefill, never store raw passwords
    - No-crash, idempotent, any load order
-   - FIX: prevents MutationObserver storms / timeouts (freeze-proof)
+   - ANTI-FREEZE: prevents MutationObserver storms/timeouts deterministically
    ========================================================= */
 (() => {
   "use strict";
+
+  // Optional kill-switch (set in console: window.EPTEC_DISABLE_MASTER_APPEND = true)
+  if (window.EPTEC_DISABLE_MASTER_APPEND === true) return;
 
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   /* -----------------------------
-     A) SAFE PLACEHOLDER POLICY (FREEZE-PROOF)
-     - Password inputs MAY have placeholders,
-       but ONLY generic labels (e.g. "Passwort", "Masterpasswort")
-     - Never inject real passwords
-     - Storm-safe: idempotent + throttled + re-entry guarded
+     A) SAFE PLACEHOLDER POLICY (ANTI-FREEZE)
+     - generic placeholders only
+     - idempotent DOM writes only
+     - throttled + re-entry guarded
+     - observer reacts ONLY to real password-input appearance/type changes
      ----------------------------- */
 
   function currentLang() {
@@ -1302,18 +1305,19 @@ PASTE HERE:
 
     safe(() => {
       const list = Array.from(root.querySelectorAll("input[type='password']"));
+
       for (const inp of list) {
         // Never prefill anything
         if (document.activeElement !== inp && typeof inp.value === "string" && inp.value) {
           inp.value = "";
         }
 
-        // Best effort: avoid browser autofill leaks (idempotent set)
+        // Best effort: avoid browser autofill leaks (idempotent)
         const wantAuto = "off";
         const curAuto = inp.getAttribute("autocomplete");
         if (curAuto !== wantAuto) inp.setAttribute("autocomplete", wantAuto);
 
-        // SAFE placeholder labels (generic only) — idempotent set
+        // SAFE placeholder labels (generic only) — idempotent
         const id = String(inp.id || "");
         const wantPh =
           (id === "admin-code" || id === "door1-master" || id === "door2-master")
@@ -1339,31 +1343,41 @@ PASTE HERE:
   }
 
   function observePasswordInputs() {
-    // bind only once
+    // Bind only once (deterministic)
     if (__eptec_pw_mo) return;
 
     safe(() => {
       __eptec_pw_mo = new MutationObserver((mutations) => {
-        // prevent self-trigger loops
+        // prevent self-trigger loops deterministically
         if (__eptec_pw_running) return;
 
         let relevant = false;
 
         for (const m of mutations) {
           if (m.type === "childList") {
+            // react only when new password inputs appear
             for (const n of m.addedNodes) {
               if (!n || n.nodeType !== 1) continue;
-              if (n.tagName === "INPUT" && (n.getAttribute("type") || "").toLowerCase() === "password") { relevant = true; break; }
-              if (typeof n.querySelector === "function" && n.querySelector("input[type='password']")) { relevant = true; break; }
+
+              if (n.tagName === "INPUT" && (n.getAttribute("type") || "").toLowerCase() === "password") {
+                relevant = true; break;
+              }
+              if (typeof n.querySelector === "function" && n.querySelector("input[type='password']")) {
+                relevant = true; break;
+              }
             }
             if (relevant) break;
           }
 
           if (m.type === "attributes") {
             const t = m.target;
-            if (t && t.tagName === "INPUT") {
+
+            // ✅ CRITICAL FIX:
+            // Only react to TYPE changes and only if it becomes password.
+            // Never react to placeholder/autocomplete changes (usually our own writes).
+            if (t && t.tagName === "INPUT" && m.attributeName === "type") {
               const type = (t.getAttribute("type") || "").toLowerCase();
-              if (type === "password" || m.attributeName === "type") { relevant = true; break; }
+              if (type === "password") { relevant = true; break; }
             }
           }
         }
@@ -1375,7 +1389,6 @@ PASTE HERE:
         childList: true,
         subtree: true,
         attributes: true,
-        // IMPORTANT: do NOT observe "value" (storms)
         attributeFilter: ["type", "placeholder", "autocomplete"]
       });
     });
@@ -1532,13 +1545,14 @@ PASTE HERE:
     ensureEye("door1-master", "eye-door1-master");
     ensureEye("door2-master", "eye-door2-master");
 
-    safe(() => console.log("EPTEC APPEND: MasterPasswords v2 (safe placeholders + eye toggles) active"));
+    safe(() => console.log("EPTEC APPEND: MasterPasswords v2 (anti-freeze) active"));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
 })();
+
 
 /* =========================================================
    EPTEC APPEND 1 — GLOBAL I18N TOOL (UNBLOCKABLE) + LOCALE + CLOCK
