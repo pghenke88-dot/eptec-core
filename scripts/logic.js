@@ -3903,4 +3903,125 @@ PASTE HERE:
 
   console.log("EPTEC APPEND H active: Admin Language Emergency Switch");
 })();
+/* =========================================================
+   EPTEC APPEND — ORB ROOM SWITCH (visibility depends on where you are)
+   - visible only in rooms (room1/room2)
+   - only for demo OR author
+   - click toggles room1 <-> room2 (no logout)
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[ORB]", e); return undefined; } };
+
+  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    let last = "";
+    const t = setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== last) { last = j; safe(() => fn(st)); }
+    }, 250);
+    return () => clearInterval(t);
+  }
+
+  function isDemoOrAuthor(st) { return !!st?.modes?.demo || !!st?.modes?.author; }
+
+  function normalizeScene(st) {
+    const raw = String(st?.scene || st?.view || "").toLowerCase().trim();
+    // normalize legacy view names if needed
+    if (raw === "meadow") return "start";
+    if (raw === "doors") return "viewdoors";
+    return raw;
+  }
+
+  function isInRoom(scene) {
+    return scene === "room1" || scene === "room2" || scene === "room-1" || scene === "room-2";
+  }
+
+  function ensureOrb() {
+    let orb =
+      document.getElementById("author-orb") ||
+      document.querySelector("[data-eptec-orb='author']");
+
+    if (orb) return orb;
+
+    orb = document.createElement("div");
+    orb.id = "author-orb";
+    orb.textContent = "◯";
+    orb.style.position = "fixed";
+    orb.style.right = "18px";
+    orb.style.top = "50%";
+    orb.style.transform = "translateY(-50%)";
+    orb.style.zIndex = "99999";
+    orb.style.width = "44px";
+    orb.style.height = "44px";
+    orb.style.borderRadius = "999px";
+    orb.style.display = "none";
+    orb.style.alignItems = "center";
+    orb.style.justifyContent = "center";
+    orb.style.cursor = "pointer";
+    orb.style.background = "rgba(255,255,255,0.10)";
+    orb.style.border = "1px solid rgba(255,255,255,0.25)";
+    orb.style.backdropFilter = "blur(6px)";
+    orb.style.color = "#fff";
+    orb.style.fontSize = "18px";
+    orb.style.lineHeight = "44px";
+    orb.style.textAlign = "center";
+    orb.style.userSelect = "none";
+    document.body.appendChild(orb);
+
+    return orb;
+  }
+
+  function go(scene) {
+    const D = window.EPTEC_MASTER?.Dramaturgy;
+    if (D?.to) return safe(() => D.to(scene, { via: "orb" }));
+    const s = store();
+    if (s?.set) return safe(() => s.set({ scene, view: scene }));
+  }
+
+  function updateVisibility(orb) {
+    const st = getState();
+    const scene = normalizeScene(st);
+
+    const show = isDemoOrAuthor(st) && isInRoom(scene);
+    orb.style.display = show ? "flex" : "none";
+  }
+
+  function init() {
+    const orb = ensureOrb();
+    if (orb.__eptec_bound) return;
+    orb.__eptec_bound = true;
+
+    // show/hide
+    const apply = () => updateVisibility(orb);
+    apply();
+    subscribe(apply);
+    setInterval(apply, 700);
+
+    // click switches rooms only if in rooms
+    orb.addEventListener("click", () => {
+      const st = getState();
+      const scene = normalizeScene(st);
+      if (!isDemoOrAuthor(st) || !isInRoom(scene)) return;
+
+      safe(() => window.SoundEngine?.uiConfirm?.());
+
+      if (scene.includes("room1")) return go("room2");
+      if (scene.includes("room2")) return go("room1");
+    });
+
+    console.log("EPTEC APPEND: Orb room switch active (rooms-only)");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
 
