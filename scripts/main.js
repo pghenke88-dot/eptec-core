@@ -1121,3 +1121,89 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — FOOTER I18N + LEGAL OPEN (fallback)
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function langKey() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    const raw = String(st?.i18n?.lang || st?.lang || document.documentElement.lang || "en").toLowerCase();
+    if (raw.startsWith("de")) return "de";
+    if (raw.startsWith("es")) return "es";
+    if (raw.startsWith("fr")) return "fr";
+    if (raw.startsWith("it")) return "it";
+    if (raw.startsWith("pt")) return "pt";
+    if (raw.startsWith("nl")) return "nl";
+    if (raw.startsWith("ru")) return "ru";
+    if (raw.startsWith("uk")) return "uk";
+    if (raw.startsWith("ar")) return "ar";
+    if (raw.startsWith("zh") || raw === "cn") return "zh";
+    if (raw.startsWith("ja") || raw === "jp") return "ja";
+    return "en";
+  }
+
+  const T = {
+    en:{ imprint:"Imprint", terms:"Terms", support:"Support", privacy:"Privacy" },
+    de:{ imprint:"Impressum", terms:"AGB", support:"Support", privacy:"Datenschutz" },
+    es:{ imprint:"Aviso legal", terms:"Términos", support:"Soporte", privacy:"Privacidad" },
+    fr:{ imprint:"Mentions légales", terms:"Conditions", support:"Support", privacy:"Confidentialité" },
+    it:{ imprint:"Note legali", terms:"Termini", support:"Supporto", privacy:"Privacy" },
+    pt:{ imprint:"Impressão", terms:"Termos", support:"Suporte", privacy:"Privacidade" },
+    nl:{ imprint:"Colofon", terms:"Voorwaarden", support:"Support", privacy:"Privacy" },
+    ru:{ imprint:"Выходные данные", terms:"Условия", support:"Поддержка", privacy:"Конфиденциальность" },
+    uk:{ imprint:"Вихідні дані", terms:"Умови", support:"Підтримка", privacy:"Конфіденційність" },
+    ar:{ imprint:"بيانات النشر", terms:"الشروط", support:"الدعم", privacy:"الخصوصية" },
+    zh:{ imprint:"署名", terms:"条款", support:"支持", privacy:"隐私" },
+    ja:{ imprint:"運営者情報", terms:"利用規約", support:"サポート", privacy:"プライバシー" }
+  };
+
+  function applyFooterText() {
+    const l = langKey();
+    const t = T[l] || T.en;
+    if ($("link-imprint")) $("link-imprint").textContent = t.imprint;
+    if ($("link-terms")) $("link-terms").textContent = t.terms;
+    if ($("link-support")) $("link-support").textContent = t.support;
+    if ($("link-privacy-footer")) $("link-privacy-footer").textContent = t.privacy;
+  }
+
+  function openLegal(key) {
+    // state hint
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "legal", legalKey: key }));
+
+    // DOM fallback
+    const scr = $("legal-screen");
+    const title = $("legal-title");
+    const body = $("legal-body");
+    if (scr) {
+      scr.classList.remove("modal-hidden");
+      scr.style.display = "block";
+      scr.style.pointerEvents = "auto";
+    }
+    if (title) title.textContent = String(key || "").toUpperCase();
+    if (body) body.textContent = "Placeholder – legal content wiring pending.";
+  }
+
+  function bind(id, key) {
+    const el = $(id);
+    if (!el || el.__eptec_legal_bound) return;
+    el.__eptec_legal_bound = true;
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => openLegal(key));
+  }
+
+  function boot() {
+    applyFooterText();
+    bind("link-imprint", "imprint");
+    bind("link-terms", "terms");
+    bind("link-support", "support");
+    bind("link-privacy-footer", "privacy");
+    safe(() => window.EPTEC_UI_STATE?.subscribe?.(() => applyFooterText()));
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
