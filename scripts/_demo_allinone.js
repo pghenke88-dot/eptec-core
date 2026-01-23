@@ -532,3 +532,162 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC DEMO FIX v2 — FORCE VIEW SWITCH + DOOR ENTER + ORB
+   - Demo start hides meadow completely
+   - Door click enters Room1/Room2 (no master needed in demo)
+   - Adds "demo-dark" class so doors/rooms become black
+   - Ensures Orb works in demo (Room1 <-> Room2)
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[DEMO_FIX]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function isDemo() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    return !!st?.modes?.demo;
+  }
+
+  // --- Hard show/hide (independent from ui_controller) ---
+  function showOnly(showId) {
+    const ids = ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"];
+    ids.forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      const on = id === showId;
+      el.style.display = on ? "block" : "none";
+      el.style.pointerEvents = on ? "auto" : "none";
+    });
+  }
+
+  function setDark(on) {
+    document.documentElement.classList.toggle("demo-dark", !!on);
+  }
+
+  function goDoors() { setDark(true); showOnly("doors-view"); }
+  function goRoom1() { setDark(true); showOnly("room-1-view"); }
+  function goRoom2() { setDark(true); showOnly("room-2-view"); }
+  function goStart() { setDark(false); showOnly("meadow-view"); }
+
+  // --- Door click in demo always enters rooms ---
+  function bindDoorClicks() {
+    const d1 = document.querySelector("[data-logic-id='doors.door1']");
+    const d2 = document.querySelector("[data-logic-id='doors.door2']");
+
+    if (d1 && !d1.__eptec_demo_enter) {
+      d1.__eptec_demo_enter = true;
+      d1.style.cursor = "pointer";
+      d1.addEventListener("click", (e) => {
+        if (!isDemo()) return;
+        e.preventDefault(); e.stopPropagation();
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        goRoom1();
+      }, true);
+    }
+
+    if (d2 && !d2.__eptec_demo_enter) {
+      d2.__eptec_demo_enter = true;
+      d2.style.cursor = "pointer";
+      d2.addEventListener("click", (e) => {
+        if (!isDemo()) return;
+        e.preventDefault(); e.stopPropagation();
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        goRoom2();
+      }, true);
+    }
+  }
+
+  // --- Orb (demo: room1 <-> room2) ---
+  function ensureOrb() {
+    let orb = $("author-orb");
+    if (orb) return orb;
+
+    orb = document.createElement("div");
+    orb.id = "author-orb";
+    orb.textContent = "◯";
+    orb.style.position = "fixed";
+    orb.style.right = "18px";
+    orb.style.top = "50%";
+    orb.style.transform = "translateY(-50%)";
+    orb.style.zIndex = "99999";
+    orb.style.width = "44px";
+    orb.style.height = "44px";
+    orb.style.borderRadius = "999px";
+    orb.style.display = "none";
+    orb.style.alignItems = "center";
+    orb.style.justifyContent = "center";
+    orb.style.cursor = "pointer";
+    orb.style.background = "rgba(255,255,255,0.10)";
+    orb.style.border = "1px solid rgba(255,255,255,0.25)";
+    orb.style.backdropFilter = "blur(6px)";
+    orb.style.color = "#fff";
+    orb.style.fontSize = "18px";
+    orb.style.lineHeight = "44px";
+    orb.style.textAlign = "center";
+    document.body.appendChild(orb);
+    return orb;
+  }
+
+  function orbVisibleInDemo() {
+    const orb = ensureOrb();
+    // Orb only when demo + in rooms
+    const inRoom = $("room-1-view")?.style.display === "block" || $("room-2-view")?.style.display === "block";
+    orb.style.display = (isDemo() && inRoom) ? "flex" : "none";
+  }
+
+  function bindOrb() {
+    const orb = ensureOrb();
+    if (orb.__eptec_demo_orb_bound) return;
+    orb.__eptec_demo_orb_bound = true;
+
+    orb.addEventListener("click", () => {
+      if (!isDemo()) return;
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      if ($("room-1-view")?.style.display === "block") return goRoom2();
+      if ($("room-2-view")?.style.display === "block") return goRoom1();
+    });
+  }
+
+  // --- Detect demo mode and force doors visible ---
+  function watchDemo() {
+    const sub = safe(() => window.EPTEC_UI_STATE?.subscribe?.((st) => {
+      if (st?.modes?.demo) {
+        bindDoorClicks();
+        bindOrb();
+        goDoors();
+        orbVisibleInDemo();
+      } else {
+        // leaving demo -> let normal app take over (show start as safe fallback)
+        goStart();
+        orbVisibleInDemo();
+      }
+    }));
+    if (typeof sub === "function") return;
+
+    // fallback poll
+    let last = false;
+    setInterval(() => {
+      const d = isDemo();
+      if (d && !last) { bindDoorClicks(); bindOrb(); goDoors(); }
+      if (!d && last) { goStart(); }
+      last = d;
+      orbVisibleInDemo();
+    }, 250);
+  }
+
+  function boot() {
+    bindDoorClicks();
+    bindOrb();
+    watchDemo();
+
+    // If demo already active on load
+    if (isDemo()) goDoors();
+    orbVisibleInDemo();
+
+    console.log("EPTEC DEMO FIX v2 active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
