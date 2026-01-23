@@ -412,3 +412,30 @@ html.demo-dark #room-2-view{
   background: #000 !important;
   color: #fff !important;
 }
+/* =========================================================
+   EPTEC ROOMS — BACKGROUND IMAGES (DOORS / ROOM1 / ROOM2)
+   ========================================================= */
+
+/* Doors */
+#doors-view{
+  background-image: url("./assets/images/view_doors.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Room 1 */
+#room-1-view{
+  background-image: url("./assets/images/view_room1.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Room 2 */
+#room-2-view{
+  background-image: url("./assets/images/view_room2.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
