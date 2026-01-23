@@ -963,16 +963,56 @@
   else boot();
 })();
 /* =========================================================
-   EPTEC MAIN APPEND — REGISTER/FORGOT MODAL FALLBACK
-   - forces visible modals even if UI controller doesn't render them yet
-   - safe: does not break if UI controller later takes over
+   EPTEC APPEND — SAFE MODEL FALLBACK (REGISTER / FORGOT)
+   Alias: "SafeModelFallback" = Register/Forgot must ALWAYS react
+   Placement: Paste at the VERY END of scripts/main.js (after main IIFE)
    ========================================================= */
 (() => {
   "use strict";
-  const $ = (id) => document.getElementById(id);
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
-  function show(id) {
+  // Global guard to prevent double insertion
+  if (window.__EPTEC_SAFE_MODEL_FALLBACK_RF__) return;
+  window.__EPTEC_SAFE_MODEL_FALLBACK_RF__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[SAFE_MODEL_FALLBACK]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
+  }
+
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function isDemo() {
+    const st = getState();
+    return !!st?.modes?.demo;
+  }
+
+  function toast(msg, type = "info") {
+    const m = String(msg || "");
+    safe(() => window.EPTEC_MASTER?.UI?.toast?.(m, type));
+    safe(() => window.EPTEC_UI?.toast?.(m, type));
+    if (!window.EPTEC_MASTER?.UI?.toast && !window.EPTEC_UI?.toast) console.log(`[TOAST:${type}]`, m);
+  }
+
+  function isVisible(el) {
+    if (!el) return false;
+    if (el.classList?.contains("modal-hidden")) return false;
+    const ds = (el.style && el.style.display) ? el.style.display : "";
+    if (ds === "none") return false;
+    return true;
+  }
+
+  function showSection(id) {
     const el = $(id);
     if (!el) return false;
     el.classList.remove("modal-hidden");
@@ -982,36 +1022,102 @@
     return true;
   }
 
-  function bind(id, fn) {
+  function hideSection(id) {
     const el = $(id);
-    if (!el || el.__eptec_modal_fallback_bound) return;
-    el.__eptec_modal_fallback_bound = true;
+    if (!el) return;
+    el.classList.add("modal-hidden");
+    el.style.display = "none";
+  }
+
+  function ensureCloseButton(sectionId, closeId) {
+    const host = $(sectionId);
+    if (!host) return;
+    if ($(closeId)) return;
+
+    const btn = document.createElement("button");
+    btn.id = closeId;
+    btn.type = "button";
+    btn.textContent = "Close";
+    btn.style.marginTop = "10px";
+    btn.style.cursor = "pointer";
+
+    // If section empty, add minimal container so close is visible
+    if (!(host.innerHTML || "").trim()) {
+      host.innerHTML = `<div class="modal-card"><h2>${sectionId}</h2></div>`;
+    }
+    host.appendChild(btn);
+
+    btn.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      hideSection("register-screen");
+      hideSection("forgot-screen");
+      setState({ modal: null });
+    });
+  }
+
+  function openModal(modalKey) {
+    // Demo: never allow account actions
+    if (isDemo()) {
+      toast("Demo: Account-Funktionen sind gesperrt.", "info");
+      return;
+    }
+
+    // Ask UI controller via state (preferred)
+    setState({ modal: modalKey });
+
+    // Give UI controller a moment. If nothing happens, fallback to DOM.
+    setTimeout(() => {
+      const reg = $("register-screen");
+      const fp  = $("forgot-screen");
+
+      // If UI controller already made it visible, do nothing.
+      if (modalKey === "register" && isVisible(reg)) return;
+      if (modalKey === "forgot" && isVisible(fp)) return;
+
+      // Fallback: show the raw sections
+      if (modalKey === "register") {
+        if (!showSection("register-screen")) toast("Register-Screen fehlt im HTML.", "error");
+        else {
+          ensureCloseButton("register-screen", "eptec-register-close");
+          toast("Register geöffnet (Fallback).", "ok");
+        }
+      }
+
+      if (modalKey === "forgot") {
+        if (!showSection("forgot-screen")) toast("Forgot-Screen fehlt im HTML.", "error");
+        else {
+          ensureCloseButton("forgot-screen", "eptec-forgot-close");
+          toast("Forgot geöffnet (Fallback).", "ok");
+        }
+      }
+    }, 120);
+  }
+
+  function bindOnce(id, fn, key) {
+    const el = $(id);
+    if (!el) return;
+    const k = `__eptec_rf_${key}`;
+    if (el[k]) return;
+    el[k] = true;
     el.addEventListener("click", fn);
   }
 
-  bind("btn-register", () => {
-    safe(() => window.SoundEngine?.uiConfirm?.());
-    // state hint (optional)
-    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "register" }));
-    // DOM fallback
-    if (!show("register-screen")) console.warn("[MODAL] register-screen missing");
-  });
+  function boot() {
+    // Buttons MUST react
+    bindOnce("btn-register", () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("register"); }, "reg");
+    bindOnce("btn-forgot",   () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("forgot"); }, "fp");
 
-  bind("btn-forgot", () => {
-    safe(() => window.SoundEngine?.uiConfirm?.());
-    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "forgot" }));
-    if (!show("forgot-screen")) console.warn("[MODAL] forgot-screen missing");
-  });
+    // ESC closes fallback modals
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      hideSection("register-screen");
+      hideSection("forgot-screen");
+      setState({ modal: null });
+    });
 
-  // ESC closes fallback
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    const r = $("register-screen");
-    const f = $("forgot-screen");
-    if (r) { r.classList.add("modal-hidden"); r.style.display = "none"; }
-    if (f) { f.classList.add("modal-hidden"); f.style.display = "none"; }
-    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
-  });
+    console.log("EPTEC APPEND: SafeModelFallback(Register/Forgot) active");
+  }
 
-  console.log("EPTEC MAIN APPEND: register/forgot fallback active");
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 })();
