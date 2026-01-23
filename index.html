@@ -8,7 +8,7 @@
   <!-- Referrer -->
   <meta name="referrer" content="no-referrer" />
 
-  <!-- Favicon (avoid implicit /favicon.ico surprises) -->
+  <!-- Favicon -->
   <link rel="icon" href="./favicon.ico" />
 
   <!-- =========================================================
@@ -30,7 +30,7 @@
   " />
 
   <!-- =========================================================
-       STYLES (ALL)
+       STYLES
        ========================================================= -->
   <link rel="stylesheet" href="./assets/style.css" />
   <link rel="stylesheet" href="./assets/ui_elements.css" />
@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       SCRIPT ORDER — FINAL / COMPLETE / SAFE
+       SCRIPTS — ORDER IS IMPORTANT
        ========================================================= -->
   <script src="./scripts/ui_state.js" defer></script>
   <script src="./scripts/ui_controller.js" defer></script>
@@ -55,43 +55,57 @@
   <script src="./scripts/room1_framework_assistant.js" defer></script>
 
   <script src="./scripts/main.js" defer></script>
-
-  <!-- DEMO: add your one-file demo append AFTER main -->
   <script src="./scripts/eptec_demo_allinone.js" defer></script>
 </head>
 
 <body>
-  <!-- START / MEADOW -->
+
+  <!-- =========================================================
+       START / MEADOW
+       ========================================================= -->
   <section id="meadow-view" class="scene grassy-meadow">
+
     <div class="sun"></div>
     <div class="stream"></div>
 
-    <div class="login-box">
-      <!-- TITLE (integrated) -->
-      <h1 id="eptec-title">Contract Office by Johannes Büngener</h1>
+    <!-- ===== FIXED START STACK ===== -->
+    <div id="start-stack">
 
-      <input id="login-username" type="text" />
+      <!-- TITLE -->
+      <h1 id="eptec-title">Contract Office</h1>
+      <h2 id="eptec-subtitle">by Johannes Büngener</h2>
 
-      <div class="pw-wrap">
-        <input id="login-password" type="password" autocomplete="off" />
+      <!-- DATE / TIME -->
+      <div id="system-clock"></div>
+
+      <!-- LOGIN BOX -->
+      <div class="login-box">
+        <input id="login-username" type="text" />
+
+        <div class="pw-wrap">
+          <input id="login-password" type="password" autocomplete="off" />
+        </div>
+
+        <button id="btn-login">Login</button>
+        <div id="login-message" class="system-msg"></div>
+
+        <button id="btn-register">Register</button>
+        <button id="btn-forgot">Forgot password</button>
+
+        <!-- DEMO -->
+        <button id="btn-demo" type="button">Demo</button>
+
+        <!-- ADMIN -->
+        <div class="pw-wrap">
+          <input id="admin-code" type="password" autocomplete="off" />
+        </div>
+        <button id="admin-submit">Enter</button>
       </div>
 
-      <button id="btn-login">Login</button>
-      <div id="login-message" class="system-msg"></div>
-
-      <button id="btn-register">Register</button>
-      <button id="btn-forgot">Forgot password</button>
-
-      <!-- DEMO: button (Demo is still closed by default; only you can open it) -->
-      <button id="btn-demo" type="button">Demo</button>
-
-      <div class="pw-wrap">
-        <input id="admin-code" type="password" autocomplete="off" />
-      </div>
-      <button id="admin-submit">Enter</button>
     </div>
+    <!-- ===== /START STACK ===== -->
 
-    <!-- LANGUAGE -->
+    <!-- LANGUAGE SWITCH -->
     <div id="language-switcher">
       <button id="lang-toggle">🌍</button>
       <div id="lang-rail">
@@ -110,18 +124,23 @@
       </div>
     </div>
 
-    <div id="system-clock"></div>
   </section>
 
-  <!-- TUNNEL / TRANSITION -->
+  <!-- =========================================================
+       TUNNEL
+       ========================================================= -->
   <section id="tunnel-view" class="scene tunnel-hidden">
     <div class="tunnel-wall"></div>
   </section>
+
   <div id="eptec-white-flash" class="whiteout-hidden"></div>
 
-  <!-- DOORS -->
+  <!-- =========================================================
+       DOORS
+       ========================================================= -->
   <section id="doors-view" class="scene modal-hidden">
     <div class="doors-wrapper">
+
       <div class="door-block" id="door-construction" data-logic-id="doors.door1">
         <h2>Construction</h2>
 
@@ -151,6 +170,7 @@
         </div>
         <button id="door2-master-apply">Enter</button>
       </div>
+
     </div>
   </section>
 
@@ -175,5 +195,6 @@
     <a id="link-support">Support</a>
     <a id="link-privacy-footer">Privacy</a>
   </footer>
+
 </body>
 </html>
