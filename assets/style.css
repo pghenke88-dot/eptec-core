@@ -439,3 +439,15 @@ html.demo-dark #room-2-view{
   background-position: center;
   background-repeat: no-repeat;
 }
+/* EPTEC FIX — legal modal always clickable */
+#legal-screen{
+  position: fixed;
+  inset: 0;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+#legal-close{
+  pointer-events: auto !important;
+  z-index: 1000000 !important;
+}
