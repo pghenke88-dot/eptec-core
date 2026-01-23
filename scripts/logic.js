@@ -1251,165 +1251,52 @@ PASTE HERE:
 
 ========================================================= */
 /* =========================================================
-   EPTEC APPEND — MASTER PASSWORDS (SECURE) + SAFE PLACEHOLDERS + EYE TOGGLES
-   Replaces: "MasterPasswords + NoPlaceholders"
-   Goal:
-   - Keep master password system + reset
-   - ALLOW SAFE placeholders (generic words only, never secrets)
-   - Provide 👁 toggles for master fields (start + doors)
-   - Never autofill, never prefill, never store raw passwords
-   - No-crash, idempotent, any load order
-   - ANTI-FREEZE: prevents MutationObserver storms/timeouts deterministically
+   EPTEC APPEND — MASTER PASSWORDS v4 (ALL-IN-ONE + UI)
+   Includes:
+   - Start Master + Door Master (hash-only, no raw storage)
+   - Change master (requires current) in an Author-only settings modal
+   - Forgot master (recovery modal on start screen): token + security answer + reset
+   - 12-language placeholders: username / password / master / present / gift
+   - Eye toggles for master fields
+   - Door gate (optional): require door master before entering
+   - Anti-freeze: event-driven, throttled, idempotent
    ========================================================= */
 (() => {
   "use strict";
 
-  // Optional kill-switch (set in console: window.EPTEC_DISABLE_MASTER_APPEND = true)
-  if (window.EPTEC_DISABLE_MASTER_APPEND === true) return;
-
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC:MASTER]", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
-  /* -----------------------------
-     A) SAFE PLACEHOLDER POLICY (ANTI-FREEZE)
-     - generic placeholders only
-     - idempotent DOM writes only
-     - throttled + re-entry guarded
-     - observer reacts ONLY to real password-input appearance/type changes
-     ----------------------------- */
+  // -----------------------------
+  // CONFIG (override BEFORE this loads)
+  // -----------------------------
+  const CONF = window.EPTEC_MASTER_CONF = window.EPTEC_MASTER_CONF || {};
+  // Door gate modes:
+  // - "require" => door click requires valid door master in door1-master / door2-master
+  // - "open"    => doors clickable without master
+  CONF.doorGate = CONF.doorGate || "require";
 
-  function currentLang() {
-    const st =
-      safe(() => window.EPTEC_UI_STATE?.get?.()) ||
-      safe(() => window.EPTEC_UI_STATE?.state) ||
-      {};
-    const l = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "en").toLowerCase();
-    return l === "de" ? "de" : "en";
-  }
+  // Default security answer (hashed; can be changed later)
+  CONF.securityAnswerDefault = CONF.securityAnswerDefault || "KRAUSE";
 
-  function phWord(kind) {
-    // kind: "password" | "master"
-    const de = { password: "Passwort", master: "Masterpasswort" };
-    const en = { password: "Password", master: "Master password" };
-    const d = currentLang() === "de" ? de : en;
-    return d[kind] || d.password;
-  }
+  // -----------------------------
+  // STORAGE KEYS
+  // -----------------------------
+  const KEY = Object.freeze({
+    secrets: "EPTEC_MASTER_SECRETS_V4",
+    reset:   "EPTEC_MASTER_RESET_V1",
+    mailbox: "EPTEC_MASTER_MAILBOX_V1"
+  });
 
-  let __eptec_pw_running = false;
-  let __eptec_pw_scheduled = false;
-  let __eptec_pw_mo = null;
-
-  function enforcePasswordInputHygiene(root = document) {
-    if (__eptec_pw_running) return;
-    __eptec_pw_running = true;
-
-    safe(() => {
-      const list = Array.from(root.querySelectorAll("input[type='password']"));
-
-      for (const inp of list) {
-        // Never prefill anything
-        if (document.activeElement !== inp && typeof inp.value === "string" && inp.value) {
-          inp.value = "";
-        }
-
-        // Best effort: avoid browser autofill leaks (idempotent)
-        const wantAuto = "off";
-        const curAuto = inp.getAttribute("autocomplete");
-        if (curAuto !== wantAuto) inp.setAttribute("autocomplete", wantAuto);
-
-        // SAFE placeholder labels (generic only) — idempotent
-        const id = String(inp.id || "");
-        const wantPh =
-          (id === "admin-code" || id === "door1-master" || id === "door2-master")
-            ? phWord("master")
-            : phWord("password");
-
-        const curPh = inp.getAttribute("placeholder") || "";
-        if (curPh !== wantPh) inp.setAttribute("placeholder", wantPh);
-      }
-    });
-
-    __eptec_pw_running = false;
-  }
-
-  function schedulePasswordHygiene(root = document) {
-    if (__eptec_pw_scheduled) return;
-    __eptec_pw_scheduled = true;
-
-    setTimeout(() => {
-      __eptec_pw_scheduled = false;
-      enforcePasswordInputHygiene(root);
-    }, 250);
-  }
-
-  function observePasswordInputs() {
-    // Bind only once (deterministic)
-    if (__eptec_pw_mo) return;
-
-    safe(() => {
-      __eptec_pw_mo = new MutationObserver((mutations) => {
-        // prevent self-trigger loops deterministically
-        if (__eptec_pw_running) return;
-
-        let relevant = false;
-
-        for (const m of mutations) {
-          if (m.type === "childList") {
-            // react only when new password inputs appear
-            for (const n of m.addedNodes) {
-              if (!n || n.nodeType !== 1) continue;
-
-              if (n.tagName === "INPUT" && (n.getAttribute("type") || "").toLowerCase() === "password") {
-                relevant = true; break;
-              }
-              if (typeof n.querySelector === "function" && n.querySelector("input[type='password']")) {
-                relevant = true; break;
-              }
-            }
-            if (relevant) break;
-          }
-
-          if (m.type === "attributes") {
-            const t = m.target;
-
-            // ✅ CRITICAL FIX:
-            // Only react to TYPE changes and only if it becomes password.
-            // Never react to placeholder/autocomplete changes (usually our own writes).
-            if (t && t.tagName === "INPUT" && m.attributeName === "type") {
-              const type = (t.getAttribute("type") || "").toLowerCase();
-              if (type === "password") { relevant = true; break; }
-            }
-          }
-        }
-
-        if (relevant) schedulePasswordHygiene(document);
-      });
-
-      __eptec_pw_mo.observe(document.documentElement || document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["type", "placeholder", "autocomplete"]
-      });
-    });
-  }
-
-  /* -----------------------------
-     B) MASTER SECRETS (ROTATABLE)
-     - hashes only in localStorage (phase1)
-     ----------------------------- */
-
-  const KEY = {
-    secrets: "EPTEC_MASTER_SECRETS_V1",
-    forgot:  "EPTEC_MASTER_FORGOT_V1"
-  };
-
-  const DEFAULTS = {
+  const DEFAULTS = Object.freeze({
     start: "PatrickGeorgHenke200288",
     door:  "PatrickGeorgHenke6264",
     email: ""
-  };
+  });
 
+  // -----------------------------
+  // HELPERS
+  // -----------------------------
   function readJSON(k) {
     const raw = safe(() => localStorage.getItem(k));
     if (!raw) return null;
@@ -1428,38 +1315,229 @@ PASTE HERE:
     return (h >>> 0).toString(16);
   }
 
+  function nowISO() { return new Date().toISOString(); }
+
+  function randToken(len = 18) {
+    try {
+      if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+        const a = new Uint8Array(len);
+        crypto.getRandomValues(a);
+        return Array.from(a).map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+    } catch {}
+    return (Math.random().toString(16).slice(2).padEnd(len * 2, "0")).slice(0, len * 2);
+  }
+
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
+  }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function isAuthor() {
+    const st = getState();
+    return !!st?.modes?.author;
+  }
+  function subscribeState(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    // fallback poll
+    let last = "";
+    const t = setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== last) { last = j; safe(() => fn(st)); }
+    }, 250);
+    return () => clearInterval(t);
+  }
+
+  // -----------------------------
+  // I18N (12 languages) — placeholders only
+  // -----------------------------
+  function langKey() {
+    const st = getState();
+    const l = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "en").toLowerCase();
+    if (l.startsWith("de")) return "de";
+    if (l.startsWith("es")) return "es";
+    if (l.startsWith("fr")) return "fr";
+    if (l.startsWith("it")) return "it";
+    if (l.startsWith("pt")) return "pt";
+    if (l.startsWith("nl")) return "nl";
+    if (l.startsWith("ru")) return "ru";
+    if (l.startsWith("uk")) return "uk";
+    if (l.startsWith("ar")) return "ar";
+    if (l.startsWith("zh") || l === "cn") return "zh";
+    if (l.startsWith("ja") || l === "jp") return "ja";
+    return "en";
+  }
+
+  const WORDS = Object.freeze({
+    en: { username:"Username", password:"Password", master:"Master password", present:"Present code", gift:"Gift code", forgotMaster:"Forgot master password?" },
+    de: { username:"Benutzername", password:"Passwort", master:"Masterpasswort", present:"Presentcode", gift:"Geschenkcode", forgotMaster:"Masterpasswort vergessen?" },
+    es: { username:"Nombre de usuario", password:"Contraseña", master:"Contraseña maestra", present:"Código Present", gift:"Código regalo", forgotMaster:"¿Olvidaste la contraseña maestra?" },
+    fr: { username:"Nom d’utilisateur", password:"Mot de passe", master:"Mot de passe maître", present:"Code Present", gift:"Code cadeau", forgotMaster:"Mot de passe maître oublié ?" },
+    it: { username:"Nome utente", password:"Password", master:"Password master", present:"Codice Present", gift:"Codice regalo", forgotMaster:"Password master dimenticata?" },
+    pt: { username:"Nome de usuário", password:"Senha", master:"Senha mestre", present:"Código Present", gift:"Código presente", forgotMaster:"Esqueceu a senha mestre?" },
+    nl: { username:"Gebruikersnaam", password:"Wachtwoord", master:"Masterwachtwoord", present:"Presentcode", gift:"Geschenkcode", forgotMaster:"Masterwachtwoord vergeten?" },
+    ru: { username:"Имя пользователя", password:"Пароль", master:"Мастер-пароль", present:"Код Present", gift:"Подарочный код", forgotMaster:"Забыли мастер-пароль?" },
+    uk: { username:"Ім’я користувача", password:"Пароль", master:"Майстер-пароль", present:"Код Present", gift:"Подарунковий код", forgotMaster:"Забули майстер-пароль?" },
+    ar: { username:"اسم المستخدم", password:"كلمة المرور", master:"كلمة مرور رئيسية", present:"رمز Present", gift:"رمز هدية", forgotMaster:"نسيت كلمة المرور الرئيسية؟" },
+    zh: { username:"用户名", password:"密码", master:"主密码", present:"Present 代码", gift:"礼品码", forgotMaster:"忘记主密码？" },
+    ja: { username:"ユーザー名", password:"パスワード", master:"マスターパスワード", present:"Presentコード", gift:"ギフトコード", forgotMaster:"マスターパスワードを忘れた？" }
+  });
+
+  function W() { return WORDS[langKey()] || WORDS.en; }
+
+  function setPH(id, txt) {
+    const el = $(id);
+    if (!el) return;
+    if (el.getAttribute("placeholder") !== txt) el.setAttribute("placeholder", txt);
+  }
+
+  // -----------------------------
+  // SECRETS (hash-only)
+  // -----------------------------
   function getSecrets() {
     let s = readJSON(KEY.secrets);
     if (!s) {
       s = {
         startHash: hashMini(DEFAULTS.start),
         doorHash:  hashMini(DEFAULTS.door),
-        email: DEFAULTS.email
+        email: DEFAULTS.email,
+        secAnswerHash: hashMini(String(CONF.securityAnswerDefault || "KRAUSE").trim().toUpperCase())
       };
       writeJSON(KEY.secrets, s);
     }
     s.startHash = String(s.startHash || hashMini(DEFAULTS.start));
     s.doorHash  = String(s.doorHash  || hashMini(DEFAULTS.door));
     s.email     = String(s.email || "");
+    s.secAnswerHash = String(s.secAnswerHash || hashMini(String(CONF.securityAnswerDefault || "KRAUSE").trim().toUpperCase()));
     return s;
   }
 
-  function verify(kind /* "start"|"door" */, code) {
+  function verify(kind /* "start"|"door"|"sec" */, code) {
     const s = getSecrets();
     const c = String(code || "").trim();
     if (!c) return false;
-    const h = hashMini(c);
-    return kind === "door" ? (h === s.doorHash) : (h === s.startHash);
+    const h = hashMini(kind === "sec" ? c.toUpperCase() : c);
+    if (kind === "door") return h === s.doorHash;
+    if (kind === "sec")  return h === s.secAnswerHash;
+    return h === s.startHash;
   }
 
-  /* -----------------------------
-     C) KERNEL HOOKS (EXTEND, NOT REWRITE)
-     ----------------------------- */
+  function setSecret(kind /* "start"|"door" */, newCode) {
+    const s = getSecrets();
+    const c = String(newCode || "").trim();
+    if (!c) return { ok:false, code:"EMPTY" };
+    const h = hashMini(c);
+    if (kind === "door") s.doorHash = h;
+    else s.startHash = h;
+    writeJSON(KEY.secrets, s);
+    return { ok:true };
+  }
 
+  function changeSecret(kind, oldCode, newCode) {
+    if (!verify(kind, oldCode)) return { ok:false, code:"OLD_INVALID" };
+    return setSecret(kind, newCode);
+  }
+
+  function setSecurityAnswer(oldAnswer, newAnswer) {
+    const s = getSecrets();
+    // require old if already set
+    if (s.secAnswerHash && !verify("sec", oldAnswer)) return { ok:false, code:"SEC_OLD_INVALID" };
+    const n = String(newAnswer || "").trim();
+    if (!n) return { ok:false, code:"SEC_EMPTY" };
+    s.secAnswerHash = hashMini(n.toUpperCase());
+    writeJSON(KEY.secrets, s);
+    return { ok:true };
+  }
+
+  // -----------------------------
+  // FORGOT FLOW (simulation + backend hooks)
+  // -----------------------------
+  function createResetToken(minutesValid = 30) {
+    const token = randToken(18).toUpperCase();
+    const tokenHash = hashMini(token);
+    const expiresAt = Date.now() + (Number(minutesValid) || 30) * 60 * 1000;
+    const obj = { tokenHash, createdAt: nowISO(), expiresAt, usedAt: null };
+    writeJSON(KEY.reset, obj);
+    return { token, ...obj };
+  }
+
+  function getReset() {
+    const r = readJSON(KEY.reset);
+    return r && typeof r === "object" ? r : null;
+  }
+
+  function requestForgotReset(identity = "") {
+    const info = createResetToken(30);
+    const link = `#reset:${info.token}`;
+
+    const mb = readJSON(KEY.mailbox) || { lastMail: null, history: [] };
+    mb.lastMail = { type:"RESET", createdAt: nowISO(), to: String(identity || ""), link };
+    mb.history = Array.isArray(mb.history) ? mb.history : [];
+    mb.history.unshift(mb.lastMail);
+    mb.history = mb.history.slice(0, 30);
+    writeJSON(KEY.mailbox, mb);
+
+    // Optional future backend hook
+    safe(async () => {
+      const api = window.EPTEC_API?.post;
+      if (typeof api === "function") {
+        await api("/auth/admin/request-reset", { identity });
+      }
+    });
+
+    return { ok:true, resetLink: link, message:"Reset link created (simulation)." };
+  }
+
+  function applyForgotReset({ token, securityAnswer, newDoorCode, newStartCode } = {}) {
+    const r = getReset();
+    if (!r) return { ok:false, code:"NO_RESET" };
+    if (r.usedAt) return { ok:false, code:"USED" };
+    if (Date.now() > Number(r.expiresAt || 0)) return { ok:false, code:"EXPIRED" };
+
+    const t = String(token || "").trim().toUpperCase();
+    if (!t) return { ok:false, code:"TOKEN_EMPTY" };
+    if (hashMini(t) !== String(r.tokenHash)) return { ok:false, code:"TOKEN_INVALID" };
+
+    if (!verify("sec", securityAnswer)) return { ok:false, code:"SECURITY_ANSWER_INVALID" };
+
+    let changed = false;
+    if (String(newDoorCode || "").trim()) {
+      const res = setSecret("door", newDoorCode);
+      if (!res.ok) return res;
+      changed = true;
+    }
+    if (String(newStartCode || "").trim()) {
+      const res = setSecret("start", newStartCode);
+      if (!res.ok) return res;
+      changed = true;
+    }
+    if (!changed) return { ok:false, code:"NO_NEW_SECRET" };
+
+    r.usedAt = nowISO();
+    writeJSON(KEY.reset, r);
+
+    // Optional future backend confirmation hook
+    safe(async () => {
+      const api = window.EPTEC_API?.post;
+      if (typeof api === "function") {
+        await api("/auth/admin/confirm-reset", { token: t, ok: true });
+      }
+    });
+
+    return { ok:true, code:"RESET_OK", message:"Master password changed (simulation + confirm hook)." };
+  }
+
+  // -----------------------------
+  // PATCH KERNEL AUTH (extend, not rewrite)
+  // -----------------------------
   function patchKernelAuth() {
     const master = window.EPTEC_MASTER;
     const auth = master?.Auth;
-    if (!auth || auth.__eptec_master_secret_patched_v2) return;
+    if (!auth || auth.__eptec_master_v4_patched) return;
 
     const origVerifyStart = typeof auth.verifyStartMaster === "function" ? auth.verifyStartMaster.bind(auth) : null;
     const origVerifyDoor  = typeof auth.verifyDoorMaster  === "function" ? auth.verifyDoorMaster.bind(auth)  : null;
@@ -1474,27 +1552,20 @@ PASTE HERE:
       return !!safe(() => origVerifyDoor?.(code));
     };
 
-    auth.__eptec_master_secret_patched_v2 = true;
+    auth.__eptec_master_v4_patched = true;
   }
 
-  /* -----------------------------
-     D) 👁 EYE TOGGLES FOR MASTER FIELDS
-     - admin-code (start)
-     - door1-master / door2-master (doors)
-     ----------------------------- */
-
+  // -----------------------------
+  // EYE TOGGLES (master fields)
+  // -----------------------------
   function ensureEye(inputId, eyeId) {
     const inp = $(inputId);
     if (!inp) return;
 
-    // ensure placeholder hygiene
-    enforcePasswordInputHygiene(document);
-
     let eye = $(eyeId);
     if (!eye) {
-      const wrap = inp.closest(".pw-wrap") || inp.parentElement; // ✅ robust
+      const wrap = inp.closest(".pw-wrap") || inp.parentElement;
       if (!wrap) return;
-
       wrap.style.position = wrap.style.position || "relative";
 
       eye = document.createElement("button");
@@ -1512,7 +1583,6 @@ PASTE HERE:
       eye.style.opacity = "0.65";
       eye.style.fontSize = "16px";
       eye.style.lineHeight = "1";
-
       wrap.appendChild(eye);
 
       if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
@@ -1528,31 +1598,417 @@ PASTE HERE:
     });
   }
 
-  /* -----------------------------
-     BOOT
-     ----------------------------- */
+  // -----------------------------
+  // PLACEHOLDERS (12 languages), throttled
+  // -----------------------------
+  let phScheduled = false;
 
+  function applyPlaceholders() {
+    const w = W();
+
+    setPH("login-username", w.username);
+    setPH("login-password", w.password);
+
+    setPH("admin-code", w.master);
+    setPH("door1-master", w.master);
+    setPH("door2-master", w.master);
+
+    setPH("door1-present", w.present);
+    setPH("door2-present", w.present);
+    setPH("door1-vip", w.gift);
+    setPH("door2-vip", w.gift);
+  }
+
+  function schedulePH() {
+    if (phScheduled) return;
+    phScheduled = true;
+    setTimeout(() => { phScheduled = false; applyPlaceholders(); }, 120);
+  }
+
+  // -----------------------------
+  // DOOR GATE (optional)
+  // -----------------------------
+  function doorMasterValueForDoor(which /* "door1"|"door2" */) {
+    return String($(which === "door2" ? "door2-master" : "door1-master")?.value || "").trim();
+  }
+
+  function installDoorGate() {
+    if (String(CONF.doorGate).toLowerCase() === "open") return;
+
+    const door1 = document.querySelector("[data-logic-id='doors.door1']");
+    const door2 = document.querySelector("[data-logic-id='doors.door2']");
+
+    function gate(e, which) {
+      const code = doorMasterValueForDoor(which);
+      if (verify("door", code)) return; // ok
+      e.preventDefault();
+      e.stopPropagation();
+      safe(() => window.SoundEngine?.uiError?.());
+      safe(() => window.EPTEC_MASTER?.UI?.toast?.("Tür gesperrt: Door-Master erforderlich.", "info"));
+      safe(() => window.EPTEC_UI?.toast?.("Tür gesperrt: Door-Master erforderlich.", "info"));
+      return false;
+    }
+
+    if (door1 && !door1.__eptec_gate_bound) {
+      door1.__eptec_gate_bound = true;
+      door1.addEventListener("click", (e) => gate(e, "door1"), true);
+    }
+    if (door2 && !door2.__eptec_gate_bound) {
+      door2.__eptec_gate_bound = true;
+      door2.addEventListener("click", (e) => gate(e, "door2"), true);
+    }
+  }
+
+  // -----------------------------
+  // UI: Startscreen "Forgot master?" + Author Settings modal
+  // -----------------------------
+  const UI_ID = Object.freeze({
+    forgotLink: "eptec-master-forgot-link",
+    settingsBtn: "eptec-master-settings-btn",
+    modal: "eptec-master-modal",
+    overlay: "eptec-master-overlay",
+    close: "eptec-master-close",
+    tabRecovery: "eptec-master-tab-recovery",
+    tabSettings: "eptec-master-tab-settings",
+    body: "eptec-master-body",
+    msg: "eptec-master-msg"
+  });
+
+  function ensureUIStyles() {
+    if ($("eptec-master-style")) return;
+    const st = document.createElement("style");
+    st.id = "eptec-master-style";
+    st.textContent = `
+      #${UI_ID.forgotLink} { display:block; margin-top:10px; font-size:12px; opacity:.75; cursor:pointer; text-decoration:underline; }
+      #${UI_ID.settingsBtn} {
+        position:fixed; right:16px; top:16px; z-index:99999;
+        padding:10px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.22);
+        background:rgba(0,0,0,.55); color:#fff; cursor:pointer; backdrop-filter:blur(6px);
+        display:none;
+      }
+      #${UI_ID.overlay}{
+        position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:99998;
+        display:none; align-items:center; justify-content:center;
+      }
+      #${UI_ID.modal}{
+        width:min(92vw,520px); max-height:min(85vh,720px); overflow:auto;
+        background:rgba(15,15,18,.92); color:#fff; border:1px solid rgba(255,255,255,.18);
+        border-radius:16px; padding:16px; box-shadow:0 16px 50px rgba(0,0,0,.55);
+      }
+      #${UI_ID.modal} h2{ margin:0 0 10px 0; }
+      #${UI_ID.modal} .row{ display:flex; gap:10px; }
+      #${UI_ID.modal} .row > *{ flex:1; }
+      #${UI_ID.modal} input{
+        width:100%; padding:10px 12px; margin:8px 0;
+        border-radius:12px; border:1px solid rgba(255,255,255,.15);
+        background:rgba(255,255,255,.06); color:#fff;
+      }
+      #${UI_ID.modal} button{
+        padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+        background:rgba(255,255,255,.08); color:#fff; cursor:pointer;
+      }
+      #${UI_ID.modal} .tabs{ display:flex; gap:8px; margin-bottom:10px; }
+      #${UI_ID.modal} .tabs button{ flex:1; }
+      #${UI_ID.msg}{ margin-top:10px; font-size:12px; opacity:.9; white-space:pre-wrap; }
+      #${UI_ID.close}{ float:right; }
+    `;
+    document.head.appendChild(st);
+  }
+
+  function ensureForgotLink() {
+    const w = W();
+    const host = $("admin-submit")?.parentElement || $("admin-submit")?.closest(".login-box");
+    if (!host) return;
+
+    if (!$(UI_ID.forgotLink)) {
+      const a = document.createElement("div");
+      a.id = UI_ID.forgotLink;
+      a.textContent = w.forgotMaster;
+      host.appendChild(a);
+    } else {
+      $(UI_ID.forgotLink).textContent = w.forgotMaster;
+    }
+
+    const link = $(UI_ID.forgotLink);
+    if (link && !link.__eptec_bound) {
+      link.__eptec_bound = true;
+      link.addEventListener("click", () => {
+        openModal("recovery");
+      });
+    }
+  }
+
+  function ensureSettingsButton() {
+    if (!$(UI_ID.settingsBtn)) {
+      const b = document.createElement("button");
+      b.id = UI_ID.settingsBtn;
+      b.type = "button";
+      b.textContent = "🔑 Master Settings";
+      document.body.appendChild(b);
+    }
+    const btn = $(UI_ID.settingsBtn);
+    if (btn && !btn.__eptec_bound) {
+      btn.__eptec_bound = true;
+      btn.addEventListener("click", () => openModal("settings"));
+    }
+  }
+
+  function ensureModalShell() {
+    ensureUIStyles();
+    ensureSettingsButton();
+
+    if (!$(UI_ID.overlay)) {
+      const overlay = document.createElement("div");
+      overlay.id = UI_ID.overlay;
+
+      overlay.innerHTML = `
+        <div id="${UI_ID.modal}">
+          <button id="${UI_ID.close}" type="button">✕</button>
+          <h2>Master</h2>
+          <div class="tabs">
+            <button id="${UI_ID.tabRecovery}" type="button">Recovery</button>
+            <button id="${UI_ID.tabSettings}" type="button">Settings</button>
+          </div>
+          <div id="${UI_ID.body}"></div>
+          <div id="${UI_ID.msg}"></div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) closeModal();
+      });
+
+      $(UI_ID.close).addEventListener("click", closeModal);
+      $(UI_ID.tabRecovery).addEventListener("click", () => renderRecovery());
+      $(UI_ID.tabSettings).addEventListener("click", () => renderSettings());
+    }
+  }
+
+  function setMsg(txt) {
+    const m = $(UI_ID.msg);
+    if (m) m.textContent = String(txt || "");
+  }
+
+  function openModal(which /* "recovery"|"settings" */) {
+    ensureModalShell();
+    setMsg("");
+
+    // show overlay
+    const ov = $(UI_ID.overlay);
+    if (ov) ov.style.display = "flex";
+
+    // tabs: settings requires author
+    if (which === "settings") renderSettings();
+    else renderRecovery();
+  }
+
+  function closeModal() {
+    const ov = $(UI_ID.overlay);
+    if (ov) ov.style.display = "none";
+    setMsg("");
+  }
+
+  // Recovery UI (works even when you are locked out)
+  function renderRecovery() {
+    ensureModalShell();
+    const body = $(UI_ID.body);
+    if (!body) return;
+
+    body.innerHTML = `
+      <div>
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Recovery erzeugt einen Reset-Link (Simulation). Du setzt dann neue Master-Passwörter über Sicherheitsfrage.
+        </p>
+
+        <div class="row">
+          <input id="eptec-rec-identity" type="text" placeholder="E-Mail/Identity (optional)" />
+          <button id="eptec-rec-request" type="button">Reset-Link erzeugen</button>
+        </div>
+
+        <input id="eptec-rec-answer" type="text" placeholder="Sicherheitsfrage Antwort" />
+        <input id="eptec-rec-newstart" type="password" placeholder="Neues Start-Masterpasswort" autocomplete="off" />
+        <input id="eptec-rec-newdoor" type="password" placeholder="Neues Door-Masterpasswort" autocomplete="off" />
+
+        <button id="eptec-rec-apply" type="button">Reset anwenden</button>
+      </div>
+    `;
+
+    // bind request
+    const req = $("eptec-rec-request");
+    if (req && !req.__b) {
+      req.__b = true;
+      req.addEventListener("click", () => {
+        const identity = String($("eptec-rec-identity")?.value || "").trim();
+        const r = requestForgotReset(identity);
+        // simulate "mail": set location.hash so apply can read token
+        if (r?.resetLink) location.hash = r.resetLink;
+        setMsg(`${r.message}\n${r.resetLink ? ("Reset-Link: " + r.resetLink) : ""}`);
+      });
+    }
+
+    // bind apply
+    const ap = $("eptec-rec-apply");
+    if (ap && !ap.__b) {
+      ap.__b = true;
+      ap.addEventListener("click", () => {
+        const hash = String(location.hash || "");
+        const token = hash.startsWith("#reset:") ? hash.slice(7) : "";
+        const answer = String($("eptec-rec-answer")?.value || "").trim();
+        const newStart = String($("eptec-rec-newstart")?.value || "").trim();
+        const newDoor  = String($("eptec-rec-newdoor")?.value || "").trim();
+
+        const res = applyForgotReset({
+          token,
+          securityAnswer: answer,
+          newStartCode: newStart,
+          newDoorCode: newDoor
+        });
+
+        setMsg(res.ok ? "✅ Bestätigt: Masterpasswörter geändert." : `❌ Fehler: ${res.code || "FAILED"}`);
+      });
+    }
+
+    // set tab highlight
+    safe(() => $(UI_ID.tabRecovery).style.opacity = "1");
+    safe(() => $(UI_ID.tabSettings).style.opacity = "0.65");
+  }
+
+  // Settings UI (author-only)
+  function renderSettings() {
+    ensureModalShell();
+    const body = $(UI_ID.body);
+    if (!body) return;
+
+    if (!isAuthor()) {
+      body.innerHTML = `<p style="opacity:.85;margin:0;">Settings nur im Author-Mode verfügbar.</p>`;
+      setMsg("");
+      safe(() => $(UI_ID.tabRecovery).style.opacity = "0.65");
+      safe(() => $(UI_ID.tabSettings).style.opacity = "1");
+      return;
+    }
+
+    body.innerHTML = `
+      <div>
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Passwort ändern (nur wenn du das aktuelle kennst).
+        </p>
+
+        <div class="row">
+          <input id="eptec-set-oldstart" type="password" placeholder="Aktuelles Start-Master" autocomplete="off" />
+          <input id="eptec-set-newstart" type="password" placeholder="Neues Start-Master" autocomplete="off" />
+        </div>
+        <button id="eptec-set-changestart" type="button">Start-Master ändern</button>
+
+        <div class="row">
+          <input id="eptec-set-olddoor" type="password" placeholder="Aktuelles Door-Master" autocomplete="off" />
+          <input id="eptec-set-newdoor" type="password" placeholder="Neues Door-Master" autocomplete="off" />
+        </div>
+        <button id="eptec-set-changedoor" type="button">Door-Master ändern</button>
+
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,.14);margin:12px 0;">
+
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Sicherheitsantwort ändern (für Recovery).
+        </p>
+        <div class="row">
+          <input id="eptec-set-oldsec" type="text" placeholder="Aktuelle Antwort" />
+          <input id="eptec-set-newsec" type="text" placeholder="Neue Antwort" />
+        </div>
+        <button id="eptec-set-changesec" type="button">Sicherheitsantwort ändern</button>
+      </div>
+    `;
+
+    const b1 = $("eptec-set-changestart");
+    if (b1 && !b1.__b) {
+      b1.__b = true;
+      b1.addEventListener("click", () => {
+        const oldC = String($("eptec-set-oldstart")?.value || "").trim();
+        const newC = String($("eptec-set-newstart")?.value || "").trim();
+        const r = changeSecret("start", oldC, newC);
+        setMsg(r.ok ? "✅ Start-Master geändert." : `❌ Fehler: ${r.code || "FAILED"}`);
+      });
+    }
+
+    const b2 = $("eptec-set-changedoor");
+    if (b2 && !b2.__b) {
+      b2.__b = true;
+      b2.addEventListener("click", () => {
+        const oldC = String($("eptec-set-olddoor")?.value || "").trim();
+        const newC = String($("eptec-set-newdoor")?.value || "").trim();
+        const r = changeSecret("door", oldC, newC);
+        setMsg(r.ok ? "✅ Door-Master geändert." : `❌ Fehler: ${r.code || "FAILED"}`);
+      });
+    }
+
+    const b3 = $("eptec-set-changesec");
+    if (b3 && !b3.__b) {
+      b3.__b = true;
+      b3.addEventListener("click", () => {
+        const oldA = String($("eptec-set-oldsec")?.value || "").trim();
+        const newA = String($("eptec-set-newsec")?.value || "").trim();
+        const r = setSecurityAnswer(oldA, newA);
+        setMsg(r.ok ? "✅ Sicherheitsantwort geändert." : `❌ Fehler: ${r.code || "FAILED"}`);
+      });
+    }
+
+    safe(() => $(UI_ID.tabRecovery).style.opacity = "0.65");
+    safe(() => $(UI_ID.tabSettings).style.opacity = "1");
+  }
+
+  // -----------------------------
+  // PUBLIC API (dev/admin)
+  // -----------------------------
+  window.EPTEC_MASTER_PASSWORDS = {
+    verifyStart: (code) => verify("start", code),
+    verifyDoor:  (code) => verify("door", code),
+    changeStart: (oldCode, newCode) => changeSecret("start", oldCode, newCode),
+    changeDoor:  (oldCode, newCode) => changeSecret("door", oldCode, newCode),
+    requestReset: (identity) => requestForgotReset(identity),
+    applyReset: (payload) => applyForgotReset(payload),
+    getMailbox: () => readJSON(KEY.mailbox) || { lastMail:null, history:[] },
+    setDoorGate: (mode) => { CONF.doorGate = mode; installDoorGate(); return { ok:true, doorGate: CONF.doorGate }; }
+  };
+
+  // -----------------------------
+  // BOOT
+  // -----------------------------
   function boot() {
     getSecrets();
-
-    // allow SAFE placeholders (generic words only)
-    enforcePasswordInputHygiene(document);
-    observePasswordInputs();
-
     patchKernelAuth();
 
+    // placeholders + keep updated when lang/state changes
+    applyPlaceholders();
+    subscribeState(() => schedulePH());
+    document.addEventListener("click", schedulePH, { passive: true });
+    document.addEventListener("focusin", schedulePH, { passive: true });
+
+    // eyes for master fields
     ensureEye("admin-code", "eye-admin-code");
     ensureEye("door1-master", "eye-door1-master");
     ensureEye("door2-master", "eye-door2-master");
 
-    safe(() => console.log("EPTEC APPEND: MasterPasswords v2 (anti-freeze) active"));
+    // "Forgot master?" link on start
+    ensureForgotLink();
+    subscribeState(() => safe(() => ensureForgotLink()));
+
+    // author settings button visibility
+    ensureModalShell();
+    const btn = $(UI_ID.settingsBtn);
+    const updateBtn = () => { if (btn) btn.style.display = isAuthor() ? "block" : "none"; };
+    updateBtn();
+    subscribeState(updateBtn);
+
+    // door gate (optional)
+    installDoorGate();
+
+    safe(() => console.log("EPTEC APPEND: MasterPasswords v4 (all-in-one + UI) active"));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
 })();
-
 
 /* =========================================================
    EPTEC APPEND 1 — GLOBAL I18N TOOL (UNBLOCKABLE) + LOCALE + CLOCK
