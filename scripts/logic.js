@@ -3904,13 +3904,17 @@ PASTE HERE:
   console.log("EPTEC APPEND H active: Admin Language Emergency Switch");
 })();
 /* =========================================================
-   EPTEC APPEND — ORB ROOM SWITCH (visibility depends on where you are)
-   - visible only in rooms (room1/room2)
-   - only for demo OR author
-   - click toggles room1 <-> room2 (no logout)
+   EPTEC APPEND — ORB ROOM SWITCH (rooms-only visibility)
+   Placement: END of scripts/logic.js
+   - Orb visible only in room1/room2
+   - Only for demo OR author
+   - Click toggles room1 <-> room2
    ========================================================= */
 (() => {
   "use strict";
+
+  if (window.__EPTEC_ORB_ROOM_SWITCH__) return;
+  window.__EPTEC_ORB_ROOM_SWITCH__ = true;
 
   const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[ORB]", e); return undefined; } };
 
@@ -3933,15 +3937,13 @@ PASTE HERE:
 
   function isDemoOrAuthor(st) { return !!st?.modes?.demo || !!st?.modes?.author; }
 
-  function normalizeScene(st) {
+  function normScene(st) {
     const raw = String(st?.scene || st?.view || "").toLowerCase().trim();
-    // normalize legacy view names if needed
     if (raw === "meadow") return "start";
     if (raw === "doors") return "viewdoors";
     return raw;
   }
-
-  function isInRoom(scene) {
+  function inRoom(scene) {
     return scene === "room1" || scene === "room2" || scene === "room-1" || scene === "room-2";
   }
 
@@ -3950,32 +3952,32 @@ PASTE HERE:
       document.getElementById("author-orb") ||
       document.querySelector("[data-eptec-orb='author']");
 
-    if (orb) return orb;
-
-    orb = document.createElement("div");
-    orb.id = "author-orb";
-    orb.textContent = "◯";
-    orb.style.position = "fixed";
-    orb.style.right = "18px";
-    orb.style.top = "50%";
-    orb.style.transform = "translateY(-50%)";
-    orb.style.zIndex = "99999";
-    orb.style.width = "44px";
-    orb.style.height = "44px";
-    orb.style.borderRadius = "999px";
-    orb.style.display = "none";
-    orb.style.alignItems = "center";
-    orb.style.justifyContent = "center";
-    orb.style.cursor = "pointer";
-    orb.style.background = "rgba(255,255,255,0.10)";
-    orb.style.border = "1px solid rgba(255,255,255,0.25)";
-    orb.style.backdropFilter = "blur(6px)";
-    orb.style.color = "#fff";
-    orb.style.fontSize = "18px";
-    orb.style.lineHeight = "44px";
-    orb.style.textAlign = "center";
-    orb.style.userSelect = "none";
-    document.body.appendChild(orb);
+    if (!orb) {
+      orb = document.createElement("div");
+      orb.id = "author-orb";
+      orb.textContent = "◯";
+      orb.style.position = "fixed";
+      orb.style.right = "18px";
+      orb.style.top = "50%";
+      orb.style.transform = "translateY(-50%)";
+      orb.style.zIndex = "99999";
+      orb.style.width = "44px";
+      orb.style.height = "44px";
+      orb.style.borderRadius = "999px";
+      orb.style.display = "none";
+      orb.style.alignItems = "center";
+      orb.style.justifyContent = "center";
+      orb.style.cursor = "pointer";
+      orb.style.background = "rgba(255,255,255,0.10)";
+      orb.style.border = "1px solid rgba(255,255,255,0.25)";
+      orb.style.backdropFilter = "blur(6px)";
+      orb.style.color = "#fff";
+      orb.style.fontSize = "18px";
+      orb.style.lineHeight = "44px";
+      orb.style.textAlign = "center";
+      orb.style.userSelect = "none";
+      document.body.appendChild(orb);
+    }
 
     return orb;
   }
@@ -3984,33 +3986,30 @@ PASTE HERE:
     const D = window.EPTEC_MASTER?.Dramaturgy;
     if (D?.to) return safe(() => D.to(scene, { via: "orb" }));
     const s = store();
-    if (s?.set) return safe(() => s.set({ scene, view: scene }));
+    if (typeof s?.set === "function") return safe(() => s.set({ scene, view: scene }));
   }
 
-  function updateVisibility(orb) {
+  function update(orb) {
     const st = getState();
-    const scene = normalizeScene(st);
-
-    const show = isDemoOrAuthor(st) && isInRoom(scene);
+    const scene = normScene(st);
+    const show = isDemoOrAuthor(st) && inRoom(scene);
     orb.style.display = show ? "flex" : "none";
   }
 
-  function init() {
+  function boot() {
     const orb = ensureOrb();
     if (orb.__eptec_bound) return;
     orb.__eptec_bound = true;
 
-    // show/hide
-    const apply = () => updateVisibility(orb);
+    const apply = () => update(orb);
     apply();
     subscribe(apply);
     setInterval(apply, 700);
 
-    // click switches rooms only if in rooms
     orb.addEventListener("click", () => {
       const st = getState();
-      const scene = normalizeScene(st);
-      if (!isDemoOrAuthor(st) || !isInRoom(scene)) return;
+      const scene = normScene(st);
+      if (!isDemoOrAuthor(st) || !inRoom(scene)) return;
 
       safe(() => window.SoundEngine?.uiConfirm?.());
 
@@ -4021,7 +4020,7 @@ PASTE HERE:
     console.log("EPTEC APPEND: Orb room switch active (rooms-only)");
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 })();
 
