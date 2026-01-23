@@ -1062,3 +1062,27 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — DOORS PLACEHOLDERS (Gift + VIP, no Present)
+   ========================================================= */
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  function setPH(id, txt){
+    const el = $(id);
+    if (!el) return;
+    el.setAttribute("placeholder", txt);
+  }
+
+  // Door inputs: use correct wording
+  // We keep IDs as-is to avoid breaking existing logic.
+  setPH("door1-present", "VIP Code");
+  setPH("door2-present", "VIP Code");
+
+  setPH("door1-vip", "Gift Code");
+  setPH("door2-vip", "Gift Code");
+
+  // Optional: username placeholder
+  setPH("login-username", "Username");
+})();
