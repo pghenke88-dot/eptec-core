@@ -1106,3 +1106,43 @@
 
   console.log("EPTEC MAIN APPEND: Doors placeholders fixed (VIP/Gift).");
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — LEGAL CLOSE ALWAYS WORKS
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function closeLegal(){
+    const scr = $("legal-screen");
+    if (scr){
+      scr.classList.add("modal-hidden");
+      scr.style.display = "none";
+      scr.style.pointerEvents = "none";
+    }
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null, legalKey: null }));
+  }
+
+  function bind(){
+    const btn = $("legal-close");
+    if (!btn || btn.__eptec_close_bound) return;
+    btn.__eptec_close_bound = true;
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      closeLegal();
+    }, true);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLegal();
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+
+  setTimeout(bind, 300);
+})();
