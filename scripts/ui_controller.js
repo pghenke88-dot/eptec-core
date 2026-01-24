@@ -1,343 +1,325 @@
 /**
  * scripts/ui_controller.js
- * EPTEC UI CONTROLLER — HARD RENDER AUTHORITY
+ * EPTEC UI CONTROLLER — FINAL (Single UI Owner)
  *
  * Aufgabe:
  * - einziges Rendering-Zentrum
- * - KEINE Logik
- * - KEINE Entscheidungen
+ * - KEINE Business-Logik
+ * - KEINE Dramaturgie-Entscheidung
  * - reagiert NUR auf EPTEC_UI_STATE
+ *
+ * Enthält:
+ * - Single View Router (ohne !important, ohne setInterval)
+ * - Modal Router
+ * - Transition FX (Tunnel/Whiteout)
+ * - Room image variant class (ohne eigene subscribe-loop)
+ * - Language switcher binding (🌍 rail) + html lang/dir mirror
  */
 
 (() => {
   "use strict";
 
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[UI_CONTROLLER]", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   /* -------------------------------------------------
-     Helpers
+     Store
   ------------------------------------------------- */
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
+  }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    // No polling in FINAL. If store missing, do nothing.
+    return () => {};
+  }
 
+  /* -------------------------------------------------
+     Canonical IDs (from your index.html)
+  ------------------------------------------------- */
+  const SCENES = Object.freeze({
+    meadow: "meadow-view",
+    tunnel: "tunnel-view",
+    doors:  "doors-view",
+    room1:  "room-1-view",
+    room2:  "room-2-view"
+  });
+
+  const MODALS = Object.freeze({
+    register: "register-screen",
+    forgot:   "forgot-screen",
+    legal:    "legal-screen"
+  });
+
+  const WHITEOUT_ID = "eptec-white-flash";
+
+  /* -------------------------------------------------
+     Helpers: hide/show without forcing !important
+     (CSS decides layout; we only toggle visibility)
+  ------------------------------------------------- */
   function hide(el) {
     if (!el) return;
     el.classList.add("modal-hidden");
     el.classList.add("hidden");
+    el.style.display = "none";
+    el.style.pointerEvents = "none";
   }
 
-  function show(el) {
+  function show(el, display = "block") {
     if (!el) return;
     el.classList.remove("modal-hidden");
     el.classList.remove("hidden");
+    el.style.display = display;
+    el.style.pointerEvents = "auto";
   }
 
   function hideAllScenes() {
-    [
-      "meadow-view",
-      "tunnel-view",
-      "doors-view",
-      "room-1-view",
-      "room-2-view"
-    ].forEach(id => hide($(id)));
+    Object.values(SCENES).forEach((id) => hide($(id)));
   }
 
   function hideAllModals() {
-    [
-      "register-screen",
-      "forgot-screen",
-      "legal-screen"
-    ].forEach(id => hide($(id)));
+    Object.values(MODALS).forEach((id) => hide($(id)));
   }
 
   /* -------------------------------------------------
-     Scene Rendering
+     Normalization (view/scene -> canonical view)
+     - No decisions. Just mapping.
   ------------------------------------------------- */
+  function normView(st) {
+    const scene = String(st?.scene || "").trim().toLowerCase();
+    const view  = String(st?.view  || "").trim().toLowerCase();
 
-  function renderScene(view) {
+    if (scene) {
+      if (scene === "start") return "meadow";
+      if (scene === "tunnel") return "tunnel";
+      if (scene === "viewdoors") return "doors";
+      if (scene === "room1") return "room1";
+      if (scene === "room2") return "room2";
+      if (scene === "whiteout") {
+        // keep view baseline; default doors
+        if (view === "tunnel") return "tunnel";
+        if (view === "room1") return "room1";
+        if (view === "room2") return "room2";
+        if (view === "meadow") return "meadow";
+        return "doors";
+      }
+    }
+
+    if (!view || view === "start" || view === "meadow") return "meadow";
+    if (view === "tunnel") return "tunnel";
+    if (view === "viewdoors" || view === "doors") return "doors";
+    if (view === "room1" || view === "room-1") return "room1";
+    if (view === "room2" || view === "room-2") return "room2";
+    return "meadow";
+  }
+
+  function normModal(st) {
+    const m = st?.modal;
+    if (!m) return null;
+    const key = String(m).trim().toLowerCase();
+    if (key === "register") return "register";
+    if (key === "forgot") return "forgot";
+    if (key === "legal") return "legal";
+    return null;
+  }
+
+  /* -------------------------------------------------
+     Rendering: Scene
+  ------------------------------------------------- */
+  let lastView = null;
+
+  function renderScene(viewKey) {
+    if (viewKey === lastView) return;
+    lastView = viewKey;
+
     hideAllScenes();
 
-    switch (view) {
-      case "meadow":
-        show($("meadow-view"));
-        break;
+    // Use "block" for most; meadow may rely on CSS anyway
+    if (viewKey === "meadow") return show($(SCENES.meadow), "block");
+    if (viewKey === "tunnel") return show($(SCENES.tunnel), "block");
+    if (viewKey === "doors")  return show($(SCENES.doors),  "block");
+    if (viewKey === "room1")  return show($(SCENES.room1),  "block");
+    if (viewKey === "room2")  return show($(SCENES.room2),  "block");
 
-      case "tunnel":
-        show($("tunnel-view"));
-        break;
-
-      case "doors":
-        show($("doors-view"));
-        break;
-
-      case "room1":
-        show($("room-1-view"));
-        break;
-
-      case "room2":
-        show($("room-2-view"));
-        break;
-
-      default:
-        show($("meadow-view"));
-    }
+    return show($(SCENES.meadow), "block");
   }
 
   /* -------------------------------------------------
-     Modal Rendering
+     Rendering: Modals
   ------------------------------------------------- */
+  let lastModal = null;
 
-  function renderModal(modal) {
+  function renderModal(modalKey) {
+    if (modalKey === lastModal) return;
+    lastModal = modalKey;
+
     hideAllModals();
+    if (!modalKey) return;
 
-    if (!modal) return;
+    const el = $(MODALS[modalKey]);
+    // your modal baseline can be block; legal uses flex in your footer append, but UI keeps it simple
+    show(el, "block");
+  }
 
-    switch (modal) {
-      case "register":
-        show($("register-screen"));
-        break;
+  /* -------------------------------------------------
+     Rendering: Transitions (tunnel / whiteout)
+  ------------------------------------------------- */
+  let lastWhiteout = null;
+  let lastTunnelActive = null;
 
-      case "forgot":
-        show($("forgot-screen"));
-        break;
+  function renderTransitions(transition = {}, st = {}) {
+    const tunnel = $(SCENES.tunnel);
+    const flash = $(WHITEOUT_ID);
 
-      case "legal":
-        show($("legal-screen"));
-        break;
+    const tunnelActive = !!transition.tunnelActive;
+    const whiteout = !!transition.whiteout || String(st?.scene || "").toLowerCase() === "whiteout";
+
+    if (tunnel && tunnelActive !== lastTunnelActive) {
+      tunnel.classList.toggle("tunnel-active", tunnelActive);
+      tunnel.classList.toggle("tunnel-hidden", !tunnelActive);
+      lastTunnelActive = tunnelActive;
+    }
+
+    if (flash && whiteout !== lastWhiteout) {
+      flash.classList.toggle("white-flash-active", whiteout);
+      flash.classList.toggle("whiteout-hidden", !whiteout);
+      flash.style.display = whiteout ? "block" : "none";
+      lastWhiteout = whiteout;
     }
   }
 
   /* -------------------------------------------------
-     Transition FX (Tunnel / Whiteout)
+     Room image variant class (UNDER controller)
+     - No subscribe loop. Uses controller render()
   ------------------------------------------------- */
+  let lastVariantKey = "";
 
-  function renderTransitions(transition = {}) {
-    const tunnel = $("tunnel-view");
-    const flash = $("eptec-white-flash");
+  function renderRoomVariant(st, viewKey) {
+    const R = window.EPTEC_ROOM_REGISTRY;
+    if (!R?.REGISTRY) return;
 
-    if (tunnel) {
-      tunnel.classList.toggle("tunnel-active", !!transition.tunnelActive);
-      tunnel.classList.toggle("tunnel-hidden", !transition.tunnelActive);
+    const variants = R.REGISTRY[viewKey]?.images || [];
+    const want = String(st?.imageVariant || variants[0] || "").trim();
+    const key = `${viewKey}::${want}`;
+
+    if (key === lastVariantKey) return;
+    lastVariantKey = key;
+
+    // remove previous room-* classes only (leave others intact)
+    const root = document.documentElement;
+    root.className = root.className
+      .split(" ")
+      .filter(c => !c.startsWith("room-"))
+      .join(" ")
+      .trim();
+
+    if (want) root.classList.add(`room-${viewKey}--${want}`);
+  }
+
+  /* -------------------------------------------------
+     Language switcher binding (🌍)
+     - UI-only, no business logic
+     - sets ONLY i18n.lang through UI_STATE
+  ------------------------------------------------- */
+  function bindLanguageSwitcher() {
+    const sw = $("language-switcher");
+    const toggle = $("lang-toggle");
+    const rail = $("lang-rail");
+    if (!sw || !toggle || !rail) return;
+
+    if (sw.__eptec_lang_bound) return;
+    sw.__eptec_lang_bound = true;
+
+    function setLang(raw) {
+      const s = store();
+      if (!s?.set) return;
+
+      const c0 = String(raw || "en").trim().toLowerCase();
+      const code =
+        c0 === "ua" ? "uk" :
+        c0 === "zh" ? "cn" :
+        c0 === "ja" ? "jp" :
+        c0;
+
+      const dir = (code === "ar") ? "rtl" : "ltr";
+
+      safe(() => s.set({ i18n: { lang: code, dir } }));
+      safe(() => document.documentElement.setAttribute("lang", code));
+      safe(() => document.documentElement.setAttribute("dir", dir));
     }
 
-    if (flash) {
-      flash.classList.toggle("white-flash-active", !!transition.whiteout);
-    }
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      sw.classList.toggle("lang-open");
+    });
+
+    rail.querySelectorAll(".lang-item").forEach((btn) => {
+      if (btn.__eptec_lang_btn) return;
+      btn.__eptec_lang_btn = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setLang(btn.dataset.lang);
+        sw.classList.remove("lang-open");
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!sw.classList.contains("lang-open")) return;
+      if (sw.contains(e.target)) return;
+      sw.classList.remove("lang-open");
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") sw.classList.remove("lang-open");
+    });
   }
 
   /* -------------------------------------------------
      Master Render
   ------------------------------------------------- */
+  function render(st) {
+    if (!st) return;
 
-  function render(state) {
-    if (!state) return;
+    const viewKey = normView(st);
+    const modalKey = normModal(st);
 
-    renderScene(state.view);
-    renderModal(state.modal);
-    renderTransitions(state.transition);
+    renderScene(viewKey);
+    renderModal(modalKey);
+    renderTransitions(st.transition || {}, st);
+
+    // optional variant renderer (safe)
+    renderRoomVariant(st, viewKey);
   }
 
   /* -------------------------------------------------
      Init
   ------------------------------------------------- */
-
   function init() {
-    if (!window.EPTEC_UI_STATE?.subscribe) {
+    const S = window.EPTEC_UI_STATE;
+    if (!S?.subscribe || !S?.get) {
       console.error("UI_CONTROLLER: EPTEC_UI_STATE missing");
       return;
     }
 
-    EPTEC_UI_STATE.subscribe(render);
+    // Single subscription: UI owner
+    S.subscribe(render);
 
     // Initial render
-    render(EPTEC_UI_STATE.get());
+    render(S.get());
 
-    console.log("EPTEC UI CONTROLLER: render online");
+    // UI-only bindings
+    bindLanguageSwitcher();
+
+    console.log("EPTEC UI CONTROLLER: FINAL render online (Single UI Owner)");
   }
 
   document.addEventListener("DOMContentLoaded", init);
-})();
-/* =========================================================
-   EPTEC UI_CONTROLLER APPEND — SINGLE VIEW (KILLS MEADOW STICKING)
-   Place at END of scripts/ui_controller.js
-   ========================================================= */
-(() => {
-  "use strict";
-  if (window.__EPTEC_SINGLE_VIEW__) return;
-  window.__EPTEC_SINGLE_VIEW__ = true;
-
-  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[SINGLE_VIEW]", e); return undefined; } };
-  const $ = (id) => document.getElementById(id);
-
-  const ALL = ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"];
-
-  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
-  function getState(){
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function subscribe(fn){
-    const s = store();
-    if (typeof s?.subscribe === "function") return s.subscribe(fn);
-    setInterval(() => fn(getState()), 250);
-  }
-
-  function norm(st){
-    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
-    if (!raw || raw === "start" || raw === "meadow") return "meadow";
-    if (raw === "viewdoors" || raw === "doors") return "doors";
-    if (raw === "room1" || raw === "room-1") return "room1";
-    if (raw === "room2" || raw === "room-2") return "room2";
-    if (raw === "tunnel") return "tunnel";
-    return raw;
-  }
-
-  function showOnly(targetId){
-    for (const id of ALL){
-      const el = $(id);
-      if (!el) continue;
-      const on = (id === targetId);
-      el.style.setProperty("display", on ? "flex" : "none", "important");
-      el.style.setProperty("pointer-events", on ? "auto" : "none", "important");
-    }
-  }
-
-  function apply(){
-    const st = getState();
-    const v = norm(st);
-
-    if (v === "tunnel") return showOnly("tunnel-view");
-    if (v === "doors")  return showOnly("doors-view");
-    if (v === "room1")  return showOnly("room-1-view");
-    if (v === "room2")  return showOnly("room-2-view");
-    return showOnly("meadow-view");
-  }
-
-  function boot(){
-    apply();
-    subscribe(apply);
-    setInterval(apply, 700); // safety tick
-    console.log("EPTEC: Single-View active");
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-})();
-/* =========================================================
-   EPTEC UI_CONTROLLER APPEND — SINGLE VIEW ROUTER (MEADOW OFF)
-   ========================================================= */
-(() => {
-  "use strict";
-  if (window.__EPTEC_SINGLE_VIEW_ROUTER__) return;
-  window.__EPTEC_SINGLE_VIEW_ROUTER__ = true;
-
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-  const $ = (id) => document.getElementById(id);
-
-  const ALL = ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"];
-
-  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
-  function getState(){
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function subscribe(fn){
-    const s = store();
-    if (typeof s?.subscribe === "function") return s.subscribe(fn);
-    setInterval(() => fn(getState()), 250);
-  }
-
-  function norm(st){
-    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
-    if (!raw || raw === "start" || raw === "meadow") return "meadow";
-    if (raw === "tunnel") return "tunnel";
-    if (raw === "viewdoors" || raw === "doors") return "doors";
-    if (raw === "room1" || raw === "room-1") return "room1";
-    if (raw === "room2" || raw === "room-2") return "room2";
-    return raw;
-  }
-
-  function showOnly(targetId){
-    for (const id of ALL){
-      const el = $(id);
-      if (!el) continue;
-      const on = (id === targetId);
-      el.style.setProperty("display", on ? "flex" : "none", "important");
-      el.style.setProperty("pointer-events", on ? "auto" : "none", "important");
-    }
-  }
-
-  function apply(){
-    const st = getState();
-    const v = norm(st);
-
-    if (v === "tunnel") return showOnly("tunnel-view");
-    if (v === "doors")  return showOnly("doors-view");
-    if (v === "room1")  return showOnly("room-1-view");
-    if (v === "room2")  return showOnly("room-2-view");
-    return showOnly("meadow-view");
-  }
-
-  function boot(){
-    apply();
-    subscribe(apply);
-    setInterval(apply, 700);
-    console.log("EPTEC: Single-View Router active");
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-})();
-/* =========================================================
-   EPTEC UI APPEND — APPLY ROOM IMAGE VARIANT CLASS
-   Uses: EPTEC_ROOM_REGISTRY.REGISTRY[view].images[]
-   ========================================================= */
-(() => {
-  "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
-  function getState(){ const s=store(); return safe(()=> (typeof s?.get==="function"?s.get():s?.state))||{}; }
-
-  function subscribe(fn){
-    const s=store();
-    if (s?.subscribe) return s.subscribe(fn);
-    setInterval(() => fn(getState()), 400);
-  }
-
-  function norm(st){
-    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
-    if (!raw || raw === "start" || raw === "meadow") return "meadow";
-    if (raw === "tunnel") return "tunnel";
-    if (raw === "viewdoors" || raw === "doors") return "doors";
-    if (raw === "room1" || raw === "room-1") return "room1";
-    if (raw === "room2" || raw === "room-2") return "room2";
-    return "meadow";
-  }
-
-  function applyVariant() {
-    const st = getState();
-    const view = norm(st);
-    const R = window.EPTEC_ROOM_REGISTRY;
-    if (!R) return;
-
-    // choose variant:
-    // - default = first image
-    // - or allow state.imageVariant to pick one
-    const variants = R.REGISTRY[view]?.images || [];
-    const want = String(st?.imageVariant || variants[0] || "");
-
-    // clear previous room-classes
-    document.documentElement.className = document.documentElement.className
-      .split(" ")
-      .filter(c => !c.startsWith("room-"))
-      .join(" ");
-
-    if (want) document.documentElement.classList.add(`room-${view}--${want}`);
-  }
-
-  function boot(){
-    applyVariant();
-    subscribe(applyVariant);
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
 })();
