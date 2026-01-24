@@ -1,3 +1,10 @@
+<!-- =========================================================
+     PATCH: Add missing Kernel-trigger UI hooks
+     - Adds: admin-camera-toggle, btn-logout
+     - Fills: room-1-view + room-2-view with data-logic-id hotspots
+     - Keeps everything else unchanged
+     ========================================================= -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,9 +17,6 @@
 
   <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe, hard but working)
-       - Removed overly-broad connect-src https:
-       - Kept img-src 'self' data: (fixes favicon + images)
-       - Kept script-src 'self' (no inline scripts allowed)
        ========================================================= -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; img-src 'self' data:; media-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';">
 
@@ -86,7 +90,17 @@
       <div class="pw-wrap">
         <input id="admin-code" type="password" autocomplete="off" />
       </div>
+
       <button id="admin-submit">Enter</button>
+
+      <!-- =========================================================
+           PATCH: admin camera option (Kernel Entry.setCameraOption)
+           ========================================================= -->
+      <label class="admin-camera-row" for="admin-camera-toggle" style="display:block; margin-top:10px;">
+        <input id="admin-camera-toggle" type="checkbox" />
+        <span>Camera (Admin option)</span>
+      </label>
+
     </div>
 
     <!-- LANGUAGE SWITCHER -->
@@ -155,14 +169,91 @@
         <button id="door2-master-apply">Enter</button>
       </div>
 
+      <!-- =========================================================
+           PATCH: Logout trigger available in Doors (Kernel Auth.logout)
+           ========================================================= -->
+      <div style="width:100%; margin-top:16px; text-align:center;">
+        <button id="btn-logout" type="button">Logout</button>
+      </div>
+
     </div>
   </section>
 
   <!-- =========================================================
        ROOMS
        ========================================================= -->
-  <section id="room-1-view" class="scene modal-hidden"></section>
-  <section id="room-2-view" class="scene modal-hidden"></section>
+
+  <!-- =======================
+       PATCH: ROOM 1 UI HOOKS
+       matches Logic Bindings:
+       - r1.savepoint
+       - r1.table.download
+       - r1.mirror.download
+       - r1.traffic.enable
+       ======================= -->
+  <section id="room-1-view" class="scene modal-hidden">
+    <div class="room room1">
+
+      <h2>Room 1</h2>
+
+      <div class="room-row">
+        <button type="button" data-logic-id="r1.savepoint">Savepoint (Download)</button>
+      </div>
+
+      <div class="room-row">
+        <button type="button" data-logic-id="r1.table.download">Download: Composed Text</button>
+      </div>
+
+      <div class="room-row">
+        <button type="button" data-logic-id="r1.mirror.download">Download: Snippets + Law</button>
+      </div>
+
+      <div class="room-row">
+        <button type="button" data-logic-id="r1.traffic.enable">Activate Traffic Light</button>
+      </div>
+
+      <div class="room-row" style="margin-top:16px;">
+        <button id="btn-logout" type="button">Logout</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =======================
+       PATCH: ROOM 2 UI HOOKS
+       matches Logic Bindings:
+       - r2.hotspot.center
+       - r2.hotspot.left1
+       - r2.hotspot.left2
+       - r2.hotspot.right1
+       - r2.hotspot.right2
+       - r2.plant.backup
+       ======================= -->
+  <section id="room-2-view" class="scene modal-hidden">
+    <div class="room room2">
+
+      <h2>Room 2</h2>
+
+      <div class="room-grid">
+        <button type="button" data-logic-id="r2.hotspot.left1">Left 1 (Download)</button>
+        <button type="button" data-logic-id="r2.hotspot.left2">Left 2 (Upload)</button>
+
+        <button type="button" data-logic-id="r2.hotspot.center">Center (Upload)</button>
+
+        <button type="button" data-logic-id="r2.hotspot.right1">Right 1 (Download)</button>
+        <button type="button" data-logic-id="r2.hotspot.right2">Right 2 (Upload)</button>
+      </div>
+
+      <div class="room-row" style="margin-top:16px;">
+        <button type="button" data-logic-id="r2.plant.backup">Plant: Backup Protocol</button>
+      </div>
+
+      <div class="room-row" style="margin-top:16px;">
+        <button id="btn-logout" type="button">Logout</button>
+      </div>
+
+    </div>
+  </section>
 
   <!-- =========================================================
        MODALS
@@ -188,4 +279,3 @@
 
 </body>
 </html>
-
