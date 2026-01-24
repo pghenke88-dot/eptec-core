@@ -4396,4 +4396,3 @@ PASTE HERE:
 
   console.log("EPTEC SCENE AUTHORITY ACTIVE");
 })();
-
