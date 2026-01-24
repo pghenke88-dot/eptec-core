@@ -1799,3 +1799,100 @@
   }
 
 })();
+/* =========================================================
+   EPTEC APPEND — UI CONTROL: CONSENT GUARD
+   - Ensures that all actions requiring consent are blocked until consent is confirmed.
+   - Non-blocking UI: Shows messages when action is blocked.
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  // Get the current state (from EPTEC_MASTER or EPTEC_UI_STATE)
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  // Consent Guard Logic
+  const Consent = window.EPTEC_CONSENT || {};
+
+  // Apply consent check to UI actions
+  function applyConsentToUI(actionName, buttonId) {
+    const consentStatus = Consent.require(actionName);
+    const button = $(buttonId);
+    if (button) {
+      if (consentStatus.ok) {
+        button.disabled = false;
+        button.title = "Click to proceed with the action.";
+      } else {
+        button.disabled = true;
+        button.title = "You must agree to the terms before proceeding.";
+      }
+    }
+  }
+
+  // Function to show consent request in the UI
+  function showConsentMessage(message) {
+    const consentMessage = $("#consent-message");
+    if (consentMessage) {
+      consentMessage.textContent = message;
+      consentMessage.style.display = "block";
+    }
+  }
+
+  // Consent dialog handling (e.g., Agree/Decline buttons)
+  function bindConsentDialog() {
+    const agreeButton = $("#consent-agree");
+    const declineButton = $("#consent-decline");
+
+    if (agreeButton && declineButton) {
+      agreeButton.addEventListener("click", () => {
+        Consent.set({ agb: true, obligation: true });
+        showConsentMessage("Thank you for agreeing to the terms!");
+        applyConsentToUI("apply_discount", "apply-discount-button");
+      });
+
+      declineButton.addEventListener("click", () => {
+        Consent.set({ agb: false, obligation: false });
+        showConsentMessage("You must agree to the terms to proceed.");
+      });
+    }
+  }
+
+  // Function to check and update the UI on consent changes
+  function updateConsentUI() {
+    const consentState = Consent.get();
+    if (consentState.agb && consentState.obligation) {
+      // Enable actions if consent is given
+      applyConsentToUI("apply_discount", "apply-discount-button");
+    } else {
+      // Disable actions if consent is not given
+      applyConsentToUI("apply_discount", "apply-discount-button");
+    }
+  }
+
+  // Initialize the consent UI elements
+  function initConsentUI() {
+    // Check and update consent status when the page loads
+    updateConsentUI();
+    // Bind consent dialog buttons
+    bindConsentDialog();
+  }
+
+  // Run the consent UI setup
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initConsentUI);
+  } else {
+    initConsentUI();
+  }
+
+})();
