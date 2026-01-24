@@ -446,112 +446,528 @@
   document.addEventListener("DOMContentLoaded", init);
 })();
 /* =========================================================
-   EPTEC APPEND — UI CONTROLLER · MASTER PASSWORDS v4
-   Role: UI-Gate + Visual Security (NO decision authority)
-   Authority: Kernel (Logic owns truth)
-   Scope: UI Controller ONLY
+   EPTEC APPEND — UI CONTROLLER · MASTER PASSWORDS v4 (ALL-IN UI)
+   Role: UI implementation ONLY (no hashing, no storage, no decisions)
+   Authority: Logic Append exposes window.EPTEC_MASTER_PASSWORDS
    ========================================================= */
 (() => {
   "use strict";
 
-  // ---------- SAFE HELPERS ----------
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  if (window.__EPTEC_UI_MASTER_V4__) return;
+  window.__EPTEC_UI_MASTER_V4__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[UI_MASTER_V4]", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
-  // ---------- UI-ONLY LOCAL VERIFY (NO AUTHORITY) ----------
-  // NOTE:
-  // - This is a PURE UI pre-filter
-  // - Kernel / Logic decides finally
-  // - UI may NEVER unlock access on its own
-  function verifyLocal(kind, code) {
-    return safe(() => window.EPTEC_MASTER_PASSWORDS?.verifyLocal?.(kind, code)) ?? false;
+  function API() {
+    return window.EPTEC_MASTER_PASSWORDS || null;
   }
 
-  /* -------------------------------------------------------
-     UI DOOR PRE-GATE (VISUAL / UX ONLY)
-     ------------------------------------------------------- */
-  function installDoorGate() {
-    ["door1", "door2"].forEach((door) => {
-      const host = document.querySelector(`[data-logic-id="doors.${door}"]`);
-      if (!host || host.__eptec_ui_gate) return;
-
-      host.__eptec_ui_gate = true;
-
-      host.addEventListener("click", (e) => {
-        const inp = $(`${door}-master`);
-        if (!inp) return;
-
-        if (!verifyLocal("door", inp.value)) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          safe(() =>
-            window.EPTEC_UI?.toast?.(
-              "Tür gesperrt: Door-Master erforderlich.",
-              "info"
-            )
-          );
-        }
-      }, true); // capture = true (before logic)
-    });
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
   }
 
-  /* -------------------------------------------------------
-     PASSWORD VISIBILITY (PURE VISUAL)
-     ------------------------------------------------------- */
-  function ensureEye(inputId) {
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  /* -------------------------------------------------
+     I18N placeholders (12 languages) — UI ONLY
+  ------------------------------------------------- */
+  function langKey() {
+    const st = getState();
+    const l = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "en").toLowerCase();
+    if (l.startsWith("de")) return "de";
+    if (l.startsWith("es")) return "es";
+    if (l.startsWith("fr")) return "fr";
+    if (l.startsWith("it")) return "it";
+    if (l.startsWith("pt")) return "pt";
+    if (l.startsWith("nl")) return "nl";
+    if (l.startsWith("ru")) return "ru";
+    if (l.startsWith("uk")) return "uk";
+    if (l.startsWith("ar")) return "ar";
+    if (l.startsWith("zh") || l === "cn") return "zh";
+    if (l.startsWith("ja") || l === "jp") return "ja";
+    return "en";
+  }
+
+  const WORDS = Object.freeze({
+    en: { username:"Username", password:"Password", master:"Master password", present:"Present code", gift:"Gift code", forgotMaster:"Forgot master password?" },
+    de: { username:"Benutzername", password:"Passwort", master:"Masterpasswort", present:"Presentcode", gift:"Geschenkcode", forgotMaster:"Masterpasswort vergessen?" },
+    es: { username:"Nombre de usuario", password:"Contraseña", master:"Contraseña maestra", present:"Código Present", gift:"Código regalo", forgotMaster:"¿Olvidaste la contraseña maestra?" },
+    fr: { username:"Nom d’utilisateur", password:"Mot de passe", master:"Mot de passe maître", present:"Code Present", gift:"Code cadeau", forgotMaster:"Mot de passe maître oublié ?" },
+    it: { username:"Nome utente", password:"Password", master:"Password master", present:"Codice Present", gift:"Codice regalo", forgotMaster:"Password master dimenticata?" },
+    pt: { username:"Nome de usuário", password:"Senha", master:"Senha mestre", present:"Código Present", gift:"Código presente", forgotMaster:"Esqueceu a senha mestre?" },
+    nl: { username:"Gebruikersnaam", password:"Wachtwoord", master:"Masterwachtwoord", present:"Presentcode", gift:"Geschenkcode", forgotMaster:"Masterwachtwoord vergeten?" },
+    ru: { username:"Имя пользователя", password:"Пароль", master:"Мастер-пароль", present:"Код Present", gift:"Подарочный код", forgotMaster:"Забыли мастер-пароль?" },
+    uk: { username:"Ім’я користувача", password:"Пароль", master:"Майстер-пароль", present:"Код Present", gift:"Подарунковий код", forgotMaster:"Забули майстер-пароль?" },
+    ar: { username:"اسم المستخدم", password:"كلمة المرور", master:"كلمة مرور رئيسية", present:"رمز Present", gift:"رمز هدية", forgotMaster:"نسيت كلمة المرور الرئيسية؟" },
+    zh: { username:"用户名", password:"密码", master:"主密码", present:"Present 代码", gift:"礼品码", forgotMaster:"忘记主密码？" },
+    ja: { username:"ユーザー名", password:"パスワード", master:"マスターパスワード", present:"Presentコード", gift:"ギフトコード", forgotMaster:"マスターパスワードを忘れた？" }
+  });
+
+  function W() { return WORDS[langKey()] || WORDS.en; }
+
+  function setPH(id, txt) {
+    const el = $(id);
+    if (!el) return;
+    if (el.getAttribute("placeholder") !== txt) el.setAttribute("placeholder", txt);
+  }
+
+  function applyPlaceholders() {
+    const w = W();
+    setPH("login-username", w.username);
+    setPH("login-password", w.password);
+
+    setPH("admin-code", w.master);
+    setPH("door1-master", w.master);
+    setPH("door2-master", w.master);
+
+    setPH("door1-present", w.present);
+    setPH("door2-present", w.present);
+    setPH("door1-vip", w.gift);
+    setPH("door2-vip", w.gift);
+
+    // Update forgot link label if exists
+    const link = $("eptec-master-forgot-link");
+    if (link) link.textContent = w.forgotMaster;
+  }
+
+  /* -------------------------------------------------
+     Eye toggles (UI ONLY)
+  ------------------------------------------------- */
+  function ensureEye(inputId, eyeId) {
     const inp = $(inputId);
-    if (!inp || inp.__eptec_eye) return;
-    inp.__eptec_eye = true;
+    if (!inp) return;
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "👁";
-    btn.setAttribute("aria-label", "Show / Hide password");
-    btn.style.marginLeft = "6px";
+    let eye = $(eyeId);
+    if (!eye) {
+      const wrap = inp.closest(".pw-wrap") || inp.parentElement;
+      if (!wrap) return;
+      wrap.style.position = wrap.style.position || "relative";
 
-    btn.addEventListener("click", () => {
-      inp.type = inp.type === "password" ? "text" : "password";
+      eye = document.createElement("button");
+      eye.type = "button";
+      eye.id = eyeId;
+      eye.textContent = "👁️";
+      eye.setAttribute("aria-label", "Show/Hide");
+      eye.style.position = "absolute";
+      eye.style.right = "12px";
+      eye.style.top = "50%";
+      eye.style.transform = "translateY(-50%)";
+      eye.style.background = "transparent";
+      eye.style.border = "0";
+      eye.style.cursor = "pointer";
+      eye.style.opacity = "0.65";
+      eye.style.fontSize = "16px";
+      eye.style.lineHeight = "1";
+      wrap.appendChild(eye);
+
+      if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
+    }
+
+    if (eye.__eptec_eye_bound) return;
+    eye.__eptec_eye_bound = true;
+
+    eye.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      inp.type = (inp.type === "password") ? "text" : "password";
+      eye.style.opacity = (inp.type === "password") ? "0.65" : "1";
+    });
+  }
+
+  /* -------------------------------------------------
+     Door Gate (UI pre-filter ONLY)
+  ------------------------------------------------- */
+  function getDoorGateMode() {
+    const api = API();
+    return String(api?.getDoorGateMode?.() || "require").toLowerCase();
+  }
+
+  function installDoorGate() {
+    if (getDoorGateMode() === "open") return;
+
+    const door1 = document.querySelector("[data-logic-id='doors.door1']");
+    const door2 = document.querySelector("[data-logic-id='doors.door2']");
+
+    function gate(e, which /* "door1"|"door2" */) {
+      const api = API();
+      if (!api?.verifyDoor) return; // no API -> don't block
+      const code = String($(which === "door2" ? "door2-master" : "door1-master")?.value || "").trim();
+      if (api.verifyDoor(code)) return; // ok
+      e.preventDefault();
+      e.stopPropagation();
+      safe(() => window.EPTEC_UI?.toast?.("Tür gesperrt: Door-Master erforderlich.", "info"));
+      safe(() => window.EPTEC_MASTER?.UI?.toast?.("Tür gesperrt: Door-Master erforderlich.", "info"));
+      return false;
+    }
+
+    if (door1 && !door1.__eptec_master_gate_bound) {
+      door1.__eptec_master_gate_bound = true;
+      door1.addEventListener("click", (e) => gate(e, "door1"), true);
+    }
+    if (door2 && !door2.__eptec_master_gate_bound) {
+      door2.__eptec_master_gate_bound = true;
+      door2.addEventListener("click", (e) => gate(e, "door2"), true);
+    }
+  }
+
+  /* -------------------------------------------------
+     UI: Forgot link + Settings modal
+  ------------------------------------------------- */
+  const UI_ID = Object.freeze({
+    forgotLink: "eptec-master-forgot-link",
+    settingsBtn: "eptec-master-settings-btn",
+    overlay: "eptec-master-overlay",
+    modal: "eptec-master-modal",
+    close: "eptec-master-close",
+    tabRecovery: "eptec-master-tab-recovery",
+    tabSettings: "eptec-master-tab-settings",
+    body: "eptec-master-body",
+    msg: "eptec-master-msg"
+  });
+
+  function ensureUIStyles() {
+    if ($("eptec-master-style")) return;
+    const st = document.createElement("style");
+    st.id = "eptec-master-style";
+    st.textContent = `
+      #${UI_ID.forgotLink} { display:block; margin-top:10px; font-size:12px; opacity:.75; cursor:pointer; text-decoration:underline; }
+      #${UI_ID.settingsBtn} {
+        position:fixed; right:16px; top:16px; z-index:99999;
+        padding:10px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.22);
+        background:rgba(0,0,0,.55); color:#fff; cursor:pointer; backdrop-filter:blur(6px);
+        display:none;
+      }
+      #${UI_ID.overlay}{
+        position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:99998;
+        display:none; align-items:center; justify-content:center;
+      }
+      #${UI_ID.modal}{
+        width:min(92vw,520px); max-height:min(85vh,720px); overflow:auto;
+        background:rgba(15,15,18,.92); color:#fff; border:1px solid rgba(255,255,255,.18);
+        border-radius:16px; padding:16px; box-shadow:0 16px 50px rgba(0,0,0,.55);
+      }
+      #${UI_ID.modal} h2{ margin:0 0 10px 0; }
+      #${UI_ID.modal} .row{ display:flex; gap:10px; }
+      #${UI_ID.modal} .row > *{ flex:1; }
+      #${UI_ID.modal} input{
+        width:100%; padding:10px 12px; margin:8px 0;
+        border-radius:12px; border:1px solid rgba(255,255,255,.15);
+        background:rgba(255,255,255,.06); color:#fff;
+      }
+      #${UI_ID.modal} button{
+        padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+        background:rgba(255,255,255,.08); color:#fff; cursor:pointer;
+      }
+      #${UI_ID.modal} .tabs{ display:flex; gap:8px; margin-bottom:10px; }
+      #${UI_ID.modal} .tabs button{ flex:1; }
+      #${UI_ID.msg}{ margin-top:10px; font-size:12px; opacity:.9; white-space:pre-wrap; }
+      #${UI_ID.close}{ float:right; }
+    `;
+    document.head.appendChild(st);
+  }
+
+  function ensureForgotLink() {
+    const host = $("admin-submit")?.parentElement || $("admin-submit")?.closest(".login-box");
+    if (!host) return;
+
+    if (!$(UI_ID.forgotLink)) {
+      const a = document.createElement("div");
+      a.id = UI_ID.forgotLink;
+      a.textContent = W().forgotMaster;
+      host.appendChild(a);
+    }
+
+    const link = $(UI_ID.forgotLink);
+    if (link && !link.__eptec_bound) {
+      link.__eptec_bound = true;
+      link.addEventListener("click", () => openModal("recovery"));
+    }
+  }
+
+  function ensureSettingsButton() {
+    if (!$(UI_ID.settingsBtn)) {
+      const b = document.createElement("button");
+      b.id = UI_ID.settingsBtn;
+      b.type = "button";
+      b.textContent = "🔑 Master Settings";
+      document.body.appendChild(b);
+    }
+    const btn = $(UI_ID.settingsBtn);
+    if (btn && !btn.__eptec_bound) {
+      btn.__eptec_bound = true;
+      btn.addEventListener("click", () => openModal("settings"));
+    }
+  }
+
+  function ensureModalShell() {
+    ensureUIStyles();
+    ensureSettingsButton();
+
+    if ($(UI_ID.overlay)) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = UI_ID.overlay;
+
+    overlay.innerHTML = `
+      <div id="${UI_ID.modal}">
+        <button id="${UI_ID.close}" type="button">✕</button>
+        <h2>Master</h2>
+        <div class="tabs">
+          <button id="${UI_ID.tabRecovery}" type="button">Recovery</button>
+          <button id="${UI_ID.tabSettings}" type="button">Settings</button>
+        </div>
+        <div id="${UI_ID.body}"></div>
+        <div id="${UI_ID.msg}"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal();
     });
 
-    inp.after(btn);
+    $(UI_ID.close).addEventListener("click", closeModal);
+    $(UI_ID.tabRecovery).addEventListener("click", () => renderRecovery());
+    $(UI_ID.tabSettings).addEventListener("click", () => renderSettings());
   }
 
-  /* -------------------------------------------------------
+  function setMsg(txt) {
+    const m = $(UI_ID.msg);
+    if (m) m.textContent = String(txt || "");
+  }
+
+  function openModal(which /* "recovery"|"settings" */) {
+    ensureModalShell();
+    setMsg("");
+
+    const ov = $(UI_ID.overlay);
+    if (ov) ov.style.display = "flex";
+
+    if (which === "settings") renderSettings();
+    else renderRecovery();
+  }
+
+  function closeModal() {
+    const ov = $(UI_ID.overlay);
+    if (ov) ov.style.display = "none";
+    setMsg("");
+  }
+
+  function renderRecovery() {
+    ensureModalShell();
+    const body = $(UI_ID.body);
+    if (!body) return;
+
+    body.innerHTML = `
+      <div>
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Recovery erzeugt einen Reset-Link (Simulation). Du setzt dann neue Master-Passwörter über Sicherheitsfrage.
+        </p>
+
+        <div class="row">
+          <input id="eptec-rec-identity" type="text" placeholder="E-Mail/Identity (optional)" />
+          <button id="eptec-rec-request" type="button">Reset-Link erzeugen</button>
+        </div>
+
+        <input id="eptec-rec-answer" type="text" placeholder="Sicherheitsfrage Antwort" />
+        <input id="eptec-rec-newstart" type="password" placeholder="Neues Start-Masterpasswort" autocomplete="off" />
+        <input id="eptec-rec-newdoor" type="password" placeholder="Neues Door-Masterpasswort" autocomplete="off" />
+
+        <button id="eptec-rec-apply" type="button">Reset anwenden</button>
+      </div>
+    `;
+
+    const req = $("eptec-rec-request");
+    if (req && !req.__b) {
+      req.__b = true;
+      req.addEventListener("click", () => {
+        const api = API();
+        if (!api?.requestReset) return setMsg("❌ API fehlt: requestReset()");
+        const identity = String($("eptec-rec-identity")?.value || "").trim();
+        const r = api.requestReset(identity);
+        if (r?.resetLink) location.hash = r.resetLink;
+        setMsg(`${r?.message || ""}\n${r?.resetLink ? ("Reset-Link: " + r.resetLink) : ""}`);
+      });
+    }
+
+    const ap = $("eptec-rec-apply");
+    if (ap && !ap.__b) {
+      ap.__b = true;
+      ap.addEventListener("click", () => {
+        const api = API();
+        if (!api?.applyReset) return setMsg("❌ API fehlt: applyReset()");
+        const hash = String(location.hash || "");
+        const token = hash.startsWith("#reset:") ? hash.slice(7) : "";
+        const answer = String($("eptec-rec-answer")?.value || "").trim();
+        const newStart = String($("eptec-rec-newstart")?.value || "").trim();
+        const newDoor  = String($("eptec-rec-newdoor")?.value || "").trim();
+
+        const res = api.applyReset({
+          token,
+          securityAnswer: answer,
+          newStartCode: newStart,
+          newDoorCode: newDoor
+        });
+
+        setMsg(res?.ok ? "✅ Bestätigt: Masterpasswörter geändert." : `❌ Fehler: ${res?.code || "FAILED"}`);
+      });
+    }
+
+    safe(() => $(UI_ID.tabRecovery).style.opacity = "1");
+    safe(() => $(UI_ID.tabSettings).style.opacity = "0.65");
+  }
+
+  function renderSettings() {
+    ensureModalShell();
+    const body = $(UI_ID.body);
+    if (!body) return;
+
+    const api = API();
+    const author = !!api?.isAuthor?.();
+
+    if (!author) {
+      body.innerHTML = `<p style="opacity:.85;margin:0;">Settings nur im Author-Mode verfügbar.</p>`;
+      setMsg("");
+      safe(() => $(UI_ID.tabRecovery).style.opacity = "0.65");
+      safe(() => $(UI_ID.tabSettings).style.opacity = "1");
+      return;
+    }
+
+    body.innerHTML = `
+      <div>
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Passwort ändern (nur wenn du das aktuelle kennst).
+        </p>
+
+        <div class="row">
+          <input id="eptec-set-oldstart" type="password" placeholder="Aktuelles Start-Master" autocomplete="off" />
+          <input id="eptec-set-newstart" type="password" placeholder="Neues Start-Master" autocomplete="off" />
+        </div>
+        <button id="eptec-set-changestart" type="button">Start-Master ändern</button>
+
+        <div class="row">
+          <input id="eptec-set-olddoor" type="password" placeholder="Aktuelles Door-Master" autocomplete="off" />
+          <input id="eptec-set-newdoor" type="password" placeholder="Neues Door-Master" autocomplete="off" />
+        </div>
+        <button id="eptec-set-changedoor" type="button">Door-Master ändern</button>
+
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,.14);margin:12px 0;">
+
+        <p style="opacity:.85;margin:0 0 8px 0;">
+          Sicherheitsantwort ändern (für Recovery).
+        </p>
+        <div class="row">
+          <input id="eptec-set-oldsec" type="text" placeholder="Aktuelle Antwort" />
+          <input id="eptec-set-newsec" type="text" placeholder="Neue Antwort" />
+        </div>
+        <button id="eptec-set-changesec" type="button">Sicherheitsantwort ändern</button>
+      </div>
+    `;
+
+    const b1 = $("eptec-set-changestart");
+    if (b1 && !b1.__b) {
+      b1.__b = true;
+      b1.addEventListener("click", () => {
+        const api2 = API();
+        if (!api2?.changeStart) return setMsg("❌ API fehlt: changeStart()");
+        const oldC = String($("eptec-set-oldstart")?.value || "").trim();
+        const newC = String($("eptec-set-newstart")?.value || "").trim();
+        const r = api2.changeStart(oldC, newC);
+        setMsg(r?.ok ? "✅ Start-Master geändert." : `❌ Fehler: ${r?.code || "FAILED"}`);
+      });
+    }
+
+    const b2 = $("eptec-set-changedoor");
+    if (b2 && !b2.__b) {
+      b2.__b = true;
+      b2.addEventListener("click", () => {
+        const api2 = API();
+        if (!api2?.changeDoor) return setMsg("❌ API fehlt: changeDoor()");
+        const oldC = String($("eptec-set-olddoor")?.value || "").trim();
+        const newC = String($("eptec-set-newdoor")?.value || "").trim();
+        const r = api2.changeDoor(oldC, newC);
+        setMsg(r?.ok ? "✅ Door-Master geändert." : `❌ Fehler: ${r?.code || "FAILED"}`);
+      });
+    }
+
+    const b3 = $("eptec-set-changesec");
+    if (b3 && !b3.__b) {
+      b3.__b = true;
+      b3.addEventListener("click", () => {
+        const api2 = API();
+        if (!api2?.setSecurityAnswer) return setMsg("❌ API fehlt: setSecurityAnswer()");
+        const oldA = String($("eptec-set-oldsec")?.value || "").trim();
+        const newA = String($("eptec-set-newsec")?.value || "").trim();
+        const r = api2.setSecurityAnswer(oldA, newA);
+        setMsg(r?.ok ? "✅ Sicherheitsantwort geändert." : `❌ Fehler: ${r?.code || "FAILED"}`);
+      });
+    }
+
+    safe(() => $(UI_ID.tabRecovery).style.opacity = "0.65");
+    safe(() => $(UI_ID.tabSettings).style.opacity = "1");
+  }
+
+  function updateSettingsButtonVisibility() {
+    ensureModalShell();
+    const api = API();
+    const btn = $(UI_ID.settingsBtn);
+    if (!btn) return;
+    const show = !!api?.isAuthor?.();
+    btn.style.display = show ? "block" : "none";
+  }
+
+  /* -------------------------------------------------
      BOOT
-     ------------------------------------------------------- */
+  ------------------------------------------------- */
   function boot() {
-    installDoorGate();
+    // Must not crash if API isn't ready yet; retry briefly
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
 
-    // visual helpers only
-    ensureEye("admin-code");
-    ensureEye("door1-master");
-    ensureEye("door2-master");
+      const api = API();
+      if (api) {
+        clearInterval(t);
 
-    console.log("EPTEC UI APPEND: MasterPasswords v4 active");
+        // UI helpers
+        applyPlaceholders();
+        ensureEye("admin-code", "eye-admin-code");
+        ensureEye("door1-master", "eye-door1-master");
+        ensureEye("door2-master", "eye-door2-master");
+
+        ensureForgotLink();
+        ensureModalShell();
+        updateSettingsButtonVisibility();
+        installDoorGate();
+
+        // react to state changes (lang + author-mode changes)
+        subscribe(() => {
+          applyPlaceholders();
+          ensureForgotLink();
+          updateSettingsButtonVisibility();
+        });
+
+        console.log("EPTEC UI APPEND: MasterPasswords v4 ALL-IN active");
+      } else if (tries > 60) {
+        clearInterval(t);
+        console.warn("EPTEC UI APPEND: MasterPasswords v4 — API missing (EPTEC_MASTER_PASSWORDS not found).");
+      }
+    }, 50);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-})();
-(() => {
-  "use strict";
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  // Beispiel: Szenenwechsel auslösen und Audio abspielen
-  function onSceneChange(scene) {
-    // Rufen Sie die AudioBridge auf, um das Audio für die Szene zu aktivieren
-    window.EPTEC_AUDIO_BRIDGE.cue(scene);
-
-    // Weiterer UI-spezifischer Code, z.B. UI-Elemente anzeigen oder ausblenden
-    // ...
-  }
-
-  // Beispielhafter Gebrauch
-  onSceneChange("meadow"); // Startet das Audio für "meadow"
 })();
 
