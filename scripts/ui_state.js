@@ -1,25 +1,12 @@
 /**
  * scripts/ui_state.js
- * EPTEC UI-STATE — FINAL (i18n.lang ONLY, no alias "lang")
+ * EPTEC UI-STATE — FINAL (i18n.lang canonical, lang alias accepted)
  *
+ * Goals:
  * - Pure state only (no DOM, no backend, no audio)
- * - Provides BOTH APIs:
- *   1) Kernel-style store: get() / set() / subscribe()
- *   2) Legacy-style: state (getter) / onChange(fn)
- *
- * - Canonical legacy views:
- *   "meadow" | "tunnel" | "doors" | "room1" | "room2"
- *
- * - Accepts logic-scene names safely:
- *   "start" -> meadow
- *   "viewdoors" -> doors
- *   "whiteout" -> keeps view (overlay via transition.whiteout)
- *
- * - Language persisted:
- *   localStorage key: EPTEC_LANG
- *
- * HARD RULE:
- * - ONLY i18n.lang is used (no state.lang mirror, no aliases).
+ * - Canonical: i18n.lang + i18n.dir
+ * - Accepts legacy input: lang / locale (alias), but normalizes into i18n.*
+ * - Keeps a synchronized mirror "lang" for legacy readers
  */
 
 (() => {
@@ -41,13 +28,9 @@
 
   function normLang(raw) {
     const s = String(raw || "en").toLowerCase().trim();
-
-    // Canonical codes used by your system/UI rail:
-    // en de es fr it pt nl ru uk ar cn jp
     if (s === "ua") return "uk";
     if (s === "zh") return "cn";
     if (s === "ja") return "jp";
-
     if (["en","de","es","fr","it","pt","nl","ru","uk","ar","cn","jp"].includes(s)) return s;
     return "en";
   }
@@ -73,13 +56,11 @@
     if (x === "room1") return "room1";
     if (x === "room2") return "room2";
 
-    // safe aliases (legacy)
     if (x === "wiese" || x === "start" || x === "entry") return "meadow";
     if (x === "viewdos" || x === "zwischenraum" || x === "doors-view") return "doors";
     if (x === "r1") return "room1";
     if (x === "r2") return "room2";
 
-    // logic-scene aliases
     if (x === "viewdoors") return "doors";
     if (x === "whiteout") return "doors";
 
@@ -103,15 +84,13 @@
     scene: "",
 
     modal: null,
-    legalKey: null, // canonical name
+    legalKey: null,
 
-    i18n: {
-      lang: "en",
-      dir: "ltr"
-    },
+    // canonical i18n
+    i18n: { lang: "en", dir: "ltr" },
 
-    // keep flexible: do NOT strip other mode keys (user/author etc.)
-    modes: { demo: false, admin: false, vip: false },
+    // Kernel may use richer mode objects; keep flexible
+    modes: {},
 
     transition: { tunnelActive: false, whiteout: false, last: null }
   };
@@ -120,22 +99,18 @@
   const listeners = new Set();
 
   function snapshot() {
-    // keep deep-copy to guarantee immutability for consumers
     return JSON.parse(JSON.stringify(state));
   }
 
   function normalize(next) {
     const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
 
-    // --- alias support (non-breaking) ---
-    // Accept "legalKind" but store canonically as "legalKey"
+    // legalKey canonicalization
     if (n.legalKey == null && n.legalKind != null) n.legalKey = n.legalKind;
     if ("legalKind" in n) delete n.legalKind;
 
-    // scene (optional)
+    // scene/view normalization
     n.scene = normScene(n.scene);
-
-    // view baseline from scene
     if (n.scene) {
       if (n.scene === "start") n.view = "meadow";
       else if (n.scene === "viewdoors") n.view = "doors";
@@ -148,22 +123,26 @@
       n.view = normView(n.view);
     }
 
-    // language (ONLY i18n.lang)
-    n.i18n = isObj(n.i18n) ? n.i18n : {};
+    // language: accept alias "lang" but store canonically in i18n.lang
     const persisted = loadLang();
-    const lang = normLang(n.i18n.lang || persisted || "en");
+    n.i18n = isObj(n.i18n) ? n.i18n : {};
+
+    const rawLang = n.i18n.lang || n.lang || persisted || "en";
+    const lang = normLang(rawLang);
+
     n.i18n.lang = lang;
     n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
     saveLang(lang);
 
-    // nested safety (do not strip unknown keys)
-    n.modes = isObj(n.modes) ? n.modes : { demo: false, admin: false, vip: false };
+    // synchronized mirror for legacy readers
+    n.lang = lang;
+
+    n.modes = isObj(n.modes) ? n.modes : {};
     n.transition = isObj(n.transition) ? n.transition : { tunnelActive: false, whiteout: false, last: null };
 
     return n;
   }
 
-  // --- storm safety ---
   let notifying = false;
   let lastJson = "";
 
@@ -173,12 +152,11 @@
     const next = normalize(merged);
 
     const nextJson = JSON.stringify(next);
-    if (nextJson === lastJson) return snapshot(); // no-op
+    if (nextJson === lastJson) return snapshot();
 
     state = next;
     lastJson = nextJson;
 
-    // prevent accidental re-entrancy loops
     if (notifying) return snapshot();
     notifying = true;
 
@@ -206,7 +184,6 @@
     return subscribe(fn);
   }
 
-  // init with persisted lang immediately
   state = normalize(state);
   lastJson = JSON.stringify(state);
 
@@ -214,10 +191,9 @@
     get,
     set,
     subscribe,
-
     onChange,
     get state() { return snapshot(); },
-
     snapshot
   };
 })();
+
