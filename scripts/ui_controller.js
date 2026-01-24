@@ -1230,3 +1230,133 @@
   }
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROLLER APPEND — APPENDIX 6 (Billing Codes UI Wiring)
+   Implements:
+   - PRÄSENTCODE (ALT Geschenkcode): door input → waives one-time fee for that room
+   - AKTIONSCODE (ALT Präsentcode): profile-only (NOT under doors) → 50% next monthly payment per room
+   Notes:
+   - This append wires UI to LOGIC ONLY.
+   - No business rules here; those live in EPTEC_BILLING (Appendix 6).
+   - Index remains unchanged.
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_APPENDIX6__) return;
+  window.__EPTEC_UI_APPENDIX6__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function Billing() { return window.EPTEC_BILLING || null; }
+
+  // ---- helpers ------------------------------------------------
+  function toast(msg, type = "info") {
+    const m = String(msg || "");
+    safe(() => window.EPTEC_UI?.toast?.(m, type, 2400));
+    safe(() => window.EPTEC_MASTER?.UI?.toast?.(m, type, 2400));
+    if (!window.EPTEC_UI?.toast && !window.EPTEC_MASTER?.UI?.toast) console.log(`[TOAST:${type}]`, m);
+  }
+
+  function roomKeyFromDoor(doorKey /* "door1"|"door2" */) {
+    return doorKey === "door2" ? "room2" : "room1";
+  }
+
+  function bindOnce(el, handler, key) {
+    if (!el || typeof handler !== "function") return;
+    const k = `__eptec_a6_${key}`;
+    if (el[k]) return;
+    el[k] = true;
+
+    // capture to avoid double listeners elsewhere
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      safe(() => handler(e));
+    }, true);
+  }
+
+  // ---- PRÄSENTCODE under doors --------------------------------
+  // Mapping (per your rule):
+  // doorX-present input == PRÄSENTCODE (waive one-time fee for that room)
+  function wirePraesentcodeForDoor(doorKey /* "door1"|"door2" */) {
+    const B = Billing();
+    if (!B) return;
+
+    const inputId = `${doorKey}-present`;
+    const applyId  = `${doorKey}-present-apply`;
+
+    const inp = $(inputId);
+    const btn = $(applyId);
+    if (!inp || !btn) return;
+
+    bindOnce(btn, () => {
+      const code = String(inp.value || "").trim();
+      if (!code) return toast("Präsentcode fehlt.", "error");
+
+      const room = roomKeyFromDoor(doorKey);
+      const res = safe(() => B.applyPraesentcode?.(room, code));
+
+      if (res?.ok) {
+        toast(`✅ Präsentcode akzeptiert (${room}). Einmalzahlung entfällt.`, "ok");
+        inp.value = "";
+      } else {
+        toast("❌ Präsentcode konnte nicht angewendet werden.", "error");
+      }
+    }, `apply_praesent_${doorKey}`);
+  }
+
+  // ---- VIP input wording (UI only) -----------------------------
+  // VIP remains VIP (paywall bypass). NOT handled by Appendix 6.
+  // We do NOT change VIP behavior here; only keep labels clean if desired.
+  function applyDoorPlaceholdersOptional() {
+    // Optional: keep text aligned with your naming.
+    // If you already manage placeholders elsewhere, this is a no-op.
+    const setPH = (id, txt) => { const el = $(id); if (el) el.setAttribute("placeholder", txt); };
+
+    // Under doors:
+    // - present => PRÄSENTCODE (waive one-time fee)
+    // - vip     => VIP code (paywall bypass)
+    setPH("door1-present", "Präsentcode");
+    setPH("door2-present", "Präsentcode");
+    setPH("door1-vip", "VIP-Code");
+    setPH("door2-vip", "VIP-Code");
+  }
+
+  // ---- AKTIONSCODE (profile-only) ------------------------------
+  // Appendix 6 says: Aktionscode is entered ONLY in user profile.
+  // Current index has no profile UI → therefore we do NOT bind it here.
+  // When you add profile inputs later, you can wire them like:
+  //
+  //   B.applyAktionscode("room1") / B.applyAktionscode("room2")
+  //
+  // with a room selector in profile.
+  //
+  // For now: nothing to bind (by design).
+
+  // ---- BOOT ----------------------------------------------------
+  function boot() {
+    // Only run if Billing append is present
+    if (!Billing()) {
+      console.warn("UI Appendix6: EPTEC_BILLING missing.");
+      return;
+    }
+
+    // Wire door present fields as PRÄSENTCODE
+    wirePraesentcodeForDoor("door1");
+    wirePraesentcodeForDoor("door2");
+
+    // Optional UI wording cleanup
+    applyDoorPlaceholdersOptional();
+
+    console.log("EPTEC UI APPENDIX 6: Door PRÄSENTCODE wiring active (Aktionscode is profile-only).");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+})();
