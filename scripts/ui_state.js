@@ -103,13 +103,14 @@
     scene: "",
 
     modal: null,
-    legalKind: null,
+    legalKey: null, // canonical name
 
     i18n: {
       lang: "en",
       dir: "ltr"
     },
 
+    // keep flexible: do NOT strip other mode keys (user/author etc.)
     modes: { demo: false, admin: false, vip: false },
 
     transition: { tunnelActive: false, whiteout: false, last: null }
@@ -119,11 +120,17 @@
   const listeners = new Set();
 
   function snapshot() {
+    // keep deep-copy to guarantee immutability for consumers
     return JSON.parse(JSON.stringify(state));
   }
 
   function normalize(next) {
     const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
+
+    // --- alias support (non-breaking) ---
+    // Accept "legalKind" but store canonically as "legalKey"
+    if (n.legalKey == null && n.legalKind != null) n.legalKey = n.legalKind;
+    if ("legalKind" in n) delete n.legalKind;
 
     // scene (optional)
     n.scene = normScene(n.scene);
@@ -147,22 +154,40 @@
     const lang = normLang(n.i18n.lang || persisted || "en");
     n.i18n.lang = lang;
     n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
-
     saveLang(lang);
 
-    // nested safety
+    // nested safety (do not strip unknown keys)
     n.modes = isObj(n.modes) ? n.modes : { demo: false, admin: false, vip: false };
     n.transition = isObj(n.transition) ? n.transition : { tunnelActive: false, whiteout: false, last: null };
 
     return n;
   }
 
+  // --- storm safety ---
+  let notifying = false;
+  let lastJson = "";
+
   function set(patch = {}) {
-    state = normalize(deepMerge(snapshot(), isObj(patch) ? patch : {}));
+    const before = snapshot();
+    const merged = deepMerge(before, isObj(patch) ? patch : {});
+    const next = normalize(merged);
+
+    const nextJson = JSON.stringify(next);
+    if (nextJson === lastJson) return snapshot(); // no-op
+
+    state = next;
+    lastJson = nextJson;
+
+    // prevent accidental re-entrancy loops
+    if (notifying) return snapshot();
+    notifying = true;
+
     const snap = snapshot();
     for (const fn of listeners) {
       try { fn(snap); } catch {}
     }
+    notifying = false;
+
     return snap;
   }
 
@@ -183,6 +208,7 @@
 
   // init with persisted lang immediately
   state = normalize(state);
+  lastJson = JSON.stringify(state);
 
   window.EPTEC_UI_STATE = {
     get,
