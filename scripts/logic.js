@@ -2635,55 +2635,7 @@ PASTE HERE:
 
   safe(() => window.EPTEC_ACTIVITY?.log?.("cap.ready", { ok: true }));
 })();
-/* =========================================================
-   EPTEC APPEND D — PERSISTENCE SEMANTICS (session/device/account)
-   - defines where each piece of state must live
-   ========================================================= */
-(() => {
-  "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
-  const Persist = (window.EPTEC_PERSIST = window.EPTEC_PERSIST || {});
-  Persist.keys = Persist.keys || Object.freeze({
-    deviceLang: "EPTEC_DEVICE_LANG",
-    deviceUI: "EPTEC_DEVICE_UI",
-    session: "EPTEC_SESSION_STATE",
-    account: "EPTEC_ACCOUNT_STATE"
-  });
-
-  Persist.saveDeviceLang = Persist.saveDeviceLang || ((lang) => {
-    safe(() => localStorage.setItem(Persist.keys.deviceLang, String(lang || "en")));
-  });
-  Persist.loadDeviceLang = Persist.loadDeviceLang || (() => {
-    return safe(() => localStorage.getItem(Persist.keys.deviceLang)) || "";
-  });
-
-  Persist.saveSession = Persist.saveSession || ((obj) => {
-    safe(() => sessionStorage.setItem(Persist.keys.session, JSON.stringify(obj || {})));
-  });
-  Persist.loadSession = Persist.loadSession || (() => {
-    const raw = safe(() => sessionStorage.getItem(Persist.keys.session));
-    return raw ? safe(() => JSON.parse(raw)) : {};
-  });
-
-  Persist.saveAccount = Persist.saveAccount || ((obj) => {
-    safe(() => localStorage.setItem(Persist.keys.account, JSON.stringify(obj || {})));
-  });
-  Persist.loadAccount = Persist.loadAccount || (() => {
-    const raw = safe(() => localStorage.getItem(Persist.keys.account));
-    return raw ? safe(() => JSON.parse(raw)) : {};
-  });
-
-  // rule helpers (not enforcing, just canonical semantics)
-  Persist.semantics = Persist.semantics || Object.freeze({
-    language: "device",       // language persists per device
-    cameraRequested: "session",
-    masterResetToken: "session",
-    backupProtocol: "account",
-    roomFrameworks: "account"
-  });
-
-})();
 /* =========================================================
    EPTEC APPEND E — AUDIT EXPORT STANDARD
    - stable export format for backup/protocol and court usage
