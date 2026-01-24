@@ -537,4 +537,21 @@
     boot();
   }
 })();
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  // Beispiel: Szenenwechsel auslösen und Audio abspielen
+  function onSceneChange(scene) {
+    // Rufen Sie die AudioBridge auf, um das Audio für die Szene zu aktivieren
+    window.EPTEC_AUDIO_BRIDGE.cue(scene);
+
+    // Weiterer UI-spezifischer Code, z.B. UI-Elemente anzeigen oder ausblenden
+    // ...
+  }
+
+  // Beispielhafter Gebrauch
+  onSceneChange("meadow"); // Startet das Audio für "meadow"
+})();
 
