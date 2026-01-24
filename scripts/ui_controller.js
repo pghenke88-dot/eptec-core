@@ -1896,3 +1896,59 @@
   }
 
 })();
+/* =========================================================
+   EPTEC APPEND C — CAPABILITIES MATRIX (can(feature))
+   - prevents accidental unlocks across appends
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function tariff() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    const t1 = String(sess?.tariff || sess?.tier || "").trim().toLowerCase();
+    if (t1) return t1;
+    const st = getState();
+    return String(st?.profile?.tariff || st?.auth?.tariff || st?.tariff || "base").trim().toLowerCase();
+  }
+  function mode() {
+    const st = getState();
+    const m = st?.modes || {};
+    if (m.author || m.admin) return "author";
+    if (m.vip) return "vip";
+    if (m.user) return "user";
+    if (m.demo) return "demo";
+    return "user";
+  }
+
+  const Cap = (window.EPTEC_CAP = window.EPTEC_CAP || {});
+  Cap.can = Cap.can || ((feature) => {
+    const f = String(feature || "").trim();
+    const m = mode();
+    const t = tariff();
+
+    // Demo: nothing functional
+    if (m === "demo") return false;
+
+    // Author: everything
+    if (m === "author") return true;
+
+    // Feature rules
+    if (f === "room1.traffic") return (t === "premium");              // Ampel only premium (non-author)
+    if (f === "room1.uploadProposal") return (t === "premium");       // Proposal upload only premium
+    if (f === "room2.upload") return (m === "vip");                   // Room2 uploads: VIP (and author handled above)
+    if (f === "codes.generate") return true;                          // gating by consent/ownership elsewhere
+    if (f === "codes.apply") return true;
+    if (f === "logout") return true;
+
+    // default allow
+    return true;
+  });
+
+  safe(() => window.EPTEC_ACTIVITY?.log?.("cap.ready", { ok: true }));
+})();
