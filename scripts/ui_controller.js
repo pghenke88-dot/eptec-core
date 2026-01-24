@@ -1083,4 +1083,57 @@
     document.addEventListener("DOMContentLoaded", boot);
   } else boot();
 })();
+/* =========================================================
+   EPTEC APPEND — ROOM 1 UI VISUALIZATION
+   Role: Reflect Room 1 Logic Changes in UI
+   Authority: UI Control
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function updateRoom1UI() {
+    const st = window.EPTEC_UI_STATE?.get() || {};
+    const r1 = st.room1 || {};
+    const traffic = r1.traffic || {};
+    const deviation = traffic.deviation || 0;
+    const color = traffic.color || "green";
+
+    // Update the traffic light color
+    const trafficLight = document.getElementById("room1-traffic-light");
+    if (trafficLight) {
+      trafficLight.style.backgroundColor = color;
+    }
+
+    // Update the deviation percentage display
+    const deviationDisplay = document.getElementById("room1-deviation");
+    if (deviationDisplay) {
+      deviationDisplay.textContent = `Deviation: ${deviation}%`;
+    }
+
+    // Update snippet count info
+    const snippetCount = document.getElementById("room1-snippet-count");
+    if (snippetCount) {
+      snippetCount.textContent = `Snippets: ${r1.snippetCount || 0} / ${r1.maxSnippetCount || 5}`;
+    }
+  }
+
+  function boot() {
+    // Bind state subscription to UI updates
+    const store = window.EPTEC_UI_STATE;
+    if (!store || store.__room1_ui_bound) return;
+    store.__room1_ui_bound = true;
+
+    const sub = (st) => updateRoom1UI();
+    store.subscribe?.(sub);
+    sub(store.get());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
+
+})();
 
