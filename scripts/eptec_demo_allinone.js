@@ -380,3 +380,35 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC DEMO APPEND — FORCE 28s TUNNEL BEFORE DOORS
+   Place at END of scripts/eptec_demo_allinone.js
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function setState(p){
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(p));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(p));
+  }
+
+  // Patch startDemo if it exists in this file's scope via global hook:
+  // We can't access inner functions safely, so we patch the Demo button click.
+  function boot(){
+    const btn = document.getElementById("btn-demo");
+    if (!btn || btn.__eptec_tunnel28_bound) return;
+    btn.__eptec_tunnel28_bound = true;
+
+    btn.addEventListener("click", (e) => {
+      // let existing handlers run too, but we enforce view timing via state
+      setState({ scene: "tunnel", view: "tunnel" });
+      setTimeout(() => setState({ scene: "viewdoors", view: "doors" }), 28000);
+    }, true);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
