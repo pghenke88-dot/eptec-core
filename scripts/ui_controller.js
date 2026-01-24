@@ -970,4 +970,80 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — UI CONTROLLER · AUDIO BRIDGE HOOK
+   Role: Call AudioBridge on scene/view change (NO decisions)
+   Authority: Kernel Audio.cue + EPTEC_AUDIO_BRIDGE.cue
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_AUDIO_BRIDGE_HOOK__) return;
+  window.__EPTEC_UI_AUDIO_BRIDGE_HOOK__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() {
+    return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
+  }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  // Normalisierung: Kernel-Szenen auf stabile Keys
+  function normSceneKey(st) {
+    const scene = String(st?.scene || "").trim().toLowerCase();
+    const view  = String(st?.view  || "").trim().toLowerCase();
+
+    // bevorzugt scene (Kernel)
+    if (scene) {
+      if (scene === "start") return "meadow";
+      if (scene === "viewdoors") return "doors";
+      if (scene === "whiteout") return "whiteout";
+      if (scene === "tunnel") return "tunnel";
+      if (scene === "room1") return "room1";
+      if (scene === "room2") return "room2";
+      return scene;
+    }
+
+    // fallback view (UI)
+    if (!view) return "meadow";
+    if (view === "meadow" || view === "start") return "meadow";
+    if (view === "doors" || view === "viewdoors") return "doors";
+    if (view === "tunnel") return "tunnel";
+    if (view === "room1" || view === "room-1") return "room1";
+    if (view === "room2" || view === "room-2") return "room2";
+    return view;
+  }
+
+  let lastKey = "";
+
+  function tick(st) {
+    const key = normSceneKey(st);
+    if (!key || key === lastKey) return;
+    lastKey = key;
+
+    // Call AudioBridge if present (NO-CRASH GUARANTEE)
+    safe(() => window.EPTEC_AUDIO_BRIDGE?.cue?.(key));
+  }
+
+  function boot() {
+    // initial
+    tick(getState());
+    // reactive
+    subscribe(tick);
+
+    console.log("EPTEC UI APPEND: AudioBridge Hook active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
 
