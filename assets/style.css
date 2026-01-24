@@ -440,3 +440,20 @@ html.demo-dark #room-2-view{
   background-position: center;
   background-repeat: no-repeat;
 }
+/* DOORS variants */
+html.room-doors--view_doors #doors-view{
+  background-image: url("./images/view_doors.jpg");
+}
+html.room-doors--view_doors_tree #doors-view{
+  background-image: url("./images/view_doors_tree.jpg");
+}
+
+/* ROOM1 variants (optional) */
+html.room-room1--view_room1 #room-1-view{
+  background-image: url("./images/view_room1.jpg");
+}
+
+/* ROOM2 variants */
+html.room-room2--view_room2 #room-2-view{
+  background-image: url("./images/view_room2.jpg");
+}
