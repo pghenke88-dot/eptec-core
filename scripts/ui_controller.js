@@ -2274,3 +2274,224 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — ADMIN LANGUAGE EMERGENCY (H)
+   Purpose:
+   - Binds UI buttons/inputs to EPTEC_LANG_EMERGENCY (Append H)
+   - NO logic, NO state authority, NO side effects
+   - Safe if elements do not exist
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function isAdmin() {
+    const st =
+      safe(() => window.EPTEC_MASTER?.UI_STATE?.get?.()) ||
+      safe(() => window.EPTEC_UI_STATE?.get?.()) || {};
+    return !!(st?.modes?.admin || st?.modes?.author);
+  }
+
+  function parseSelection() {
+    const el = $("admin-lang-select");
+    if (!el) return [];
+    if (el.tagName === "SELECT") {
+      return Array.from(el.selectedOptions || [])
+        .map(o => String(o.value || o.text || "").toUpperCase().trim())
+        .filter(Boolean);
+    }
+    return String(el.value || "")
+      .split(/[,\s]+/g)
+      .map(x => x.toUpperCase().trim())
+      .filter(Boolean);
+  }
+
+  function updateVisual() {
+    const btn = $("admin-lang-action");
+    const out = $("admin-lang-status");
+    if (!btn || !window.EPTEC_LANG_EMERGENCY) return;
+
+    const sel = parseSelection();
+    const first = sel[0] || "EN";
+    const s = safe(() => window.EPTEC_LANG_EMERGENCY.uiStatus(first));
+    if (!s) return;
+
+    btn.textContent = (s.label === "ACTIVATE") ? "Aktivieren" : "Deaktivieren";
+    btn.setAttribute("data-state", s.color);
+
+    if (out) {
+      out.textContent = s.pending
+        ? `Pending ${s.code} → wirksam ab ${s.effectiveAt}`
+        : s.disabled
+          ? `${s.code} ist deaktiviert`
+          : `${s.code} ist aktiv`;
+    }
+  }
+
+  function bindOnce(el, fn, key) {
+    if (!el) return;
+    const k = "__eptec_ui_lang_" + key;
+    if (el[k]) return;
+    el.addEventListener("click", fn);
+    el[k] = true;
+  }
+
+  function boot() {
+    const btn = $("admin-lang-action");
+    const sel = $("admin-lang-select");
+
+    bindOnce(btn, () => {
+      if (!isAdmin()) return;
+      const list = parseSelection();
+      if (!list.length) return;
+
+      const first = list[0];
+      const st = safe(() => window.EPTEC_LANG_EMERGENCY.uiStatus(first));
+      if (!st) return;
+
+      if (st.label === "ACTIVATE")
+        safe(() => window.EPTEC_LANG_EMERGENCY.activate(list));
+      else
+        safe(() => window.EPTEC_LANG_EMERGENCY.deactivate(list));
+
+      updateVisual();
+    }, "action");
+
+    bindOnce(sel, updateVisual, "select");
+    updateVisual();
+  }
+
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", boot);
+  else
+    boot();
+
+})();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — ORB ROOM SWITCH (UI ONLY)
+   Purpose:
+   - Shows an Orb only in Room1/Room2 for Demo or Author/Admin
+   - Click switches Room1 <-> Room2
+   - Uses Dramaturgy if present, else safe fallback to UI_STATE set
+   - No-crash, idempotent, append-only
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_ORB_SWITCH__) return;
+  window.__EPTEC_UI_ORB_SWITCH__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  function normScene(st) {
+    const raw = String(st?.scene || st?.view || "").toLowerCase().trim();
+    if (raw === "viewdoors" || raw === "doors") return "doors";
+    if (raw === "room1" || raw === "room-1") return "room1";
+    if (raw === "room2" || raw === "room-2") return "room2";
+    if (raw === "start" || raw === "meadow") return "start";
+    return raw || "start";
+  }
+
+  function isDemoOrAuthor(st) {
+    const m = st?.modes || {};
+    return !!m.demo || !!m.author || !!m.admin;
+  }
+
+  function ensureOrb() {
+    let orb = document.getElementById("author-orb");
+    if (orb) return orb;
+
+    orb = document.createElement("div");
+    orb.id = "author-orb";
+    orb.textContent = "◯";
+    orb.setAttribute("aria-label", "Switch room");
+    orb.style.position = "fixed";
+    orb.style.right = "18px";
+    orb.style.top = "50%";
+    orb.style.transform = "translateY(-50%)";
+    orb.style.zIndex = "99999";
+    orb.style.width = "44px";
+    orb.style.height = "44px";
+    orb.style.borderRadius = "999px";
+    orb.style.display = "none";
+    orb.style.alignItems = "center";
+    orb.style.justifyContent = "center";
+    orb.style.cursor = "pointer";
+    orb.style.background = "rgba(255,255,255,0.10)";
+    orb.style.border = "1px solid rgba(255,255,255,0.25)";
+    orb.style.backdropFilter = "blur(6px)";
+    orb.style.color = "#fff";
+    orb.style.userSelect = "none";
+
+    document.body.appendChild(orb);
+    return orb;
+  }
+
+  function goTo(scene) {
+    // Preferred: Dramaturgy (Kernel)
+    const D = window.EPTEC_MASTER?.Dramaturgy;
+    if (D && typeof D.to === "function") return safe(() => D.to(scene, { via: "orb" }));
+
+    // Fallback: state set (still safe)
+    setState({ scene, view: scene });
+  }
+
+  function update() {
+    const st = getState();
+    const s = normScene(st);
+    const orb = ensureOrb();
+
+    const inRoom = (s === "room1" || s === "room2");
+    const show = isDemoOrAuthor(st) && inRoom;
+
+    orb.style.display = show ? "flex" : "none";
+    orb.style.pointerEvents = show ? "auto" : "none";
+  }
+
+  function bindClick() {
+    const orb = ensureOrb();
+    if (orb.__eptec_bound) return;
+    orb.__eptec_bound = true;
+
+    orb.addEventListener("click", () => {
+      const st = getState();
+      const s = normScene(st);
+      if (!isDemoOrAuthor(st)) return;
+
+      safe(() => window.SoundEngine?.uiConfirm?.());
+
+      if (s === "room1") return goTo("room2");
+      if (s === "room2") return goTo("room1");
+    });
+  }
+
+  function boot() {
+    ensureOrb();
+    bindClick();
+    update();
+    subscribe(update);
+    console.log("EPTEC UI APPEND: Orb room switch active.");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
