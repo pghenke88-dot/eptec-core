@@ -1443,3 +1443,35 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC MAIN APPEND — UI CONFIRM ON FOOTER (CAPTURE, ALWAYS)
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const IDS = ["link-imprint","link-terms","link-support","link-privacy-footer"];
+
+  function bindOne(id){
+    const el = document.getElementById(id);
+    if (!el || el.__eptec_footer_sound) return;
+    el.__eptec_footer_sound = true;
+
+    // pointerdown triggers earlier than click (best for audio)
+    el.addEventListener("pointerdown", () => {
+      safe(() => window.SoundEngine?.unlockAudio?.());
+      safe(() => window.SoundEngine?.uiConfirm?.());
+    }, true);
+
+    el.addEventListener("click", () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+    }, true);
+  }
+
+  function boot(){
+    IDS.forEach(bindOne);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
