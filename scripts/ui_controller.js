@@ -1,19 +1,15 @@
 /**
  * scripts/ui_controller.js
- * EPTEC UI CONTROLLER — FINAL (Single UI Owner)
+ * EPTEC UI CONTROLLER — KERNEL-TRIGGERED (Single UI Owner + Single Trigger Owner)
  *
- * Aufgabe:
- * - einziges Rendering-Zentrum
- * - KEINE Business-Logik
- * - KEINE Dramaturgie-Entscheidung
- * - reagiert NUR auf EPTEC_UI_STATE
+ * Ziel (nach deiner Vorgabe):
+ * - UI ist die EINZIGE Trigger-Schicht: jede Aufforderung (Klick/Change) triggert Kernel-Funktionen 1:1
+ * - UI rendert NUR auf Basis von EPTEC_UI_STATE (subscribe)
+ * - KEINE Business-Logik im UI
+ * - KEINE Dramaturgie-Entscheidung im UI
  *
- * Enthält:
- * - Single View Router (ohne !important, ohne setInterval)
- * - Modal Router
- * - Transition FX (Tunnel/Whiteout)
- * - Room image variant class (ohne eigene subscribe-loop)
- * - Language switcher binding (🌍 rail) + html lang/dir mirror
+ * Hinweis:
+ * - Wir binden Events CAPTURE + stopImmediatePropagation(), damit keine Doppel-Trigger aus anderen Dateien feuern.
  */
 
 (() => {
@@ -23,7 +19,7 @@
   const $ = (id) => document.getElementById(id);
 
   /* -------------------------------------------------
-     Store
+     Store + Kernel
   ------------------------------------------------- */
   function store() {
     return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null;
@@ -36,12 +32,16 @@
     const s = store();
     if (typeof s?.subscribe === "function") return s.subscribe(fn);
     if (typeof s?.onChange === "function") return s.onChange(fn);
-    // No polling in FINAL. If store missing, do nothing.
     return () => {};
   }
 
+  function kernel() {
+    // bevorzugt: EPTEC.kernel (Module API), fallback: EPTEC_MASTER (dein Kernel-Export)
+    return window.EPTEC?.kernel || window.EPTEC_MASTER || null;
+  }
+
   /* -------------------------------------------------
-     Canonical IDs (from your index.html)
+     Canonical IDs (from index.html)
   ------------------------------------------------- */
   const SCENES = Object.freeze({
     meadow: "meadow-view",
@@ -60,8 +60,7 @@
   const WHITEOUT_ID = "eptec-white-flash";
 
   /* -------------------------------------------------
-     Helpers: hide/show without forcing !important
-     (CSS decides layout; we only toggle visibility)
+     Helpers: hide/show
   ------------------------------------------------- */
   function hide(el) {
     if (!el) return;
@@ -88,8 +87,7 @@
   }
 
   /* -------------------------------------------------
-     Normalization (view/scene -> canonical view)
-     - No decisions. Just mapping.
+     Normalization (scene/view -> canonical view)
   ------------------------------------------------- */
   function normView(st) {
     const scene = String(st?.scene || "").trim().toLowerCase();
@@ -102,7 +100,6 @@
       if (scene === "room1") return "room1";
       if (scene === "room2") return "room2";
       if (scene === "whiteout") {
-        // keep view baseline; default doors
         if (view === "tunnel") return "tunnel";
         if (view === "room1") return "room1";
         if (view === "room2") return "room2";
@@ -140,7 +137,6 @@
 
     hideAllScenes();
 
-    // Use "block" for most; meadow may rely on CSS anyway
     if (viewKey === "meadow") return show($(SCENES.meadow), "block");
     if (viewKey === "tunnel") return show($(SCENES.tunnel), "block");
     if (viewKey === "doors")  return show($(SCENES.doors),  "block");
@@ -163,7 +159,6 @@
     if (!modalKey) return;
 
     const el = $(MODALS[modalKey]);
-    // your modal baseline can be block; legal uses flex in your footer append, but UI keeps it simple
     show(el, "block");
   }
 
@@ -195,8 +190,7 @@
   }
 
   /* -------------------------------------------------
-     Room image variant class (UNDER controller)
-     - No subscribe loop. Uses controller render()
+     Room image variant class (optional)
   ------------------------------------------------- */
   let lastVariantKey = "";
 
@@ -211,7 +205,6 @@
     if (key === lastVariantKey) return;
     lastVariantKey = key;
 
-    // remove previous room-* classes only (leave others intact)
     const root = document.documentElement;
     root.className = root.className
       .split(" ")
@@ -223,63 +216,24 @@
   }
 
   /* -------------------------------------------------
-     Language switcher binding (🌍)
-     - UI-only, no business logic
-     - sets ONLY i18n.lang through UI_STATE
+     HTML lang/dir mirror (from state)
   ------------------------------------------------- */
-  function bindLanguageSwitcher() {
-    const sw = $("language-switcher");
-    const toggle = $("lang-toggle");
-    const rail = $("lang-rail");
-    if (!sw || !toggle || !rail) return;
+  let lastHtmlLang = "";
+  let lastHtmlDir = "";
 
-    if (sw.__eptec_lang_bound) return;
-    sw.__eptec_lang_bound = true;
+  function mirrorHtmlLangDir(st) {
+    // supports both models (lang/locale) AND (i18n.lang/dir)
+    const lang = String(st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang") || "de").toLowerCase();
+    const dir  = String(st?.i18n?.dir  || (lang === "ar" ? "rtl" : "ltr")).toLowerCase();
 
-    function setLang(raw) {
-      const s = store();
-      if (!s?.set) return;
-
-      const c0 = String(raw || "en").trim().toLowerCase();
-      const code =
-        c0 === "ua" ? "uk" :
-        c0 === "zh" ? "cn" :
-        c0 === "ja" ? "jp" :
-        c0;
-
-      const dir = (code === "ar") ? "rtl" : "ltr";
-
-      safe(() => s.set({ i18n: { lang: code, dir } }));
-      safe(() => document.documentElement.setAttribute("lang", code));
-      safe(() => document.documentElement.setAttribute("dir", dir));
+    if (lang && lang !== lastHtmlLang) {
+      safe(() => document.documentElement.setAttribute("lang", lang));
+      lastHtmlLang = lang;
     }
-
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      sw.classList.toggle("lang-open");
-    });
-
-    rail.querySelectorAll(".lang-item").forEach((btn) => {
-      if (btn.__eptec_lang_btn) return;
-      btn.__eptec_lang_btn = true;
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setLang(btn.dataset.lang);
-        sw.classList.remove("lang-open");
-      });
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!sw.classList.contains("lang-open")) return;
-      if (sw.contains(e.target)) return;
-      sw.classList.remove("lang-open");
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") sw.classList.remove("lang-open");
-    });
+    if (dir && dir !== lastHtmlDir) {
+      safe(() => document.documentElement.setAttribute("dir", dir));
+      lastHtmlDir = dir;
+    }
   }
 
   /* -------------------------------------------------
@@ -288,22 +242,190 @@
   function render(st) {
     if (!st) return;
 
-    const viewKey = normView(st);
+    const viewKey  = normView(st);
     const modalKey = normModal(st);
 
     renderScene(viewKey);
     renderModal(modalKey);
     renderTransitions(st.transition || {}, st);
-
-    // optional variant renderer (safe)
     renderRoomVariant(st, viewKey);
+    mirrorHtmlLangDir(st);
+  }
+
+  /* -------------------------------------------------
+     Trigger Binding (UI -> Kernel) — EXACT TRIGGERS
+     - capture + stopImmediatePropagation to prevent double triggers elsewhere
+  ------------------------------------------------- */
+  function bind(el, type, handler, key) {
+    if (!el) return;
+    const k = `__eptec_ui_tr_${key || (type + "_x")}`;
+    if (el[k]) return;
+    el[k] = true;
+
+    el.addEventListener(type, (e) => {
+      // Single Trigger Owner: prevent other listeners from firing
+      try { e.preventDefault?.(); } catch {}
+      try { e.stopPropagation?.(); } catch {}
+      try { e.stopImmediatePropagation?.(); } catch {}
+      safe(() => handler(e));
+    }, true); // capture = true
+  }
+
+  function setModal(keyOrNull) {
+    const S = store();
+    if (!S?.set) return;
+    S.set({ modal: keyOrNull || null });
+  }
+
+  function bindAllKernelTriggers() {
+    const K = kernel();
+    const S = store();
+    if (!K || !S?.set) return;
+
+    // --- START / MEADOW triggers (Logic: Entry.*)
+    bind($("btn-demo"), "click", () => K.Entry?.demo?.(), "btn_demo");
+
+    bind($("btn-login"), "click", () => {
+      const u = $("login-username")?.value;
+      const p = $("login-password")?.value;
+      K.Entry?.userLogin?.(u, p);
+    }, "btn_login");
+
+    bind($("admin-submit"), "click", () => {
+      const code = $("admin-code")?.value;
+      K.Entry?.authorStartMaster?.(code);
+    }, "admin_submit");
+
+    // optional (exists only if present in HTML)
+    bind($("admin-camera-toggle"), "change", (e) => {
+      const enabled = !!e?.target?.checked;
+      K.Entry?.setCameraOption?.(enabled);
+    }, "admin_camera_toggle");
+
+    // Register/Forgot -> modal open (pure UI state)
+    bind($("btn-register"), "click", () => setModal("register"), "btn_register");
+    bind($("btn-forgot"), "click", () => setModal("forgot"), "btn_forgot");
+
+    // --- LANGUAGE SWITCHER (Kernel: I18N.setLang)
+    const sw = $("language-switcher");
+    const toggle = $("lang-toggle");
+    const rail = $("lang-rail");
+
+    if (sw && toggle && rail) {
+      bind(toggle, "click", () => {
+        sw.classList.toggle("lang-open");
+      }, "lang_toggle");
+
+      rail.querySelectorAll(".lang-item").forEach((btn, idx) => {
+        bind(btn, "click", () => {
+          const raw = btn?.dataset?.lang;
+          const c0 = String(raw || "de").trim().toLowerCase();
+          const code =
+            c0 === "ua" ? "uk" :
+            c0 === "zh" ? "cn" :
+            c0 === "ja" ? "jp" :
+            c0;
+
+          // 1) canonical Kernel call
+          if (K.I18N?.setLang) K.I18N.setLang(code);
+
+          // 2) also keep i18n mirror for UI-only consumers (no business)
+          const dir = (code === "ar") ? "rtl" : "ltr";
+          safe(() => S.set({ i18n: { lang: code, dir } }));
+
+          sw.classList.remove("lang-open");
+        }, `lang_item_${idx}`);
+      });
+
+      // close on outside click / escape (UI-only)
+      document.addEventListener("click", (e) => {
+        if (!sw.classList.contains("lang-open")) return;
+        if (sw.contains(e.target)) return;
+        sw.classList.remove("lang-open");
+      }, { passive: true });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") sw.classList.remove("lang-open");
+      });
+    }
+
+    // --- DOORS triggers (Logic: Doors.*)
+    document.querySelectorAll("[data-logic-id='doors.door1']").forEach((el, idx) => {
+      bind(el, "click", () => K.Doors?.clickDoor?.(K.TERMS?.doors?.door1 || "door1"), `door1_click_${idx}`);
+    });
+    document.querySelectorAll("[data-logic-id='doors.door2']").forEach((el, idx) => {
+      bind(el, "click", () => K.Doors?.clickDoor?.(K.TERMS?.doors?.door2 || "door2"), `door2_click_${idx}`);
+    });
+
+    bind($("door1-present-apply"), "click", () =>
+      K.Doors?.applyPresent?.(K.TERMS?.doors?.door1 || "door1", $("door1-present")?.value), "d1_present");
+
+    bind($("door1-vip-apply"), "click", () =>
+      K.Doors?.applyVip?.(K.TERMS?.doors?.door1 || "door1", $("door1-vip")?.value), "d1_vip");
+
+    bind($("door1-master-apply"), "click", () =>
+      K.Doors?.applyMaster?.(K.TERMS?.doors?.door1 || "door1", $("door1-master")?.value), "d1_master");
+
+    bind($("door2-present-apply"), "click", () =>
+      K.Doors?.applyPresent?.(K.TERMS?.doors?.door2 || "door2", $("door2-present")?.value), "d2_present");
+
+    bind($("door2-vip-apply"), "click", () =>
+      K.Doors?.applyVip?.(K.TERMS?.doors?.door2 || "door2", $("door2-vip")?.value), "d2_vip");
+
+    bind($("door2-master-apply"), "click", () =>
+      K.Doors?.applyMaster?.(K.TERMS?.doors?.door2 || "door2", $("door2-master")?.value), "d2_master");
+
+    // --- LOGOUT (Logic: Auth.logout)
+    const logoutBtn = $("btn-logout") || document.querySelector("[data-eptec='logout']");
+    bind(logoutBtn, "click", () => K.Auth?.logout?.(), "logout");
+
+    // --- ROOM1 hotspots (Logic: Room1.* / TrafficLight.*)
+    document.querySelectorAll("[data-logic-id='r1.savepoint']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room1?.savepointDownload?.(), `r1_sp_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r1.table.download']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room1?.downloadComposedText?.(), `r1_tbl_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r1.mirror.download']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room1?.downloadSnippetsPlusLaw?.(), `r1_mir_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r1.traffic.enable']").forEach((el, idx) =>
+      bind(el, "click", () => K.TrafficLight?.enable?.(), `r1_traffic_enable_${idx}`));
+
+    // --- ROOM2 hotspots (Logic: Room2.*)
+    document.querySelectorAll("[data-logic-id='r2.hotspot.center']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.uploadSomething?.("Room2_Center_Upload"), `r2_center_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r2.hotspot.left1']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.downloadSomething?.("Room2_Left1_Download"), `r2_l1_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r2.hotspot.left2']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.uploadSomething?.("Room2_Left2_Upload"), `r2_l2_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r2.hotspot.right1']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.downloadSomething?.("Room2_Right1_Download"), `r2_r1_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r2.hotspot.right2']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.uploadSomething?.("Room2_Right2_Upload"), `r2_r2_${idx}`));
+
+    document.querySelectorAll("[data-logic-id='r2.plant.backup']").forEach((el, idx) =>
+      bind(el, "click", () => K.Room2?.openBackupProtocol?.(), `r2_plant_${idx}`));
+
+    // --- LEGAL MODAL (UI state)
+    bind($("legal-close"), "click", () => setModal(null), "legal_close");
+
+    // --- FOOTER LINKS -> open legal modal (you can later differentiate by content key)
+    bind($("link-imprint"), "click", () => setModal("legal"), "footer_imprint");
+    bind($("link-terms"), "click", () => setModal("legal"), "footer_terms");
+    bind($("link-support"), "click", () => setModal("legal"), "footer_support");
+    bind($("link-privacy-footer"), "click", () => setModal("legal"), "footer_privacy");
   }
 
   /* -------------------------------------------------
      Init
   ------------------------------------------------- */
   function init() {
-    const S = window.EPTEC_UI_STATE;
+    const S = store();
     if (!S?.subscribe || !S?.get) {
       console.error("UI_CONTROLLER: EPTEC_UI_STATE missing");
       return;
@@ -315,11 +437,12 @@
     // Initial render
     render(S.get());
 
-    // UI-only bindings
-    bindLanguageSwitcher();
+    // Single trigger owner: bind ALL kernel triggers here
+    bindAllKernelTriggers();
 
-    console.log("EPTEC UI CONTROLLER: FINAL render online (Single UI Owner)");
+    console.log("EPTEC UI CONTROLLER: KERNEL-TRIGGERED online (Single UI Owner + Trigger Owner)");
   }
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+
