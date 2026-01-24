@@ -2011,279 +2011,150 @@ PASTE HERE:
 })();
 
 /* =========================================================
-   EPTEC APPEND 1 — GLOBAL I18N TOOL (UNBLOCKABLE) + LOCALE + CLOCK
-   - 12 language rail always works, never blocked
-   - updates: html lang/dir, UI_STATE lang/locale, clock formatting
-   - official UI labels: EN DE ES FR IT PT NL RU UK AR CN JP
+   EPTEC APPEND — MASTER PASSWORDS v4 (KERNEL-HARMONIZED)
+   Role: UI + Security Intensifier
+   Authority: Kernel
    ========================================================= */
 (() => {
   "use strict";
+
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const $ = (id) => document.getElementById(id);
+  const store = () => window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE;
+  const getState = () => safe(() => store()?.get?.()) || {};
 
-  const LANG = Object.freeze({
-    en: { locale: "en-US", dir: "ltr", ui: "EN" },
-    de: { locale: "de-DE", dir: "ltr", ui: "DE" },
-    es: { locale: "es-ES", dir: "ltr", ui: "ES" },
-    fr: { locale: "fr-FR", dir: "ltr", ui: "FR" },
-    it: { locale: "it-IT", dir: "ltr", ui: "IT" },
-    pt: { locale: "pt-PT", dir: "ltr", ui: "PT" }, // ✅ PT (no PL)
-    nl: { locale: "nl-NL", dir: "ltr", ui: "NL" },
-    ru: { locale: "ru-RU", dir: "ltr", ui: "RU" },
-    uk: { locale: "uk-UA", dir: "ltr", ui: "UK" }, // UI label UK (Ukrainisch)
-    ar: { locale: "ar-SA", dir: "rtl", ui: "AR" },
-    cn: { locale: "zh-CN", dir: "ltr", ui: "CN" }, // UI label CN
-    jp: { locale: "ja-JP", dir: "ltr", ui: "JP" }  // UI label JP
-  });
+  /* ---------- HASH + STORAGE (unchanged, hash-only) ---------- */
+  const KEY = "EPTEC_MASTER_SECRETS_V4";
+  const hashMini = (s) => {
+    let h = 2166136261;
+    s = String(s || "");
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16);
+  };
 
-  function norm(code) {
-    const c = String(code || "en").trim().toLowerCase();
-    if (c === "ua") return "uk";
-    if (c === "zh") return "cn";
-    if (c === "ja") return "jp";
-    return LANG[c] ? c : "en";
+  function getSecrets() {
+    let s = safe(() => JSON.parse(localStorage.getItem(KEY)));
+    if (!s) {
+      s = {
+        startHash: hashMini("PatrickGeorgHenke200288"),
+        doorHash:  hashMini("PatrickGeorgHenke6264")
+      };
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }
+    return s;
   }
 
-  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function setState(patch) {
-    const s = store();
-    if (typeof s?.set === "function") return safe(() => s.set(patch));
-    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  function verifyLocal(kind, code) {
+    const s = getSecrets();
+    const h = hashMini(code);
+    return kind === "door" ? h === s.doorHash : h === s.startHash;
   }
 
-  function applyLang(langCode) {
-    const k = norm(langCode);
-    const meta = LANG[k] || LANG.en;
+  /* ---------- DOOR GATE (UI-VORFILTER, KEINE ENTSCHEIDUNG) ---------- */
+  function installDoorGate() {
+    ["door1", "door2"].forEach((d) => {
+      const el = document.querySelector(`[data-logic-id="doors.${d}"]`);
+      if (!el || el.__eptec_gate) return;
+      el.__eptec_gate = true;
 
-    safe(() => document.documentElement.setAttribute("lang", k));
-    safe(() => document.documentElement.setAttribute("dir", meta.dir));
+      el.addEventListener("click", (e) => {
+        const inp = $(`${d}-master`);
+        if (!inp) return;
 
-    setState({ lang: k, locale: meta.locale, i18n: { lang: k, locale: meta.locale } });
-    safe(() => window.EPTEC_ACTIVITY?.log?.("i18n.set", { lang: k, locale: meta.locale }));
-
-    // clock render (if exists)
-    const clk = $("system-clock");
-    if (clk) safe(() => {
-      clk.textContent = new Date().toLocaleString(meta.locale, { dateStyle: "medium", timeStyle: "medium" });
+        if (!verifyLocal("door", inp.value)) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.EPTEC_UI?.toast?.(
+            "Tür gesperrt: Door-Master erforderlich.",
+            "info"
+          );
+        }
+      }, true);
     });
   }
 
-  // Default language = EN if nothing set yet
-  function ensureDefaultEN() {
-    const st = getState();
-    const already = st?.i18n?.lang || st?.lang || document.documentElement.getAttribute("lang");
-    if (!already) applyLang("en");
-  }
+  /* ---------- PLACEHOLDERS + EYES (rein visuell) ---------- */
+  function ensureEye(inputId) {
+    const inp = $(inputId);
+    if (!inp || inp.__eye) return;
+    inp.__eye = true;
 
-  // Bind globe rail (never blocks)
-  function bind() {
-    const sw = $("language-switcher");
-    const toggle = $("lang-toggle");
-    const rail = $("lang-rail");
-    if (!sw || !toggle || !rail) return;
-
-    if (sw.__eptec_lang_bound) return;
-    sw.__eptec_lang_bound = true;
-
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault(); e.stopPropagation();
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      sw.classList.toggle("lang-open");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "👁";
+    btn.style.marginLeft = "6px";
+    btn.addEventListener("click", () => {
+      inp.type = inp.type === "password" ? "text" : "password";
     });
-
-    rail.querySelectorAll(".lang-item").forEach((btn) => {
-      if (btn.__eptec_lang_btn) return;
-      btn.__eptec_lang_btn = true;
-      btn.addEventListener("click", (e) => {
-        e.preventDefault(); e.stopPropagation();
-        safe(() => window.SoundEngine?.flagClick?.());
-        applyLang(btn.dataset.lang);
-        sw.classList.remove("lang-open");
-      });
-    });
-
-    document.addEventListener("click", () => sw.classList.remove("lang-open"));
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") sw.classList.remove("lang-open"); });
-  }
-
-  // Keep clock alive (safe even if main also does it)
-  function bindClock() {
-    const clk = $("system-clock");
-    if (!clk || clk.__eptec_clock) return;
-    clk.__eptec_clock = true;
-    setInterval(() => {
-      const st = getState();
-      const loc = st?.i18n?.locale || st?.locale || "en-US";
-      safe(() => clk.textContent = new Date().toLocaleString(loc, { dateStyle: "medium", timeStyle: "medium" }));
-    }, 1000);
+    inp.after(btn);
   }
 
   function boot() {
-    ensureDefaultEN();
-    bind();
-    bindClock();
+    installDoorGate();
+    ensureEye("admin-code");
+    ensureEye("door1-master");
+    ensureEye("door2-master");
+    console.log("EPTEC APPEND: MasterPasswords (kernel-harmonized) active");
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-
-  window.EPTEC_I18N = window.EPTEC_I18N || {};
-  window.EPTEC_I18N.apply = window.EPTEC_I18N.apply || applyLang;
-  window.EPTEC_I18N.get = window.EPTEC_I18N.get || (() => norm(getState()?.i18n?.lang || getState()?.lang || "en"));
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
 
 })();
+
 /* =========================================================
-   EPTEC APPEND 2 — SCENE AUDIO POLICY (SECTION-OWNED)
-   - each dramaturgy section owns audio; switching stops previous
-   - start: wind/birds (ambient) until tunnel
-   - tunnel: tunnel sound
-   - doors: doors ambience
-   - whiteout: short fx
-   - room1/room2: room ambience while inside
+   EPTEC APPEND — AUDIO BRIDGE
+   Role: Technical Bridge ONLY
+   Authority: Kernel Audio.cue
    ========================================================= */
 (() => {
   "use strict";
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
-  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-
-  const AudioPolicy = window.EPTEC_AUDIO_POLICY || {};
-  let lastScene = null;
-
-  function stopAll() {
-    safe(() => window.SoundEngine?.stopAmbient?.());
-  }
-
-  function cue(scene) {
-    const s = String(scene || "");
-    stopAll();
-
-    // Start: wind/birds ambient (you already use startAmbient for wind; birds can be added later)
-    if (s === "start") {
-      safe(() => window.SoundEngine?.startAmbient?.());
-      return;
+  const AudioBridge = {
+    cue(scene) {
+      // delegiert vollständig
+      safe(() => window.SoundEngine?.unlockAudio?.());
     }
-    if (s === "tunnel") {
-      safe(() => window.SoundEngine?.tunnelFall?.());
-      return;
-    }
-    if (s === "viewdoors") {
-      safe(() => window.SoundEngine?.startAmbient?.());
-      return;
-    }
-    if (s === "whiteout") {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      return;
-    }
-    if (s === "room1" || s === "room2") {
-      safe(() => window.SoundEngine?.startAmbient?.());
-      return;
-    }
-  }
+  };
 
-  AudioPolicy.cue = AudioPolicy.cue || cue;
-
-  // subscribe to scene changes (never crashes if store differs)
-  function hook() {
-    const s = store();
-    if (!s || s.__eptec_audio_subscribed) return;
-    s.__eptec_audio_subscribed = true;
-
-    const sub = (st) => {
-      const scene = st?.scene || st?.view;
-      if (!scene || scene === lastScene) return;
-      lastScene = scene;
-      cue(scene);
-      safe(() => window.EPTEC_ACTIVITY?.log?.("audio.scene", { scene }));
-    };
-
-    if (typeof s.subscribe === "function") s.subscribe(sub);
-    else if (typeof s.onChange === "function") s.onChange(sub);
-    else {
-      // fallback polling (rare)
-      setInterval(() => sub(getState()), 250);
-    }
-
-    // initial cue
-    sub(getState());
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hook);
-  else hook();
-
-  window.EPTEC_AUDIO_POLICY = AudioPolicy;
+  window.EPTEC_AUDIO_BRIDGE = AudioBridge;
 })();
+
 /* =========================================================
-   EPTEC APPEND 3 — SCENE VISUAL ASSETS (2D NOW, 3D LATER)
-   - binds scene -> visual slot keys (no filenames in logic)
-   - UI can load images or 3D later by these stable keys
+   EPTEC APPEND — SCENE VISUAL MIRROR
+   Role: Visual Reflection
+   Authority: Kernel Scene
    ========================================================= */
 (() => {
   "use strict";
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function setState(patch) {
-    const s = store();
-    if (typeof s?.set === "function") return safe(() => s.set(patch));
-    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
-  }
-
-  const Visual = window.EPTEC_VISUAL || {};
-  Visual.slotForScene = Visual.slotForScene || ((scene) => {
-    const s = String(scene || "");
-    if (s === "start") return "visual.start";
-    if (s === "viewdoors") return "visual.doors";
-    if (s === "room1") return "visual.room1";
-    if (s === "room2") return "visual.room2";
-    if (s === "tunnel") return "visual.tunnel";
-    if (s === "whiteout") return "visual.whiteout";
-    return "visual.unknown";
-  });
+  const store = () => window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE;
 
   function apply(scene) {
-    const slot = Visual.slotForScene(scene);
-    setState({ visual: { slot } });
-    safe(() => window.EPTEC_ACTIVITY?.log?.("visual.slot", { scene, slot }));
+    document.body.setAttribute("data-scene", scene);
   }
 
-  function hook() {
+  function boot() {
     const s = store();
-    if (!s || s.__eptec_visual_subscribed) return;
-    s.__eptec_visual_subscribed = true;
+    if (!s || s.__visual_bound) return;
+    s.__visual_bound = true;
 
-    let last = null;
-    const sub = (st) => {
-      const scene = st?.scene || st?.view;
-      if (!scene || scene === last) return;
-      last = scene;
-      apply(scene);
-    };
-
-    if (typeof s.subscribe === "function") s.subscribe(sub);
-    else if (typeof s.onChange === "function") s.onChange(sub);
-    else setInterval(() => sub(getState()), 250);
-
-    sub(getState());
+    const sub = (st) => apply(st.scene || st.view);
+    s.subscribe?.(sub);
+    sub(s.get());
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hook);
-  else hook();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
 
-  window.EPTEC_VISUAL = Visual;
 })();
+
 /* =========================================================
    EPTEC APPEND 4 — ROOM1 FRAMEWORK (MODULES) + LIMITS + SAVEPOINT + PREMIUM COMPARE
    Rules:
