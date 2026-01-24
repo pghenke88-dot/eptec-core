@@ -1360,3 +1360,146 @@
   }
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROLLER APPEND — ADDEND 7 (LANGUAGE GOVERNANCE MIRROR)
+   Role: UI Execution ONLY (no language governance logic)
+   Authority: EPTEC_I18N (Logic Addend 7)
+   ---------------------------------------------------------
+   Implements in UI-Control:
+   - Uses EPTEC_I18N.apply(...) as the ONLY language setter
+   - Unblockable language rail: capture-phase click handler
+   - Mirrors html[lang]/[dir] already handled by EPTEC_I18N.apply, UI just calls it
+   - Clock tick uses locale from state (already set by EPTEC_I18N.apply)
+   - Loads locale json via EPTEC_I18N.loadLocale (best effort)
+   - No decisions, no mapping tables here (they stay in Logic Addend 7)
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_I18N_MIRROR__) return;
+  window.__EPTEC_UI_I18N_MIRROR__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  function I18N() { return window.EPTEC_I18N || null; }
+
+  /* -----------------------------
+     1) UNBLOCKABLE LANGUAGE RAIL (CAPTURE)
+     - Delegates to EPTEC_I18N.apply
+     ----------------------------- */
+  function bindRailCapture() {
+    if (document.__eptec_ui_lang_capture) return;
+    document.__eptec_ui_lang_capture = true;
+
+    document.addEventListener("click", (e) => {
+      const t = e?.target;
+      if (!t) return;
+
+      const btn = t.closest ? t.closest(".lang-item,[data-lang]") : null;
+      if (!btn) return;
+
+      const dataLang = btn.getAttribute("data-lang");
+      if (!dataLang) return;
+
+      // Delegate 100% to Logic Addend 7
+      safe(() => I18N()?.apply?.(dataLang));
+
+      // Close switcher if present
+      const sw = $("language-switcher");
+      if (sw) sw.classList.remove("lang-open");
+    }, true);
+  }
+
+  /* -----------------------------
+     2) CLOCK (LOCALE-DRIVEN)
+     - Locale comes from state (set by EPTEC_I18N.apply)
+     ----------------------------- */
+  function getLocaleFromState() {
+    const st = getState();
+    return String(st?.i18n?.locale || st?.locale || "en-US");
+  }
+
+  function updateClock() {
+    const el = $("system-clock");
+    if (!el) return;
+    const loc = getLocaleFromState();
+    safe(() => {
+      el.textContent = new Date().toLocaleString(loc, { dateStyle: "medium", timeStyle: "medium" });
+    });
+  }
+
+  function bindClock() {
+    const el = $("system-clock");
+    if (!el || el.__eptec_ui_clock) return;
+    el.__eptec_ui_clock = true;
+    updateClock();
+    setInterval(updateClock, 1000);
+  }
+
+  /* -----------------------------
+     3) LOCALE PRELOAD (BEST EFFORT)
+     - UI may preload EN and current lang; actual translation lookup stays in EPTEC_I18N
+     ----------------------------- */
+  function preloadLocales() {
+    const api = I18N();
+    if (!api?.loadLocale) return;
+
+    safe(() => api.loadLocale("en"));
+
+    const st = getState();
+    const k = String(st?.i18n?.lang || st?.lang || "en").trim().toLowerCase();
+    if (k && k !== "en") safe(() => api.loadLocale(k));
+  }
+
+  /* -----------------------------
+     4) STATE REACTION (NO DECISIONS)
+     - When lang/locale changes, refresh clock and preload locale
+     ----------------------------- */
+  let lastLang = "";
+  let lastLoc = "";
+
+  function onState(st) {
+    const lang = String(st?.i18n?.lang || st?.lang || "");
+    const loc  = String(st?.i18n?.locale || st?.locale || "");
+    if (lang !== lastLang || loc !== lastLoc) {
+      lastLang = lang;
+      lastLoc = loc;
+      preloadLocales();
+      updateClock();
+    }
+  }
+
+  /* -----------------------------
+     5) BOOT
+     ----------------------------- */
+  function boot() {
+    bindRailCapture();
+    bindClock();
+
+    // Ensure the logic addend had a chance to run; if not, no-op safely.
+    preloadLocales();
+
+    // React to state
+    subscribe(onState);
+    onState(getState());
+
+    console.log("EPTEC UI APPEND: I18N mirror active (delegates to EPTEC_I18N.apply).");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
