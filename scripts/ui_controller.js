@@ -2641,3 +2641,186 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — HOUSE MODEL EXECUTOR (VISUAL + AUDIO)
+   Purpose:
+   - Makes the "House" behavior actually work in UI-Control:
+     each room begins/ends with BOTH image + audio (hard cut)
+   Authority:
+   - Logic owns scene/view changes (EPTEC_MASTER.Dramaturgy / House router)
+   - UI-Control only EXECUTES (no scene authority, no door binding)
+   Inputs:
+   - state.scene/view (single truth)
+   - optional EPTEC_HOUSE.PROFILE or EPTEC_ROOM_REGISTRY.REGISTRY
+   - optional SoundEngine (preferred), fallback HTMLAudio
+   No-crash · Idempotent · Append-only
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_HOUSE_EXECUTOR__) return;
+  window.__EPTEC_UI_HOUSE_EXECUTOR__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  // -----------------------------
+  // Room key normalization (UI truth)
+  // -----------------------------
+  function normRoom(st) {
+    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
+    if (!raw || raw === "start" || raw === "meadow") return "meadow";
+    if (raw === "viewdoors" || raw === "doors") return "doors";
+    if (raw === "room-1" || raw === "room1") return "room1";
+    if (raw === "room-2" || raw === "room2") return "room2";
+    if (raw === "tunnel") return "tunnel";
+    if (raw === "whiteout") return "whiteout";
+    return raw;
+  }
+
+  // -----------------------------
+  // Profile resolver
+  // Prefer EPTEC_HOUSE.PROFILE, fallback EPTEC_ROOM_REGISTRY.REGISTRY
+  // -----------------------------
+  function profileFor(room) {
+    const HOUSE = window.EPTEC_HOUSE;
+    const p1 = HOUSE?.PROFILE?.[room];
+    if (p1) return p1;
+
+    const RR = window.EPTEC_ROOM_REGISTRY?.REGISTRY;
+    const p2 = RR?.[room];
+    if (p2) return p2;
+
+    // minimal defaults
+    return {
+      view: room,
+      image: room,
+      audio: (room === "meadow") ? ["wind"] : (room === "tunnel") ? ["tunnelfall"] : []
+    };
+  }
+
+  // -----------------------------
+  // Audio execution (hard cut)
+  // Prefer SoundEngine hooks; fallback HTMLAudio
+  // -----------------------------
+  const Audio = {
+    loop: null,
+    loopKey: null,
+
+    stopAll() {
+      safe(() => window.SoundEngine?.stopAll?.());
+      safe(() => window.SoundEngine?.stopAmbient?.());
+      safe(() => window.SoundEngine?.stopTunnel?.());
+      if (this.loop) {
+        try { this.loop.pause(); this.loop.currentTime = 0; } catch {}
+        this.loop = null;
+        this.loopKey = null;
+      }
+    },
+
+    playFor(room, prof) {
+      // HARD CUT always
+      this.stopAll();
+
+      const SE = window.SoundEngine;
+
+      // Use SoundEngine if available
+      if (SE) {
+        // Meadow: ambient wind loop
+        if (room === "meadow") {
+          safe(() => SE.unlockAudio?.());
+          if (typeof SE.startAmbient === "function") return safe(() => SE.startAmbient());
+          // fallback to tag method if you have it
+        }
+
+        // Tunnel: one-shot fall
+        if (room === "tunnel") {
+          safe(() => SE.unlockAudio?.());
+          if (typeof SE.tunnelFall === "function") return safe(() => SE.tunnelFall());
+        }
+
+        // Otherwise silence (doors/rooms) unless you add later
+        return;
+      }
+
+      // Fallback HTMLAudio (only for meadow/tunnel with your known files)
+      const map = {
+        wind: "assets/sounds/wind.mp3",
+        tunnelfall: "assets/sounds/tunnelfall.mp3"
+      };
+
+      const keys = Array.isArray(prof?.audio) ? prof.audio : [];
+      const first = String(keys[0] || "");
+      const src = map[first];
+      if (!src) return;
+
+      try {
+        const a = new Audio(src);
+        if (room === "meadow") a.loop = true;
+        a.volume = room === "tunnel" ? 1.0 : 0.35;
+        a.preload = "auto";
+        a.play().catch(() => {});
+        this.loop = room === "meadow" ? a : null;
+        this.loopKey = room === "meadow" ? first : null;
+      } catch {}
+    }
+  };
+
+  // -----------------------------
+  // Visual execution (non-invasive)
+  // We do NOT render scenes here (ui_controller already does),
+  // but we set a stable attribute for CSS hooks.
+  // -----------------------------
+  function applyVisual(room) {
+    safe(() => document.body.setAttribute("data-scene", room));
+  }
+
+  // -----------------------------
+  // Master execution (on room change)
+  // -----------------------------
+  let lastRoom = null;
+
+  function onState(st) {
+    const room = normRoom(st);
+
+    // Ignore whiteout as its own "room" for audio; keep last stable room
+    if (room === "whiteout") {
+      applyVisual("whiteout");
+      return;
+    }
+
+    if (room === lastRoom) return;
+    lastRoom = room;
+
+    const prof = profileFor(room);
+
+    applyVisual(room);
+    Audio.playFor(room, prof);
+
+    safe(() => window.EPTEC_ACTIVITY?.log?.("house.room", { room, audio: prof?.audio || [] }));
+  }
+
+  function boot() {
+    // initial
+    onState(getState());
+    // reactive
+    subscribe(onState);
+
+    console.log("EPTEC UI-CONTROL: House executor active (visual+audio).");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
