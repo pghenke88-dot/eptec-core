@@ -2098,3 +2098,179 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — PROFILE PANEL (for APPEND G)
+   Role:
+   - Provides UI controls for EPTEC_PROFILE API
+   - Creates Profile modal dynamically (no index change)
+   - Wires buttons + inputs to Profile manager
+   - Safe, idempotent, UI-only
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function toast(msg, type="info", ms=2400) {
+    const bridged = safe(() => window.EPTEC_UI?.toast?.(msg, type, ms));
+    if (bridged !== undefined) return;
+    console.log(`[PROFILE:${type}]`, msg);
+  }
+
+  // ---------------------------------------------------------
+  // 1) Create modal shell (once)
+  // ---------------------------------------------------------
+  const IDS = {
+    overlay: "eptec-profile-overlay",
+    modal: "eptec-profile-modal",
+    openBtn: "eptec-profile-open",
+    closeBtn: "eptec-profile-close"
+  };
+
+  function ensureStyles() {
+    if ($("eptec-profile-style")) return;
+    const st = document.createElement("style");
+    st.id = "eptec-profile-style";
+    st.textContent = `
+      #${IDS.openBtn}{
+        position:fixed; right:16px; bottom:16px; z-index:9999;
+        padding:10px 14px; border-radius:999px;
+        background:#222; color:#fff; border:1px solid rgba(255,255,255,.2);
+        cursor:pointer;
+      }
+      #${IDS.overlay}{
+        position:fixed; inset:0; display:none;
+        background:rgba(0,0,0,.55);
+        z-index:10000; align-items:center; justify-content:center;
+      }
+      #${IDS.modal}{
+        width:min(92vw,520px);
+        background:#111; color:#fff;
+        border-radius:14px; padding:16px;
+        border:1px solid rgba(255,255,255,.2);
+      }
+      #${IDS.modal} h3{margin:0 0 10px 0;}
+      #${IDS.modal} input{width:100%;margin:6px 0;padding:8px;}
+      #${IDS.modal} button{margin-top:8px;}
+      #${IDS.closeBtn}{float:right;}
+    `;
+    document.head.appendChild(st);
+  }
+
+  function ensureModal() {
+    ensureStyles();
+
+    if (!$(IDS.overlay)) {
+      const ov = document.createElement("div");
+      ov.id = IDS.overlay;
+      ov.innerHTML = `
+        <div id="${IDS.modal}">
+          <button id="${IDS.closeBtn}">✕</button>
+          <h3>Profile / Account</h3>
+
+          <label>E-Mail</label>
+          <input id="profile-email" type="email" />
+          <button id="profile-email-change-submit">E-Mail ändern</button>
+
+          <hr/>
+
+          <label>Zahlungsmethode</label>
+          <input id="profile-payment-method" placeholder="Methode" />
+          <input id="profile-iban-masked" placeholder="IBAN (maskiert)" />
+          <label><input type="checkbox" id="profile-payment-confirmed"/> bestätigt</label>
+          <button id="profile-payment-change-submit">Zahlung ändern</button>
+
+          <hr/>
+
+          <label>Kündigung</label>
+          <input id="profile-cancel-reason" placeholder="Grund (optional)" />
+          <button id="profile-cancel-submit">Kündigen (3×)</button>
+        </div>
+      `;
+      document.body.appendChild(ov);
+
+      ov.addEventListener("click", (e) => {
+        if (e.target === ov) ov.style.display = "none";
+      });
+    }
+
+    if (!$(IDS.openBtn)) {
+      const b = document.createElement("button");
+      b.id = IDS.openBtn;
+      b.textContent = "Profile";
+      document.body.appendChild(b);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2) Bind UI to Profile API
+  // ---------------------------------------------------------
+  function bind() {
+    const Profile = window.EPTEC_PROFILE;
+    if (!Profile) return;
+
+    const ov = $(IDS.overlay);
+    const open = $(IDS.openBtn);
+    const close = $(IDS.closeBtn);
+
+    if (open && !open.__b) {
+      open.__b = true;
+      open.addEventListener("click", () => ov.style.display = "flex");
+    }
+    if (close && !close.__b) {
+      close.__b = true;
+      close.addEventListener("click", () => ov.style.display = "none");
+    }
+
+    const be = $("profile-email-change-submit");
+    if (be && !be.__b) {
+      be.__b = true;
+      be.addEventListener("click", () => {
+        const v = $("profile-email")?.value;
+        const r = Profile.setEmail(v);
+        if (!r?.ok) toast("E-Mail konnte nicht geändert werden", "error");
+      });
+    }
+
+    const bp = $("profile-payment-change-submit");
+    if (bp && !bp.__b) {
+      bp.__b = true;
+      bp.addEventListener("click", () => {
+        Profile.setPayment({
+          method: $("profile-payment-method")?.value,
+          ibanMasked: $("profile-iban-masked")?.value,
+          confirmed: !!$("profile-payment-confirmed")?.checked
+        });
+      });
+    }
+
+    const bc = $("profile-cancel-submit");
+    if (bc && !bc.__b) {
+      bc.__b = true;
+      bc.addEventListener("click", () => {
+        const reason = $("profile-cancel-reason")?.value;
+        const r = Profile.cancel(reason);
+        if (r?.ok) ov.style.display = "none";
+      });
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 3) Boot
+  // ---------------------------------------------------------
+  function boot() {
+    ensureModal();
+    bind();
+    console.log("EPTEC UI-CONTROL: Profile panel active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
