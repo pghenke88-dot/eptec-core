@@ -2055,3 +2055,46 @@
   }
 
 })();
+/* =========================================================
+   EPTEC APPEND F — SINGLE SCENE AUTHORITY (UI-Control)
+   - ensures only EPTEC_MASTER.Dramaturgy changes scenes
+   - if other code sets UI_STATE.scene/view directly, we log it
+   - non-destructive: does not block, but makes drift visible immediately
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  let last = null;
+
+  function watch() {
+    const s = store();
+    if (!s || s.__eptec_scene_watch) return;
+    s.__eptec_scene_watch = true;
+
+    const sub = (st) => {
+      const scene = st?.scene || st?.view;
+      if (!scene) return;
+      if (last === null) { last = scene; return; }
+      if (scene !== last) {
+        // If Dramaturgy exists, any scene change should have been via it
+        const hasDram = !!window.EPTEC_MASTER?.Dramaturgy;
+        safe(() => window.EPTEC_ACTIVITY?.log?.("scene.change", { from: last, to: scene, viaDramaturgy: hasDram }));
+        last = scene;
+      }
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(sub);
+    else if (typeof s.onChange === "function") s.onChange(sub);
+    else setInterval(() => sub(getState()), 250);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
+  else watch();
+})();
