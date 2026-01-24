@@ -1136,4 +1136,164 @@
   } else boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — ROOM2 HOTSPOTS + BACKUP PLANT + YELLOW STAGES + CONSENT
+   Rules:
+   - Room2: table uploads/downloads; carts: 2 left + 2 right upload/download
+   - Plant hotspot: download-only backup protocol (file names, timestamps, profile)
+   - Yellow stages: number displayed next to yellow only (green/red no numbers)
+   - First yellow click logs profile + stage into backup
+   - Consent gate (AGB + obligation) for code generate/apply actions
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function username() {
+    const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
+    return String(sess?.username || "anonymous").trim().toLowerCase() || "anonymous";
+  }
+
+  const Room2 = window.EPTEC_ROOM2 || {};
+
+  // Backup protocol store (append-only)
+  const KEY = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1";
+  function readLog() {
+    const raw = safe(() => localStorage.getItem(KEY));
+    const arr = raw ? safe(() => JSON.parse(raw)) : null;
+    return Array.isArray(arr) ? arr : [];
+  }
+  function writeLog(arr) { safe(() => localStorage.setItem(KEY, JSON.stringify(arr))); }
+  function addLog(type, detail, meta) {
+    const logs = readLog();
+    logs.unshift({ at: new Date().toISOString(), type: String(type || ""), detail: String(detail || ""), meta: meta || null });
+    while (logs.length > 500) logs.pop();
+    writeLog(logs);
+    safe(() => window.EPTEC_ACTIVITY?.log?.("backup.log", { type, detail }));
+    safe(() => window.EPTEC_MASTER?.Compliance?.log?.(`BACKUP:${type}`, detail, meta || null));
+    return logs[0];
+  }
+
+  Room2.logUpload = Room2.logUpload || ((where, fileName) => addLog("UPLOAD", `${where}: ${fileName}`, { where, fileName, user: username() }));
+  Room2.logDownload = Room2.logDownload || ((where, fileName) => addLog("DOWNLOAD", `${where}: ${fileName}`, { where, fileName, user: username() }));
+
+  // Yellow stage (number next to yellow only)
+  Room2.yellow = Room2.yellow || {};
+  Room2.yellow.getStage = Room2.yellow.getStage || (() => {
+    const st = getState();
+    return Number(st.room2?.yellowStage || st.room?.room2?.yellowStage || 0) || 0;
+  });
+  Room2.yellow.setStage = Room2.yellow.setStage || ((n) => {
+    const st = getState();
+    const room2 = { ...(st.room2 || {}) };
+    room2.yellowStage = Math.max(0, Number(n) || 0);
+    setState({ room2 });
+  });
+  Room2.yellow.bump = Room2.yellow.bump || (() => {
+    const stage = Room2.yellow.getStage() + 1;
+    Room2.yellow.setStage(stage);
+    // log first yellow only with extra note
+    const first = stage === 1;
+    addLog("YELLOW", `Yellow stage ${stage}`, { stage, first, user: username() });
+    return stage;
+  });
+
+  // Consent gate for “sharing code generate/apply”
+  Room2.consent = Room2.consent || {};
+  Room2.consent.isOk = Room2.consent.isOk || (() => {
+    const st = getState();
+    const c = st.consent || {};
+    return !!(c.agb && c.obligation);
+  });
+  Room2.consent.set = Room2.consent.set || ((patch) => {
+    const st = getState();
+    setState({ consent: { ...(st.consent || {}), ...(patch || {}) } });
+  });
+
+  // Plant backup export (download-only hotspot)
+  Room2.exportBackup = Room2.exportBackup || (() => {
+    const logs = readLog();
+    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), logs }, null, 2);
+    // UI can open a modal; fallback console
+    console.log("ROOM2 BACKUP PROTOCOL:", payload);
+    safe(() => window.EPTEC_UI?.toast?.("Backup-Protokoll exportiert (Konsole).", "ok", 2400));
+    return payload;
+  });
+
+  // UI Interaction Handlers
+
+  // For backup logs
+  const showBackupLog = () => {
+    const logs = Room2.readLog();
+    const logContainer = document.getElementById('backup-log-container');
+    logContainer.innerHTML = logs.map(log => `
+      <div class="log-entry">
+        <strong>${log.type}</strong>: ${log.detail}
+        <span>${log.at}</span>
+      </div>
+    `).join('');
+  };
+
+  const exportBackup = () => {
+    const backupData = Room2.exportBackup();
+    // Zeige es als Modal oder in der Konsole
+    console.log('Backup Export:', backupData);
+    window.EPTEC_UI?.toast?.('Backup-Protokoll exportiert.', 'ok', 2400);
+  };
+
+  // Event-Listener und UI-Elemente für Backup-Protokolle
+  document.getElementById('show-backup-log-btn')?.addEventListener('click', showBackupLog);
+  document.getElementById('export-backup-btn')?.addEventListener('click', exportBackup);
+
+  // For Yellow Stage
+  const updateYellowStage = () => {
+    const stage = Room2.yellow.getStage();
+    const stageElement = document.getElementById('yellow-stage-display');
+    stageElement.textContent = `Stage: ${stage}`;
+  };
+
+  // Event-Listener für "Bump" der Yellow Stage
+  document.getElementById('yellow-bump-btn')?.addEventListener('click', () => {
+    Room2.yellow.bump();
+    updateYellowStage();
+  });
+
+  // Initiales Update der Yellow Stage
+  updateYellowStage();
+
+  // For Consent-Gate
+  const consentGate = () => {
+    const consent = Room2.consent.isOk();
+    const consentElement = document.getElementById('consent-gate');
+
+    if (!consent) {
+      consentElement.style.display = 'block'; // Zeige das Modal, wenn keine Zustimmung vorliegt
+    } else {
+      consentElement.style.display = 'none'; // Verstecke es, wenn Zustimmung vorhanden
+    }
+  };
+
+  // Event-Listener für Zustimmungs-Button
+  document.getElementById('consent-btn')?.addEventListener('click', () => {
+    Room2.consent.set({ agb: true, obligation: true });
+    consentGate(); // Aktualisiere den Zustand
+  });
+
+  consentGate(); // Initiale Überprüfung, ob das Gate angezeigt werden muss
+
+  // Fensterobjekt verfügbar machen
+  window.EPTEC_ROOM2 = Room2;
+
+})();
 
