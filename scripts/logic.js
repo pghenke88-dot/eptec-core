@@ -4396,3 +4396,50 @@ PASTE HERE:
 
   console.log("EPTEC SCENE AUTHORITY ACTIVE");
 })();
+/* =========================================================
+   EPTEC APPEND — ROOM REGISTRY (Images + Audio Layers)
+   Place at END of scripts/logic.js
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.EPTEC_ROOM_REGISTRY) return;
+
+  // Canonical rooms (match your view keys)
+  const ROOM = Object.freeze({
+    MEADOW: "meadow",
+    TUNNEL: "tunnel",
+    DOORS:  "doors",
+    ROOM1:  "room1",
+    ROOM2:  "room2"
+  });
+
+  // Registry: one room -> images[] + audio[]
+  // images[] = CSS background variants
+  // audio[]  = sound layer keys (you can add more later)
+  const REGISTRY = Object.freeze({
+    [ROOM.MEADOW]: {
+      images: ["meadow"],                 // CSS uses #meadow-view base
+      audio:  ["wind"]                    // assets/sounds/wind.mp3
+    },
+    [ROOM.TUNNEL]: {
+      images: ["tunnel"],
+      audio:  ["tunnelfall"]              // assets/sounds/tunnelfall.mp3
+    },
+    [ROOM.DOORS]: {
+      images: ["view_doors", "view_doors_tree"], // SAME room, multiple looks
+      audio:  []                            // optional later: ["doors"]
+    },
+    [ROOM.ROOM1]: {
+      images: ["view_room1"],              // one or more
+      audio:  []                            // optional later: ["room1_base","room1_birds"]
+    },
+    [ROOM.ROOM2]: {
+      images: ["view_room2"],
+      audio:  []                            // optional later: ["room2_base"]
+    }
+  });
+
+  // Expose globally for UI + Sound Router
+  window.EPTEC_ROOM_REGISTRY = { ROOM, REGISTRY };
+})();
