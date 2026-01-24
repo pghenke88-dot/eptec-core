@@ -4310,4 +4310,90 @@ PASTE HERE:
   else boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — SCENE & AUDIO AUTHORITY (HOUSE MODEL)
+   - Defines HARD start/end of each room
+   - Controls BOTH view + audio
+   - One source of truth
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[SCENE]", e); } };
+
+  const VIEWS = {
+    meadow: "meadow",
+    tunnel: "tunnel",
+    doors: "doors",
+    room1: "room1",
+    room2: "room2"
+  };
+
+  const TUNNEL_DURATION_MS = 28000; // ✅ your requirement
+
+  function setView(view) {
+    // --- VISUAL ---
+    safe(() => window.EPTEC_UI_STATE?.set?.({ view }));
+
+    // hard hide all scenes except active
+    ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"]
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = id.startsWith(view) ? "flex" : "none";
+      });
+
+    // --- AUDIO ---
+    const SE = window.SoundEngine;
+    if (!SE) return;
+
+    safe(() => SE.stopAll?.());
+
+    if (view === VIEWS.meadow) safe(() => SE.startAmbient?.());
+    if (view === VIEWS.tunnel) safe(() => SE.tunnelFall?.());
+    if (view === VIEWS.doors)  safe(() => SE.startDoorsAmbient?.());
+    if (view === VIEWS.room1)  safe(() => SE.startRoom1Ambient?.());
+    if (view === VIEWS.room2)  safe(() => SE.startRoom2Ambient?.());
+  }
+
+  // --------------------------------------------------
+  // PUBLIC ROUTES (used by Entry / UI)
+  // --------------------------------------------------
+  window.Dramaturgy = {
+
+    toMeadow() {
+      setView(VIEWS.meadow);
+    },
+
+    startToDoors() {
+      setView(VIEWS.tunnel);
+
+      setTimeout(() => {
+        setView(VIEWS.doors);
+      }, TUNNEL_DURATION_MS);
+    },
+
+    enterRoom1() {
+      setView(VIEWS.room1);
+    },
+
+    enterRoom2() {
+      setView(VIEWS.room2);
+    },
+
+    logout() {
+      setView(VIEWS.meadow);
+    }
+  };
+
+  // boot safety
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setView(VIEWS.meadow));
+  } else {
+    setView(VIEWS.meadow);
+  }
+
+  console.log("EPTEC SCENE AUTHORITY ACTIVE");
+})();
 
