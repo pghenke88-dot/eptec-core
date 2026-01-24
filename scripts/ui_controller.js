@@ -1503,3 +1503,201 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE (RECORD UNTIL LOGOUT)
+   - Demo: show placeholder icons (start + doors) without enabling functions
+   - Author camera option: if enabled on entry, record until logout
+   - Logout always stops camera + offers download
+   - No-crash, idempotent
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- state bridge ----------
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  // ---------- 1) DEMO PLACEHOLDER ICONS ----------
+  // You can place ANY element with these attributes; logic just toggles visibility:
+  // data-eptec-demo-placeholder="start"   (start screen)
+  // data-eptec-demo-placeholder="doors"   (before doors)
+  function applyDemoPlaceholders(st) {
+    const demo = !!(st?.modes?.demo);
+    safe(() => {
+      document.querySelectorAll("[data-eptec-demo-placeholder]").forEach((el) => {
+        el.style.display = demo ? "" : "none";
+        el.setAttribute("aria-hidden", demo ? "false" : "true");
+      });
+    });
+  }
+
+  // ---------- 2) CAMERA / RECORDING CONTROLLER ----------
+  const Camera = {
+    stream: null,
+    recorder: null,
+    chunks: [],
+    downloadUrl: null,
+    isRecording: false,
+    lastBlob: null,
+
+    async start() {
+      if (this.isRecording) return { ok: true, already: true };
+      if (!navigator.mediaDevices?.getUserMedia) return { ok: false, reason: "NO_MEDIA" };
+
+      const constraints = { video: true, audio: true }; // you can switch audio later
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      this.stream = stream;
+      this.chunks = [];
+      this.lastBlob = null;
+
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : (MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm");
+
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      this.recorder = rec;
+
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) this.chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(this.chunks, { type: mime });
+        this.lastBlob = blob;
+        this.chunks = [];
+        if (this.downloadUrl) URL.revokeObjectURL(this.downloadUrl);
+        this.downloadUrl = URL.createObjectURL(blob);
+      };
+
+      rec.start(1000); // chunks every second
+      this.isRecording = true;
+      setState({ camera: { ...(getState().camera || {}), active: true, startedAt: new Date().toISOString() } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.start", { mime }));
+      return { ok: true };
+    },
+
+    stop({ offerDownload = true } = {}) {
+      if (!this.isRecording) return { ok: true, already: true };
+
+      safe(() => this.recorder?.stop?.());
+      this.isRecording = false;
+
+      // stop tracks immediately
+      safe(() => this.stream?.getTracks?.().forEach((t) => t.stop()));
+      this.stream = null;
+
+      setState({ camera: { ...(getState().camera || {}), active: false, stoppedAt: new Date().toISOString() } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.stop", {}));
+
+      // Offer download slightly delayed to allow onstop to finalize blob/url
+      if (offerDownload) {
+        setTimeout(() => this.offerDownload(), 250);
+      }
+      return { ok: true };
+    },
+
+    offerDownload() {
+      if (!this.downloadUrl) return;
+      const a = document.createElement("a");
+      a.href = this.downloadUrl;
+      a.download = `EPTEC_RECORDING_${new Date().toISOString().replaceAll(":", "-")}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.download", { ok: true }));
+    }
+  };
+
+  // ---------- 3) AUTHOR CAMERA MODE RULE ----------
+  // Rule: if author enters WITH camera option -> start recording and keep until logout.
+  function shouldCameraRun(st) {
+    const author = !!(st?.modes?.author || st?.modes?.admin);
+    const camOpt = !!(st?.camera?.requested || st?.camera?.enabled || st?.camera === true);
+    // We treat "requested/enabled" as the toggle you set on start screen.
+    return author && camOpt;
+  }
+
+  function syncCamera(st) {
+    const want = shouldCameraRun(st);
+    const active = !!Camera.isRecording;
+
+    if (want && !active) safe(() => Camera.start());
+    if (!want && active) Camera.stop({ offerDownload: false });
+  }
+
+  // ---------- 4) Integrate with existing "camera toggle" input on start screen ----------
+  // If you have: <input id="admin-camera-toggle" type="checkbox">
+  function bindCameraToggle() {
+    const t = $("admin-camera-toggle");
+    if (!t || t.__eptec_bound) return;
+    t.__eptec_bound = true;
+
+    t.addEventListener("change", () => {
+      const on = !!t.checked;
+      // store as camera request in state
+      setState({ camera: { ...(getState().camera || {}), requested: on } });
+      safe(() => window.EPTEC_ACTIVITY?.log?.("camera.request", { on }));
+      // If already author, apply immediately
+      syncCamera(getState());
+    });
+  }
+
+  // ---------- 5) Force camera OFF on logout (and download) ----------
+  function patchLogout() {
+    const auth = window.EPTEC_MASTER?.Auth || window.EPTEC_MASTER?.Auth || null;
+    if (!auth || auth.__eptec_logout_camera_patched) return;
+
+    const orig = auth.logout?.bind(auth);
+    if (typeof orig !== "function") return;
+
+    auth.logout = function(...args) {
+      // stop camera + offer download on logout (your requirement)
+      Camera.stop({ offerDownload: true });
+
+      // reset request flag too
+      setState({ camera: { ...(getState().camera || {}), requested: false, enabled: false, active: false } });
+
+      return orig(...args);
+    };
+
+    auth.__eptec_logout_camera_patched = true;
+  }
+
+  // ---------- 6) Subscribe to state changes ----------
+  function subscribe() {
+    const s = store();
+    if (!s || s.__eptec_demo_cam_sub) return;
+    s.__eptec_demo_cam_sub = true;
+
+    const onState = (st) => {
+      applyDemoPlaceholders(st);
+      syncCamera(st);
+    };
+
+    if (typeof s.subscribe === "function") s.subscribe(onState);
+    else if (typeof s.onChange === "function") s.onChange(onState);
+    else setInterval(() => onState(getState()), 300);
+
+    onState(getState());
+  }
+
+  function boot() {
+    bindCameraToggle();
+    patchLogout();
+    subscribe();
+    console.log("EPTEC APPEND: Demo placeholders + Author camera mode active");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
