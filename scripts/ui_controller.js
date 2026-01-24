@@ -1952,3 +1952,106 @@
 
   safe(() => window.EPTEC_ACTIVITY?.log?.("cap.ready", { ok: true }));
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — AUDIT EXPORT BINDINGS
+   Mirrors: EPTEC APPEND E — AUDIT EXPORT STANDARD
+   Role: UI-Control only (no logic, no persistence)
+   Scope: Append-only · Idempotent · Non-blocking
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------------------------------------------------------
+  // 1) Guard: requires Audit core
+  // ---------------------------------------------------------
+  function hasAudit() {
+    return !!window.EPTEC_AUDIT;
+  }
+
+  // ---------------------------------------------------------
+  // 2) UI helpers
+  // ---------------------------------------------------------
+  function toast(msg, type = "info", ms = 2400) {
+    const t = safe(() => window.EPTEC_UI?.toast?.(msg, type, ms));
+    if (t !== undefined) return;
+    console.log(`[AUDIT:${type}]`, msg);
+  }
+
+  function download(filename, content, mime = "application/json") {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------------------------------------------------------
+  // 3) Bindings (buttons / hotspots)
+  // Convention:
+  //  - data-audit-export="room2-backup"
+  //  - data-audit-export="custom"
+  // ---------------------------------------------------------
+  function bindAuditExports() {
+    if (!hasAudit()) return;
+
+    document.querySelectorAll("[data-audit-export]").forEach((el) => {
+      if (el.__eptec_audit_bound) return;
+      el.__eptec_audit_bound = true;
+
+      el.addEventListener("click", () => {
+        const kind = el.getAttribute("data-audit-export");
+
+        // ---- Room2 backup protocol ----
+        if (kind === "room2-backup") {
+          const json = safe(() => window.EPTEC_AUDIT.exportRoom2Backup?.());
+          if (!json) {
+            toast("Kein Backup-Protokoll vorhanden.", "info");
+            return;
+          }
+          download(
+            `EPTEC_ROOM2_BACKUP_${new Date().toISOString().replaceAll(":", "-")}.json`,
+            json
+          );
+          toast("Backup-Protokoll exportiert.", "ok");
+          return;
+        }
+
+        // ---- Custom export (expects window.EPTEC_AUDIT_BUFFER) ----
+        if (kind === "custom") {
+          const events = window.EPTEC_AUDIT_BUFFER || [];
+          const json = window.EPTEC_AUDIT.exportJSON(events);
+          download(
+            `EPTEC_AUDIT_EXPORT_${new Date().toISOString().replaceAll(":", "-")}.json`,
+            json
+          );
+          toast("Audit-Export erstellt.", "ok");
+          return;
+        }
+
+        toast("Unbekannter Audit-Export.", "error");
+      });
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 4) Boot
+  // ---------------------------------------------------------
+  function boot() {
+    bindAuditExports();
+    console.log("EPTEC UI-CONTROL: Audit export bindings active");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+})();
