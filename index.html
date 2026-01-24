@@ -22,7 +22,7 @@
                  media-src 'self' data:;
                  style-src 'self' 'unsafe-inline';
                  script-src 'self';
-                 connect-src 'self';>
+                 connect-src 'self';">
 
   <!-- =========================================================
        STYLES
@@ -72,48 +72,48 @@
 
   <div class="login-box">
 
-    <input id="login-username" type="text" />
+    <input id="login-username" type="text" data-logic-id="login-username" />
 
     <div class="pw-wrap">
-      <input id="login-password" type="password" autocomplete="off" />
+      <input id="login-password" type="password" autocomplete="off" data-logic-id="login-password"/>
     </div>
 
-    <button id="btn-login">Login</button>
-    <div id="login-message" class="system-msg"></div>
+    <button id="btn-login" data-logic-id="btn-login">Login</button>
+    <div id="login-message" class="system-msg" data-logic-id="login-message"></div>
 
-    <button id="btn-register">Register</button>
-    <button id="btn-forgot">Forgot password</button>
+    <button id="btn-register" data-logic-id="btn-register">Register</button>
+    <button id="btn-forgot" data-logic-id="btn-forgot">Forgot password</button>
 
-    <button id="btn-demo" type="button">Demo</button>
+    <button id="btn-demo" type="button" data-logic-id="btn-demo">Demo</button>
 
     <div class="pw-wrap">
-      <input id="admin-code" type="password" autocomplete="off" />
+      <input id="admin-code" type="password" autocomplete="off" data-logic-id="admin-code"/>
     </div>
 
-    <button id="admin-submit">Enter</button>
+    <button id="admin-submit" data-logic-id="admin-submit">Enter</button>
 
     <label class="admin-camera-row" for="admin-camera-toggle" style="display:block; margin-top:10px;">
-      <input id="admin-camera-toggle" type="checkbox" />
+      <input id="admin-camera-toggle" type="checkbox" data-logic-id="admin-camera-toggle"/>
       <span>Camera (Admin option)</span>
     </label>
 
   </div>
 
-  <div id="language-switcher">
-    <button id="lang-toggle">🌍</button>
-    <div id="lang-rail">
-      <button class="lang-item" data-lang="en">EN</button>
-      <button class="lang-item" data-lang="de">DE</button>
-      <button class="lang-item" data-lang="es">ES</button>
-      <button class="lang-item" data-lang="fr">FR</button>
-      <button class="lang-item" data-lang="it">IT</button>
-      <button class="lang-item" data-lang="pt">PT</button>
-      <button class="lang-item" data-lang="nl">NL</button>
-      <button class="lang-item" data-lang="ru">RU</button>
-      <button class="lang-item" data-lang="uk">UK</button>
-      <button class="lang-item" data-lang="ar">AR</button>
-      <button class="lang-item" data-lang="cn">CN</button>
-      <button class="lang-item" data-lang="jp">JP</button>
+  <div id="language-switcher" data-logic-id="language-switcher">
+    <button id="lang-toggle" data-logic-id="lang-toggle">🌍</button>
+    <div id="lang-rail" data-logic-id="lang-rail">
+      <button class="lang-item" data-lang="en" data-logic-id="lang-item-en">EN</button>
+      <button class="lang-item" data-lang="de" data-logic-id="lang-item-de">DE</button>
+      <button class="lang-item" data-lang="es" data-logic-id="lang-item-es">ES</button>
+      <button class="lang-item" data-lang="fr" data-logic-id="lang-item-fr">FR</button>
+      <button class="lang-item" data-lang="it" data-logic-id="lang-item-it">IT</button>
+      <button class="lang-item" data-lang="pt" data-logic-id="lang-item-pt">PT</button>
+      <button class="lang-item" data-lang="nl" data-logic-id="lang-item-nl">NL</button>
+      <button class="lang-item" data-lang="ru" data-logic-id="lang-item-ru">RU</button>
+      <button class="lang-item" data-lang="uk" data-logic-id="lang-item-uk">UK</button>
+      <button class="lang-item" data-lang="ar" data-logic-id="lang-item-ar">AR</button>
+      <button class="lang-item" data-lang="cn" data-logic-id="lang-item-cn">CN</button>
+      <button class="lang-item" data-lang="jp" data-logic-id="lang-item-jp">JP</button>
     </div>
   </div>
 
@@ -131,41 +131,41 @@
 <!-- =========================================================
      DOORS
      ========================================================= -->
-<section id="doors-view" class="scene modal-hidden">
+<section id="doors-view" class="scene modal-hidden" data-logic-id="doors-view">
   <div class="doors-wrapper">
 
     <div class="door-block" id="door-construction" data-logic-id="doors.door1">
-      <h2>Construction</h2>
+      <h2 data-logic-id="door1-title">Construction</h2>
 
-      <input id="door1-present" type="text" />
-      <button id="door1-present-apply">Apply</button>
+      <input id="door1-present" type="text" data-logic-id="door1-present"/>
+      <button id="door1-present-apply" data-logic-id="door1-present-apply">Apply</button>
 
-      <input id="door1-vip" type="text" />
-      <button id="door1-vip-apply">Apply</button>
+      <input id="door1-vip" type="text" data-logic-id="door1-vip"/>
+      <button id="door1-vip-apply" data-logic-id="door1-vip-apply">Apply</button>
 
       <div class="pw-wrap">
-        <input id="door1-master" type="password" autocomplete="off" />
+        <input id="door1-master" type="password" autocomplete="off" data-logic-id="door1-master"/>
       </div>
-      <button id="door1-master-apply">Enter</button>
+      <button id="door1-master-apply" data-logic-id="door1-master-apply">Enter</button>
     </div>
 
     <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
-      <h2>Contract Controlling</h2>
+      <h2 data-logic-id="door2-title">Contract Controlling</h2>
 
-      <input id="door2-present" type="text" />
-      <button id="door2-present-apply">Apply</button>
+      <input id="door2-present" type="text" data-logic-id="door2-present"/>
+      <button id="door2-present-apply" data-logic-id="door2-present-apply">Apply</button>
 
-      <input id="door2-vip" type="text" />
-      <button id="door2-vip-apply">Apply</button>
+      <input id="door2-vip" type="text" data-logic-id="door2-vip"/>
+      <button id="door2-vip-apply" data-logic-id="door2-vip-apply">Apply</button>
 
       <div class="pw-wrap">
-        <input id="door2-master" type="password" autocomplete="off" />
+        <input id="door2-master" type="password" autocomplete="off" data-logic-id="door2-master"/>
       </div>
-      <button id="door2-master-apply">Enter</button>
+      <button id="door2-master-apply" data-logic-id="door2-master-apply">Enter</button>
     </div>
 
     <div style="width:100%; margin-top:16px; text-align:center;">
-      <button id="btn-logout-doors" type="button">Logout</button>
+      <button id="btn-logout-doors" type="button" data-logic-id="btn-logout-doors">Logout</button>
     </div>
 
   </div>
@@ -174,17 +174,17 @@
 <!-- =========================================================
      ROOM 1
      ========================================================= -->
-<section id="room-1-view" class="scene modal-hidden">
+<section id="room-1-view" class="scene modal-hidden" data-logic-id="room-1-view">
   <div class="room room1">
 
-    <h2>Room 1</h2>
+    <h2 data-logic-id="room1-title">Room 1</h2>
 
     <button data-logic-id="r1.savepoint">Savepoint (Download)</button>
     <button data-logic-id="r1.table.download">Download: Composed Text</button>
     <button data-logic-id="r1.mirror.download">Download: Snippets + Law</button>
     <button data-logic-id="r1.traffic.enable">Activate Traffic Light</button>
 
-    <button id="btn-logout-room1" type="button">Logout</button>
+    <button id="btn-logout-room1" type="button" data-logic-id="btn-logout-room1">Logout</button>
 
   </div>
 </section>
@@ -192,10 +192,10 @@
 <!-- =========================================================
      ROOM 2
      ========================================================= -->
-<section id="room-2-view" class="scene modal-hidden">
+<section id="room-2-view" class="scene modal-hidden" data-logic-id="room-2-view">
   <div class="room room2">
 
-    <h2>Room 2</h2>
+    <h2 data-logic-id="room2-title">Room 2</h2>
 
     <button data-logic-id="r2.hotspot.left1">Left 1</button>
     <button data-logic-id="r2.hotspot.left2">Left 2</button>
@@ -205,7 +205,7 @@
 
     <button data-logic-id="r2.plant.backup">Plant: Backup Protocol</button>
 
-    <button id="btn-logout-room2" type="button">Logout</button>
+    <button id="btn-logout-room2" type="button" data-logic-id="btn-logout-room2">Logout</button>
 
   </div>
 </section>
@@ -213,20 +213,20 @@
 <!-- =========================================================
      MODALS
      ========================================================= -->
-<section id="register-screen" class="modal modal-hidden"></section>
-<section id="forgot-screen" class="modal modal-hidden"></section>
+<section id="register-screen" class="modal modal-hidden" data-logic-id="register-screen"></section>
+<section id="forgot-screen" class="modal modal-hidden" data-logic-id="forgot-screen"></section>
 
-<section id="legal-screen" class="modal modal-hidden">
-  <button id="legal-close">Close</button>
-  <h2 id="legal-title"></h2>
-  <div id="legal-body"></div>
+<section id="legal-screen" class="modal modal-hidden" data-logic-id="legal-screen">
+  <button id="legal-close" data-logic-id="legal-close">Close</button>
+  <h2 id="legal-title" data-logic-id="legal-title"></h2>
+  <div id="legal-body" data-logic-id="legal-body"></div>
 </section>
 
-<footer id="eptec-footer">
-  <a id="link-imprint">Imprint</a>
-  <a id="link-terms">Terms</a>
-  <a id="link-support">Support</a>
-  <a id="link-privacy-footer">Privacy</a>
+<footer id="eptec-footer" data-logic-id="eptec-footer">
+  <a id="link-imprint" data-logic-id="link-imprint">Imprint</a>
+  <a id="link-terms" data-logic-id="link-terms">Terms</a>
+  <a id="link-support" data-logic-id="link-support">Support</a>
+  <a id="link-privacy-footer" data-logic-id="link-privacy-footer">Privacy</a>
 </footer>
 
 </body>
