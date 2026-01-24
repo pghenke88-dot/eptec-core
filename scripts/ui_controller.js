@@ -1046,4 +1046,41 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC APPEND — SCENE VISUAL REFLECTOR
+   Role: Update UI with scene changes
+   Authority: UI Control
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function updateSceneUI(scene) {
+    // Verändere die UI basierend auf der Szene
+    // Beispiel: Passende CSS-Klassen, spezifische UI-Elemente anpassen
+    const sceneElement = document.querySelector("#scene-display");
+    if (sceneElement) {
+      sceneElement.textContent = `Aktuelle Szene: ${scene}`;
+    }
+  }
+
+  function boot() {
+    const store = window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE;
+    if (!store || store.__scene_reflector_bound) return;
+    store.__scene_reflector_bound = true;
+
+    const subscribe = (state) => {
+      updateSceneUI(state.scene || state.view);
+    };
+
+    store.subscribe?.(subscribe);
+    subscribe(store.get());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
+})();
 
