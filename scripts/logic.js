@@ -1768,31 +1768,34 @@ PASTE HERE:
 
 })();
 /* =========================================================
-   EPTEC APPENDIX 6 — BILLING, PRESENT, REFERRAL & COUPLING CORE
+   EPTEC APPENDIX 6 — BILLING, AKTIONSCODE, PRÄSENTCODE & COUPLING CORE
    Status: CANONICAL LOGIC EXTENSION
    Scope: GLOBAL · PERMANENT · AGB-RELEVANT
    ---------------------------------------------------------
-   RULES (BINDING):
-   1) Present Codes (Newsletter)
+   BINDING RULES (FINAL NAMING):
+
+   A) AKTIONSCODE  (ALT: Präsentcode)
       - 50% Rabatt EINMALIG auf die NÄCHSTE Monatszahlung
       - Gültigkeit: 30 Tage ab Ausstellung
       - Gilt PRO RAUM separat
-        → Hat ein Nutzer Raum 1 + Raum 2,
-          kann BEIDE Monatszahlungen je einmal reduziert werden
+      - Eingabeort: NUR im USER-PROFIL (nicht unter den Türen)
 
-   2) Referral / Geschenkcodes (User / Admin)
-      - Unbefristet gültig
+   B) PRÄSENTCODE  (ALT: Geschenkcode / Neukunden-Code)
+      - Zweck: Wegfall der EINMALZAHLUNG bei Anmeldung zu einem Tarif (Signup-Fee Waiver)
+      - Unbefristet gültig (bis deaktiviert – Deaktivierung ist Admin-Sache, nicht Teil dieses Appendix)
       - Raumgebunden
       - Codes für BEIDE Räume dürfen NUR generiert werden,
         wenn der Ersteller beide Räume aktiv besitzt
+      - Eingabeort: unter der jeweiligen Tür (door-field)
 
-   3) Upgrade Base → Premium
+   C) VIP-CODE (Paywall bypass) bleibt separat (Admin-Feature, nicht hier definiert)
+
+   D) Upgrade Base → Premium
       - KEINE erneute Einmalzahlung
       - Bereits gezahlte Fees gelten als verrechnet
 
-   4) Raum-Kopplung / Kündigung
-      - Sobald ZWEI Räume aktiv sind:
-        → Kündigung NUR GEMEINSAM möglich
+   E) Raum-Kopplung / Kündigung
+      - Sobald ZWEI Räume aktiv sind: Kündigung NUR GEMEINSAM möglich
       - Zustimmung gilt als Teil der AGB-Bestätigung
    ========================================================= */
 (() => {
@@ -1824,20 +1827,33 @@ PASTE HERE:
   function ensureFeed() {
     const f = readFeed();
 
+    // products (rooms)
     f.products = isObj(f.products) ? f.products : {};
     f.products.room1 = isObj(f.products.room1) ? f.products.room1 : { active: false };
     f.products.room2 = isObj(f.products.room2) ? f.products.room2 : { active: false };
 
+    // billing
     f.billing = isObj(f.billing) ? f.billing : {};
+    // legacy/global flag (kept for compatibility)
     f.billing.oneTimeFeeWaived = !!f.billing.oneTimeFeeWaived;
+    f.billing.oneTimeFeeReason = String(f.billing.oneTimeFeeReason || "");
+
+    // per-room signup fee waiver (Präsentcode)
+    f.billing.signupWaiver = isObj(f.billing.signupWaiver)
+      ? f.billing.signupWaiver
+      : { room1: null, room2: null };
+
+    // per-room next discount (Aktionscode)
     f.billing.nextDiscount = isObj(f.billing.nextDiscount)
       ? f.billing.nextDiscount
       : { room1: null, room2: null };
 
+    // promos registry (optional bookkeeping; validity/deactivation is elsewhere)
     f.promos = isObj(f.promos) ? f.promos : {};
-    f.promos.present = isObj(f.promos.present) ? f.promos.present : {};
-    f.promos.referral = isObj(f.promos.referral) ? f.promos.referral : {};
+    f.promos.aktionscode = isObj(f.promos.aktionscode) ? f.promos.aktionscode : {}; // profile-based
+    f.promos.praesentcode = isObj(f.promos.praesentcode) ? f.promos.praesentcode : {}; // door-based (signup waiver)
 
+    // coupling
     f.coupling = isObj(f.coupling) ? f.coupling : { jointCancel: false };
 
     return f;
@@ -1848,6 +1864,7 @@ PASTE HERE:
      ----------------------------- */
   const Billing = {};
 
+  // Legacy/global one-time fee waiver (kept)
   Billing.waiveOneTimeFee = (reason = "SYSTEM") => {
     const feed = ensureFeed();
     feed.billing.oneTimeFeeWaived = true;
@@ -1856,26 +1873,67 @@ PASTE HERE:
     return { ok: true };
   };
 
-  Billing.upgradeToPremium = () => {
-    // Regel: Upgrade entfernt jede weitere Einmalzahlung
-    return Billing.waiveOneTimeFee("UPGRADE_BASE_TO_PREMIUM");
-  };
+  // Upgrade rule: no new one-time fee
+  Billing.upgradeToPremium = () => Billing.waiveOneTimeFee("UPGRADE_BASE_TO_PREMIUM");
 
-  Billing.applyPresentCode = (roomKey) => {
+  // -----------------------------
+  // AKTIONSCODE (profile) -> next monthly payment -50% per room
+  // -----------------------------
+  Billing.applyAktionscode = (roomKey) => {
     const feed = ensureFeed();
-    if (!["room1", "room2"].includes(roomKey)) return { ok: false };
+    if (!["room1", "room2"].includes(roomKey)) return { ok: false, code: "INVALID_ROOM" };
 
     feed.billing.nextDiscount[roomKey] = {
       percent: 50,
       expiresAt: addDaysISO(30),
       appliedAt: nowISO(),
-      type: "PRESENT"
+      type: "AKTIONSCODE"
     };
 
     writeFeed(feed);
-    return { ok: true };
+    return { ok: true, room: roomKey };
   };
 
+  // -----------------------------
+  // PRÄSENTCODE (door) -> signup one-time fee waived per room
+  // -----------------------------
+  Billing.applyPraesentcode = (roomKey, code = "") => {
+    const feed = ensureFeed();
+    if (!["room1", "room2"].includes(roomKey)) return { ok: false, code: "INVALID_ROOM" };
+
+    // Per-room waiver record
+    feed.billing.signupWaiver[roomKey] = {
+      waived: true,
+      appliedAt: nowISO(),
+      type: "PRAESENTCODE",
+      code: String(code || "").trim() || null
+    };
+
+    // Keep legacy/global for compatibility with old checks
+    feed.billing.oneTimeFeeWaived = true;
+    if (!feed.billing.oneTimeFeeReason) feed.billing.oneTimeFeeReason = "PRAESENTCODE_SIGNUP_WAIVER";
+
+    writeFeed(feed);
+    return { ok: true, room: roomKey };
+  };
+
+  Billing.isSignupFeeWaivedForRoom = (roomKey) => {
+    const feed = ensureFeed();
+    const x = feed.billing.signupWaiver?.[roomKey];
+    return !!(x && x.waived);
+  };
+
+  // Rule: codes for BOTH rooms may only be generated if creator has both rooms active
+  Billing.canGenerateBothRoomPraesentcodes = () => {
+    const feed = ensureFeed();
+    const r1 = !!feed.products.room1.active;
+    const r2 = !!feed.products.room2.active;
+    return r1 && r2;
+  };
+
+  /* -----------------------------
+     COUPLING / JOINT CANCEL
+     ----------------------------- */
   Billing.updateCoupling = () => {
     const feed = ensureFeed();
     const r1 = !!feed.products.room1.active;
@@ -1898,6 +1956,7 @@ PASTE HERE:
   ));
 
 })();
+
 
 /* =========================================================
    EPTEC ADDEND 7 — LANGUAGE GOVERNANCE CORE (UNBLOCKABLE · GLOBAL · DETERMINISTIC)
