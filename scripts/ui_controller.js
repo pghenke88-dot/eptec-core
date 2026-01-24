@@ -2425,3 +2425,27 @@
   else boot();
 
 })();
+(() => {
+  "use strict";
+
+  // Sicherstellen, dass die Logik vorhanden ist
+  if (!window.EPTEC_LOGIC) {
+    console.error("Logik-Objekt nicht gefunden. UI-Kontrollreferenzen können nicht aktiviert werden.");
+    return;
+  }
+
+  // Funktion, die die Logik referenziert und die UI-Kontrollaktion auslöst
+  function handleLoginAction() {
+    // Logik aufrufen und die entsprechende Aktion in der Logik auslösen
+    EPTEC_LOGIC.handleLogin(); // Beispielreferenz zur Logik
+
+    // UI-Feedback oder Übergabe an weiterführende Skripte/Assets
+    console.log("Login-Aktion wurde über Logik aktiviert.");
+  }
+
+  // UI-Kontrollen (Buttons oder andere Elemente) mit Event-Listenern versehen
+  document.getElementById('btn-login').addEventListener('click', handleLoginAction);
+  document.getElementById('btn-register').addEventListener('click', () => EPTEC_LOGIC.handleRegistration());
+
+  console.log("UI-Kontrollen für Login und Registrierung aktiviert.");
+})();
