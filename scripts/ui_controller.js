@@ -445,4 +445,96 @@
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+/* =========================================================
+   EPTEC APPEND — UI CONTROLLER · MASTER PASSWORDS v4
+   Role: UI-Gate + Visual Security (NO decision authority)
+   Authority: Kernel (Logic owns truth)
+   Scope: UI Controller ONLY
+   ========================================================= */
+(() => {
+  "use strict";
+
+  // ---------- SAFE HELPERS ----------
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- UI-ONLY LOCAL VERIFY (NO AUTHORITY) ----------
+  // NOTE:
+  // - This is a PURE UI pre-filter
+  // - Kernel / Logic decides finally
+  // - UI may NEVER unlock access on its own
+  function verifyLocal(kind, code) {
+    return safe(() => window.EPTEC_MASTER_PASSWORDS?.verifyLocal?.(kind, code)) ?? false;
+  }
+
+  /* -------------------------------------------------------
+     UI DOOR PRE-GATE (VISUAL / UX ONLY)
+     ------------------------------------------------------- */
+  function installDoorGate() {
+    ["door1", "door2"].forEach((door) => {
+      const host = document.querySelector(`[data-logic-id="doors.${door}"]`);
+      if (!host || host.__eptec_ui_gate) return;
+
+      host.__eptec_ui_gate = true;
+
+      host.addEventListener("click", (e) => {
+        const inp = $(`${door}-master`);
+        if (!inp) return;
+
+        if (!verifyLocal("door", inp.value)) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          safe(() =>
+            window.EPTEC_UI?.toast?.(
+              "Tür gesperrt: Door-Master erforderlich.",
+              "info"
+            )
+          );
+        }
+      }, true); // capture = true (before logic)
+    });
+  }
+
+  /* -------------------------------------------------------
+     PASSWORD VISIBILITY (PURE VISUAL)
+     ------------------------------------------------------- */
+  function ensureEye(inputId) {
+    const inp = $(inputId);
+    if (!inp || inp.__eptec_eye) return;
+    inp.__eptec_eye = true;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "👁";
+    btn.setAttribute("aria-label", "Show / Hide password");
+    btn.style.marginLeft = "6px";
+
+    btn.addEventListener("click", () => {
+      inp.type = inp.type === "password" ? "text" : "password";
+    });
+
+    inp.after(btn);
+  }
+
+  /* -------------------------------------------------------
+     BOOT
+     ------------------------------------------------------- */
+  function boot() {
+    installDoorGate();
+
+    // visual helpers only
+    ensureEye("admin-code");
+    ensureEye("door1-master");
+    ensureEye("door2-master");
+
+    console.log("EPTEC UI APPEND: MasterPasswords v4 active");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
 
