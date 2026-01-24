@@ -198,3 +198,46 @@
     snapshot
   };
 })();
+/* =========================================================
+   EPTEC APPEND — MAIN FUNCTIONALITY EXTENSION
+   Role: Extend Main Logic
+   Authority: Kernel + UI Control
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  /* ---------- MAIN FUNCTIONALITY EXTENSION ---------- */
+  function initializeSystem() {
+    console.log("EPTEC: Initializing System...");
+    // Trigger initial states
+    window.EPTEC_UI?.setState?.({ mode: "init" });
+    window.EPTEC_STATE_MANAGER?.set?.({ systemInitialized: true });
+
+    // Additional initialization logic if required
+    // Further API calls or logic can go here
+  }
+
+  function handleUserInteraction(event) {
+    if (event.target.id === "btn-login") {
+      window.EPTEC_UI?.toast?.("User interaction detected", "info");
+      // Perform login logic, invoke related functions here
+    }
+  }
+
+  function boot() {
+    // Hook for System Initialization
+    initializeSystem();
+
+    // Adding event listener for user interactions
+    document.addEventListener("click", handleUserInteraction);
+
+    console.log("EPTEC APPEND: Main functionality extension active");
+  }
+
+  // Ensure system boots when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
+})();
