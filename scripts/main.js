@@ -1,327 +1,200 @@
 /**
- * scripts/main.js
- * EPTEC MAIN — FINAL BODY (Kernel-obedient)
+ * scripts/ui_state.js
+ * EPTEC UI-STATE — FINAL (i18n.lang canonical, lang alias accepted)
  *
- * RULES:
- * - NO rendering (ui_controller.js owns rendering)
- * - NO dramaturgy (logic.js owns scenes)
- * - NO audio routing (APPEND 2 owns audio)
- * - NO business logic
- *
- * ALLOWED:
- * - word placeholders
- * - 👁 eye toggles
- * - button → logic delegation
- * - audio unlock ONLY
+ * Goals:
+ * - Pure state only (no DOM, no backend, no audio)
+ * - Canonical: i18n.lang + i18n.dir
+ * - Accepts legacy input: lang / locale (alias), but normalizes into i18n.*
+ * - Keeps a synchronized read-only mirror "lang" for legacy readers (optional)
  */
 
 (() => {
   "use strict";
 
-  const $ = (id) => document.getElementById(id);
-  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC MAIN]", e); return undefined; } };
+  const STORAGE_LANG = "EPTEC_LANG";
+  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 
-  /* -----------------------------------------
-     STATE ACCESS (READ ONLY)
-     ----------------------------------------- */
-  function store() {
-    return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
-  }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function subscribe(fn) {
-    const s = store();
-    if (typeof s?.subscribe === "function") return s.subscribe(fn);
-    if (typeof s?.onChange === "function") return s.onChange(fn);
-
-    let last = "";
-    const t = setInterval(() => {
-      const st = getState();
-      const j = safe(() => JSON.stringify(st)) || "";
-      if (j !== last) { last = j; safe(() => fn(st)); }
-    }, 250);
-    return () => clearInterval(t);
-  }
-
-  /* -----------------------------------------
-     PLACEHOLDERS (WORDS ONLY)
-     ----------------------------------------- */
-  function langKey() {
-    const st = getState();
-    const raw = String(st?.i18n?.lang || st?.lang || document.documentElement.lang || "de").toLowerCase();
-    return raw === "en" ? "en" : "de";
-  }
-
-  function word(kind) {
-    const de = { pass: "Passwort", master: "Masterpasswort" };
-    const en = { pass: "Password", master: "Master password" };
-    const L = langKey() === "en" ? en : de;
-    return kind === "master" ? L.master : L.pass;
-  }
-
-  function ensurePlaceholder(id, txt) {
-    const el = $(id);
-    if (!el) return;
-    if (!el.getAttribute("placeholder")) el.setAttribute("placeholder", txt);
-  }
-
-  function applyPlaceholders() {
-    ensurePlaceholder("login-password", word("pass"));
-    ensurePlaceholder("admin-code", word("master"));
-    ensurePlaceholder("door1-master", word("master"));
-    ensurePlaceholder("door2-master", word("master"));
-  }
-
-  /* -----------------------------------------
-     👁 EYE TOGGLES (UI-ONLY)
-     ----------------------------------------- */
-  function ensureEye(inputId, eyeId) {
-    const inp = $(inputId);
-    if (!inp) return;
-
-    const wrap = inp.closest(".pw-wrap") || inp.parentElement;
-    if (!wrap) return;
-    wrap.style.position = wrap.style.position || "relative";
-
-    if ($(eyeId)) return;
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = eyeId;
-    btn.textContent = "👁️";
-    btn.setAttribute("aria-label", "Show/Hide");
-    btn.style.position = "absolute";
-    btn.style.right = "10px";
-    btn.style.top = "50%";
-    btn.style.transform = "translateY(-50%)";
-    btn.style.background = "transparent";
-    btn.style.border = "0";
-    btn.style.cursor = "pointer";
-    btn.style.opacity = "0.75";
-    btn.style.fontSize = "16px";
-    btn.style.lineHeight = "1";
-
-    if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
-
-    btn.addEventListener("click", () => {
-      safe(() => window.SoundEngine?.uiConfirm?.());
-      inp.type = (inp.type === "password") ? "text" : "password";
-      btn.style.opacity = (inp.type === "password") ? "0.75" : "1";
-    });
-
-    wrap.appendChild(btn);
-  }
-
-  function initEyes() {
-    ensureEye("login-password", "eye-login-password");
-    ensureEye("admin-code", "eye-admin-code");
-    ensureEye("door1-master", "eye-door1-master");
-    ensureEye("door2-master", "eye-door2-master");
-  }
-
-  /* -----------------------------------------
-     AUDIO: UNLOCK ONLY (NO ROUTING)
-     ----------------------------------------- */
-  let audioUnlocked = false;
-
-  function unlockAudioOnce() {
-    if (audioUnlocked) return;
-    audioUnlocked = true;
-    safe(() => window.SoundEngine?.unlockAudio?.());
-  }
-
-  /* -----------------------------------------
-     BUTTON → LOGIC DELEGATION
-     ----------------------------------------- */
-  function bindButtons() {
-    const loginBtn = $("btn-login");
-    if (loginBtn && !loginBtn.__eptec_bound) {
-      loginBtn.__eptec_bound = true;
-      loginBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        const u = String($("login-username")?.value || "").trim();
-        const p = String($("login-password")?.value || "").trim();
-        safe(() => window.Logic?.login?.(u, p));
-      });
+  function deepMerge(base, patch) {
+    if (!isObj(base)) base = {};
+    if (!isObj(patch)) return base;
+    for (const k of Object.keys(patch)) {
+      const bv = base[k], pv = patch[k];
+      if (isObj(bv) && isObj(pv)) base[k] = deepMerge({ ...bv }, pv);
+      else base[k] = pv;
     }
-
-    const adminBtn = $("admin-submit");
-    if (adminBtn && !adminBtn.__eptec_bound) {
-      adminBtn.__eptec_bound = true;
-      adminBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        const code = String($("admin-code")?.value || "").trim();
-        safe(() => window.Logic?.adminEnter?.(code));
-      });
-    }
-
-    const regBtn = $("btn-register");
-    if (regBtn && !regBtn.__eptec_bound) {
-      regBtn.__eptec_bound = true;
-      regBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        safe(() => window.Logic?.openRegister?.());
-      });
-    }
-
-    const forgotBtn = $("btn-forgot");
-    if (forgotBtn && !forgotBtn.__eptec_bound) {
-      forgotBtn.__eptec_bound = true;
-      forgotBtn.addEventListener("click", () => {
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        safe(() => window.Logic?.openForgot?.());
-      });
-    }
+    return base;
   }
 
-  /* -----------------------------------------
-     BOOT
-     ----------------------------------------- */
-  function boot() {
-    applyPlaceholders();
-    initEyes();
-    bindButtons();
-
-    subscribe(() => applyPlaceholders());
-
-    document.addEventListener("pointerdown", unlockAudioOnce, { once: true, passive: true });
-
-    console.log("EPTEC MAIN: FINAL BODY active");
+  function normLang(raw) {
+    const s = String(raw || "en").toLowerCase().trim();
+    if (s === "ua") return "uk";
+    if (s === "zh") return "cn";
+    if (s === "ja") return "jp";
+    if (["en","de","es","fr","it","pt","nl","ru","uk","ar","cn","jp"].includes(s)) return s;
+    return "en";
   }
 
-  document.addEventListener("DOMContentLoaded", boot);
-})();
-
-
-/* =========================================================
-   EPTEC APPEND A — SAFE REGISTER / FORGOT FALLBACK (PASSIVE)
-   ========================================================= */
-(() => {
-  "use strict";
-  if (window.__EPTEC_SAFE_RF__) return;
-  window.__EPTEC_SAFE_RF__ = true;
-
-  const safe = (f) => { try { return f(); } catch { return; } };
-  const $ = (id) => document.getElementById(id);
-
-  function bind(id, fn){
-    const el = $(id);
-    if (!el || el.__eptec_bound) return;
-    el.__eptec_bound = true;
-    el.addEventListener("click", fn);
+  function loadLang() {
+    try {
+      const v = localStorage.getItem(STORAGE_LANG);
+      if (v) return normLang(v);
+    } catch {}
+    return null;
   }
 
-  function open(key){
-    // delegate to logic / UI if present
-    if (window.Logic?.openRegister && key === "register")
-      return safe(() => window.Logic.openRegister());
-    if (window.Logic?.openForgot && key === "forgot")
-      return safe(() => window.Logic.openForgot());
-
-    // ultimate fallback: state hint ONLY
-    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: key }));
+  function saveLang(lang) {
+    try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
   }
 
-  function boot(){
-    bind("btn-register", () => open("register"));
-    bind("btn-forgot",   () => open("forgot"));
+  function normView(raw) {
+    const x = String(raw || "meadow").trim().toLowerCase();
+
+    if (x === "meadow") return "meadow";
+    if (x === "tunnel") return "tunnel";
+    if (x === "doors") return "doors";
+    if (x === "room1") return "room1";
+    if (x === "room2") return "room2";
+
+    if (x === "wiese" || x === "start" || x === "entry") return "meadow";
+    if (x === "viewdos" || x === "zwischenraum" || x === "doors-view") return "doors";
+    if (x === "r1") return "room1";
+    if (x === "r2") return "room2";
+
+    if (x === "viewdoors") return "doors";
+    if (x === "whiteout") return "doors";
+
+    return "meadow";
   }
 
-  document.readyState === "loading"
-    ? document.addEventListener("DOMContentLoaded", boot)
-    : boot();
+  function normScene(raw) {
+    const x = String(raw || "").trim().toLowerCase();
+    if (!x) return "";
+    if (x === "start") return "start";
+    if (x === "tunnel") return "tunnel";
+    if (x === "viewdoors") return "viewdoors";
+    if (x === "whiteout") return "whiteout";
+    if (x === "room1") return "room1";
+    if (x === "room2") return "room2";
+    return x;
+  }
 
-})();
-/* =========================================================
-   EPTEC APPEND B — FOOTER I18N + LEGAL (SINGLE OWNER)
-   ========================================================= */
-(() => {
-  "use strict";
+  const DEFAULTS = {
+    view: "meadow",
+    scene: "",
 
-  const safe = (f)=>{ try{ return f(); }catch{} };
-  const $ = (id)=>document.getElementById(id);
+    modal: null,
+    legalKey: null,
 
-  const TXT = {
-    en:{i:"Imprint",t:"Terms",s:"Support",p:"Privacy"},
-    de:{i:"Impressum",t:"AGB",s:"Support",p:"Datenschutz"},
-    es:{i:"Aviso legal",t:"Términos",s:"Soporte",p:"Privacidad"},
-    fr:{i:"Mentions légales",t:"Conditions",s:"Support",p:"Confidentialité"}
+    // canonical i18n
+    i18n: { lang: "en", dir: "ltr" },
+
+    // Kernel may use richer mode objects; keep flexible
+    modes: {},
+
+    transition: { tunnelActive: false, whiteout: false, last: null }
   };
 
-  function lang(){
-    const st = safe(()=>window.EPTEC_UI_STATE?.get?.()) || {};
-    const l = String(st?.i18n?.lang || st?.lang || "en").toLowerCase();
-    return TXT[l] ? l : "en";
+  let state = deepMerge({}, DEFAULTS);
+  const listeners = new Set();
+
+  function snapshot() {
+    return JSON.parse(JSON.stringify(state));
   }
 
-  function applyText(){
-    const t = TXT[lang()];
-    if ($("link-imprint")) $("link-imprint").textContent = t.i;
-    if ($("link-terms")) $("link-terms").textContent = t.t;
-    if ($("link-support")) $("link-support").textContent = t.s;
-    if ($("link-privacy-footer")) $("link-privacy-footer").textContent = t.p;
-  }
+  function normalize(next) {
+    const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
 
-  function openLegal(key){
-    const scr = $("legal-screen");
-    if (!scr) return;
-    scr.classList.remove("modal-hidden");
-    scr.style.display = "flex";
-    if ($("legal-title")) $("legal-title").textContent = key.toUpperCase();
-    safe(()=>window.EPTEC_UI_STATE?.set?.({ modal:"legal", legalKey:key }));
-  }
+    // --- canonicalize legalKey
+    if (n.legalKey == null && n.legalKind != null) n.legalKey = n.legalKind;
+    if ("legalKind" in n) delete n.legalKind;
 
-  function closeLegal(){
-    const scr = $("legal-screen");
-    if (!scr) return;
-    scr.classList.add("modal-hidden");
-    scr.style.display = "none";
-    safe(()=>window.EPTEC_UI_STATE?.set?.({ modal:null, legalKey:null }));
-  }
-
-  function bind(){
-    [["link-imprint","imprint"],["link-terms","terms"],["link-support","support"],["link-privacy-footer","privacy"]]
-      .forEach(([id,key])=>{
-        const el=$(id);
-        if (!el || el.__eptec_bound) return;
-        el.__eptec_bound=true;
-        el.addEventListener("click",e=>{ e.preventDefault(); openLegal(key); });
-      });
-
-    const c = $("legal-close");
-    if (c && !c.__eptec_bound){
-      c.__eptec_bound=true;
-      c.addEventListener("click",closeLegal);
+    // scene/view normalization
+    n.scene = normScene(n.scene);
+    if (n.scene) {
+      if (n.scene === "start") n.view = "meadow";
+      else if (n.scene === "viewdoors") n.view = "doors";
+      else if (n.scene === "room1") n.view = "room1";
+      else if (n.scene === "room2") n.view = "room2";
+      else if (n.scene === "tunnel") n.view = "tunnel";
+      else if (n.scene === "whiteout") n.view = normView(n.view || "doors");
+      else n.view = normView(n.view || "meadow");
+    } else {
+      n.view = normView(n.view);
     }
 
-    document.addEventListener("keydown",e=>{
-      if (e.key==="Escape") closeLegal();
-    });
+    // --- language: accept alias "lang"/"locale" but store in i18n.lang
+    const persisted = loadLang();
+    n.i18n = isObj(n.i18n) ? n.i18n : {};
+
+    // priority: explicit i18n.lang > explicit lang > persisted > default
+    const rawLang = n.i18n.lang || n.lang || persisted || "en";
+    const lang = normLang(rawLang);
+
+    n.i18n.lang = lang;
+    n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
+    saveLang(lang);
+
+    // keep a synchronized mirror for legacy readers (read-only by convention)
+    n.lang = lang;
+
+    // keep flexible
+    n.modes = isObj(n.modes) ? n.modes : {};
+    n.transition = isObj(n.transition) ? n.transition : { tunnelActive: false, whiteout: false, last: null };
+
+    return n;
   }
 
-  function boot(){
-    applyText();
-    bind();
-    safe(()=>window.EPTEC_UI_STATE?.subscribe?.(applyText));
+  let notifying = false;
+  let lastJson = "";
+
+  function set(patch = {}) {
+    const before = snapshot();
+    const merged = deepMerge(before, isObj(patch) ? patch : {});
+    const next = normalize(merged);
+
+    const nextJson = JSON.stringify(next);
+    if (nextJson === lastJson) return snapshot();
+
+    state = next;
+    lastJson = nextJson;
+
+    if (notifying) return snapshot();
+    notifying = true;
+
+    const snap = snapshot();
+    for (const fn of listeners) {
+      try { fn(snap); } catch {}
+    }
+    notifying = false;
+
+    return snap;
   }
 
-  document.readyState==="loading"
-    ? document.addEventListener("DOMContentLoaded",boot)
-    : boot();
+  function get() {
+    return snapshot();
+  }
 
-})();
-/* =========================================================
-   EPTEC APPEND C — DOORS PLACEHOLDERS (TEXT ONLY)
-   ========================================================= */
-(() => {
-  "use strict";
-  const $ = (id)=>document.getElementById(id);
-  const ph = (id,txt)=>{ const e=$(id); if(e) e.setAttribute("placeholder",txt); };
+  function subscribe(fn) {
+    if (typeof fn !== "function") return () => {};
+    listeners.add(fn);
+    try { fn(snapshot()); } catch {}
+    return () => listeners.delete(fn);
+  }
 
-  ph("door1-present","Gift Code");
-  ph("door2-present","Gift Code");
-  ph("door1-vip","VIP Code");
-  ph("door2-vip","VIP Code");
+  function onChange(fn) {
+    return subscribe(fn);
+  }
+
+  state = normalize(state);
+  lastJson = JSON.stringify(state);
+
+  window.EPTEC_UI_STATE = {
+    get,
+    set,
+    subscribe,
+    onChange,
+    get state() { return snapshot(); },
+    snapshot
+  };
 })();
