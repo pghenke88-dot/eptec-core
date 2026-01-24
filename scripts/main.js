@@ -1146,3 +1146,300 @@
 
   setTimeout(bind, 300);
 })();
+/* =========================================================
+   EPTEC MAIN APPEND PACK — FINAL (NO DUPLICATES)
+   Includes:
+   1) Footer i18n labels
+   2) Legal modal open + close (button/ESC/backdrop) + z-index fix
+   3) UI confirm on footer clicks
+   4) Doors placeholders: Gift + VIP + Master (keep IDs)
+   5) Sound routing (Meadow wind + Tunnel fall only) using your REAL files
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC:APPEND_PACK]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  /* -----------------------------
+     0) Helpers
+     ----------------------------- */
+  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    let last = "";
+    setInterval(() => {
+      const st = getState();
+      const j = safe(() => JSON.stringify(st)) || "";
+      if (j !== last) { last = j; safe(() => fn(st)); }
+    }, 250);
+  }
+  function setState(patch) {
+    safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+    safe(() => window.EPTEC_MASTER?.UI_STATE?.set?.(patch));
+  }
+
+  /* -----------------------------
+     1) Footer I18N
+     ----------------------------- */
+  function langKey() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    const raw = String(st?.i18n?.lang || st?.lang || document.documentElement.lang || "en").toLowerCase();
+    if (raw.startsWith("de")) return "de";
+    if (raw.startsWith("es")) return "es";
+    if (raw.startsWith("fr")) return "fr";
+    if (raw.startsWith("it")) return "it";
+    if (raw.startsWith("pt")) return "pt";
+    if (raw.startsWith("nl")) return "nl";
+    if (raw.startsWith("ru")) return "ru";
+    if (raw.startsWith("uk")) return "uk";
+    if (raw.startsWith("ar")) return "ar";
+    if (raw.startsWith("zh") || raw === "cn") return "zh";
+    if (raw.startsWith("ja") || raw === "jp") return "ja";
+    return "en";
+  }
+
+  const FOOTER_TXT = {
+    en:{ imprint:"Imprint", terms:"Terms", support:"Support", privacy:"Privacy" },
+    de:{ imprint:"Impressum", terms:"AGB", support:"Support", privacy:"Datenschutz" },
+    es:{ imprint:"Aviso legal", terms:"Términos", support:"Soporte", privacy:"Privacidad" },
+    fr:{ imprint:"Mentions légales", terms:"Conditions", support:"Support", privacy:"Confidentialité" },
+    it:{ imprint:"Note legali", terms:"Termini", support:"Supporto", privacy:"Privacy" },
+    pt:{ imprint:"Impressão", terms:"Termos", support:"Suporte", privacy:"Privacidade" },
+    nl:{ imprint:"Colofon", terms:"Voorwaarden", support:"Support", privacy:"Privacy" },
+    ru:{ imprint:"Выходные данные", terms:"Условия", support:"Поддержка", privacy:"Конфиденциальность" },
+    uk:{ imprint:"Вихідні дані", terms:"Умови", support:"Підтримка", privacy:"Конфіденційність" },
+    ar:{ imprint:"بيانات النشر", terms:"الشروط", support:"الدعم", privacy:"الخصوصية" },
+    zh:{ imprint:"署名", terms:"条款", support:"支持", privacy:"隐私" },
+    ja:{ imprint:"運営者情報", terms:"利用規約", support:"サポート", privacy:"プライバシー" }
+  };
+
+  function applyFooterText() {
+    const t = FOOTER_TXT[langKey()] || FOOTER_TXT.en;
+    if ($("link-imprint")) $("link-imprint").textContent = t.imprint;
+    if ($("link-terms")) $("link-terms").textContent = t.terms;
+    if ($("link-support")) $("link-support").textContent = t.support;
+    if ($("link-privacy-footer")) $("link-privacy-footer").textContent = t.privacy;
+  }
+
+  /* -----------------------------
+     2) Legal modal open/close (no reload)
+     ----------------------------- */
+  function ensureLegalClickable() {
+    const scr = $("legal-screen");
+    if (!scr) return;
+    scr.style.position = "fixed";
+    scr.style.inset = "0";
+    scr.style.zIndex = "999999";
+    scr.style.pointerEvents = "auto";
+    const close = $("legal-close");
+    if (close) {
+      close.style.pointerEvents = "auto";
+      close.style.zIndex = "1000000";
+      close.style.cursor = "pointer";
+    }
+  }
+
+  function openLegal(key) {
+    ensureLegalClickable();
+    const scr = $("legal-screen");
+    const title = $("legal-title");
+    const body = $("legal-body");
+    if (scr) {
+      scr.classList.remove("modal-hidden");
+      scr.style.display = "flex";
+      scr.style.pointerEvents = "auto";
+    }
+    if (title) title.textContent = String(key || "").toUpperCase();
+    if (body) body.textContent = "Placeholder – legal content wiring pending.";
+    setState({ modal: "legal", legalKey: key });
+
+    safe(() => window.SoundEngine?.uiConfirm?.()); // click sound for footer too
+  }
+
+  function closeLegal() {
+    const scr = $("legal-screen");
+    if (!scr) return;
+    scr.classList.add("modal-hidden");
+    scr.style.display = "none";
+    scr.style.pointerEvents = "none";
+    setState({ modal: null, legalKey: null });
+    safe(() => window.SoundEngine?.uiConfirm?.());
+  }
+
+  function bindLegal() {
+    const bindLink = (id, key) => {
+      const el = $(id);
+      if (!el || el.__eptec_legal_bound) return;
+      el.__eptec_legal_bound = true;
+      el.style.cursor = "pointer";
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        openLegal(key);
+      }, true);
+    };
+
+    bindLink("link-imprint", "imprint");
+    bindLink("link-terms", "terms");
+    bindLink("link-support", "support");
+    bindLink("link-privacy-footer", "privacy");
+
+    const btn = $("legal-close");
+    if (btn && !btn.__eptec_close_bound) {
+      btn.__eptec_close_bound = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeLegal();
+      }, true);
+    }
+
+    const scr = $("legal-screen");
+    if (scr && !scr.__eptec_backdrop_bound) {
+      scr.__eptec_backdrop_bound = true;
+      scr.addEventListener("click", (e) => {
+        if (e.target === scr) closeLegal();
+      }, true);
+    }
+
+    if (!document.__eptec_legal_esc_bound) {
+      document.__eptec_legal_esc_bound = true;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeLegal();
+      });
+    }
+  }
+
+  /* -----------------------------
+     3) Doors placeholders (Gift + VIP + Master) — keep IDs
+     ----------------------------- */
+  function applyDoorPlaceholders() {
+    const setPH = (id, txt) => { const el = $(id); if (el) el.setAttribute("placeholder", txt); };
+
+    // IMPORTANT mapping:
+    // doorX-present => Gift Code
+    // doorX-vip     => VIP Code
+    setPH("door1-present", "Gift Code");
+    setPH("door2-present", "Gift Code");
+
+    setPH("door1-vip", "VIP Code");
+    setPH("door2-vip", "VIP Code");
+
+    setPH("door1-master", "Master code");
+    setPH("door2-master", "Master code");
+  }
+
+  /* -----------------------------
+     4) Sound routing (only the sounds you really have)
+     - Meadow: wind.mp3
+     - Tunnel: tunnelfall.mp3
+     - Click: SoundEngine uiConfirm already works (you confirmed)
+     ----------------------------- */
+  const FILES = {
+    meadow: "./assets/sounds/wind.mp3",
+    tunnel: "./assets/sounds/tunnelfall.mp3"
+  };
+
+  const AudioBus = {
+    cur: null,
+    el: null,
+    unlocked: false,
+    unlockOnce() {
+      if (this.unlocked) return;
+      this.unlocked = true;
+      safe(() => window.SoundEngine?.unlockAudio?.());
+      // best effort prime
+      safe(() => { const a=new Audio(); a.muted=true; a.play().catch(()=>{}); });
+    },
+    stop() {
+      const a = this.el;
+      this.el = null;
+      this.cur = null;
+      if (!a) return;
+      safe(() => { a.pause(); a.currentTime = 0; });
+    },
+    playLoop(key, vol) {
+      const src = FILES[key];
+      if (!src) return;
+      if (this.cur === key && this.el) return;
+
+      this.stop();
+      this.cur = key;
+
+      const a = new Audio(src);
+      a.loop = true;
+      a.volume = vol;
+      a.preload = "auto";
+      this.el = a;
+      safe(() => a.play().catch(()=>{}));
+    }
+  };
+
+  function normView(st) {
+    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
+    if (!raw || raw === "start" || raw === "meadow") return "meadow";
+    if (raw === "tunnel") return "tunnel";
+    if (raw === "viewdoors" || raw === "doors") return "doors";
+    if (raw === "room1" || raw === "room-1") return "room1";
+    if (raw === "room2" || raw === "room-2") return "room2";
+    return raw;
+  }
+
+  let lastView = null;
+
+  function applySound(st) {
+    const v = normView(st);
+    if (v === lastView) return;
+    lastView = v;
+
+    // stop previous on any change
+    AudioBus.stop();
+
+    if (v === "tunnel") {
+      AudioBus.unlockOnce();
+      AudioBus.playLoop("tunnel", 1.0);
+      return;
+    }
+
+    if (v === "meadow") {
+      // only after first user interaction (you said that's okay)
+      if (AudioBus.unlocked) AudioBus.playLoop("meadow", 0.35);
+      return;
+    }
+
+    // doors/rooms: silence for now (until you add more MP3s)
+  }
+
+  /* -----------------------------
+     BOOT
+     ----------------------------- */
+  function boot() {
+    applyFooterText();
+    bindLegal();
+    applyDoorPlaceholders();
+
+    // update footer language text on lang change
+    safe(() => window.EPTEC_UI_STATE?.subscribe?.(() => applyFooterText()));
+
+    // sound routing
+    applySound(getState());
+    subscribe(applySound);
+
+    // unlock audio on first interaction; start meadow wind if still on meadow
+    document.addEventListener("pointerdown", () => {
+      AudioBus.unlockOnce();
+      if (normView(getState()) === "meadow") AudioBus.playLoop("meadow", 0.35);
+    }, { once: true, passive: true });
+
+    console.log("EPTEC MAIN APPEND PACK active (clean).");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
