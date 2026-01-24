@@ -1420,7 +1420,7 @@
       // Close switcher if present
       const sw = $("language-switcher");
       if (sw) sw.classList.remove("lang-open");
-    }, true);
+    }, true); // <-- capture phase
   }
 
   /* -----------------------------
@@ -1913,6 +1913,7 @@
 
   safe(() => window.EPTEC_ACTIVITY?.log?.("cap.ready", { ok: true }));
 })();
+
 /* =========================================================
    EPTEC UI-CONTROL APPEND — AUDIT EXPORT BINDINGS
    Mirrors: EPTEC APPEND E — AUDIT EXPORT STANDARD
@@ -1925,16 +1926,12 @@
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const $ = (id) => document.getElementById(id);
 
-  // ---------------------------------------------------------
   // 1) Guard: requires Audit core
-  // ---------------------------------------------------------
   function hasAudit() {
     return !!window.EPTEC_AUDIT;
   }
 
-  // ---------------------------------------------------------
   // 2) UI helpers
-  // ---------------------------------------------------------
   function toast(msg, type = "info", ms = 2400) {
     const t = safe(() => window.EPTEC_UI?.toast?.(msg, type, ms));
     if (t !== undefined) return;
@@ -1953,12 +1950,7 @@
     URL.revokeObjectURL(url);
   }
 
-  // ---------------------------------------------------------
   // 3) Bindings (buttons / hotspots)
-  // Convention:
-  //  - data-audit-export="room2-backup"
-  //  - data-audit-export="custom"
-  // ---------------------------------------------------------
   function bindAuditExports() {
     if (!hasAudit()) return;
 
@@ -1969,29 +1961,23 @@
       el.addEventListener("click", () => {
         const kind = el.getAttribute("data-audit-export");
 
-        // ---- Room2 backup protocol ----
+        // Room2 backup protocol
         if (kind === "room2-backup") {
           const json = safe(() => window.EPTEC_AUDIT.exportRoom2Backup?.());
           if (!json) {
             toast("Kein Backup-Protokoll vorhanden.", "info");
             return;
           }
-          download(
-            `EPTEC_ROOM2_BACKUP_${new Date().toISOString().replaceAll(":", "-")}.json`,
-            json
-          );
+          download(`EPTEC_ROOM2_BACKUP_${new Date().toISOString().replaceAll(":", "-")}.json`, json);
           toast("Backup-Protokoll exportiert.", "ok");
           return;
         }
 
-        // ---- Custom export (expects window.EPTEC_AUDIT_BUFFER) ----
+        // Custom export
         if (kind === "custom") {
           const events = window.EPTEC_AUDIT_BUFFER || [];
           const json = window.EPTEC_AUDIT.exportJSON(events);
-          download(
-            `EPTEC_AUDIT_EXPORT_${new Date().toISOString().replaceAll(":", "-")}.json`,
-            json
-          );
+          download(`EPTEC_AUDIT_EXPORT_${new Date().toISOString().replaceAll(":", "-")}.json`, json);
           toast("Audit-Export erstellt.", "ok");
           return;
         }
@@ -2001,9 +1987,7 @@
     });
   }
 
-  // ---------------------------------------------------------
   // 4) Boot
-  // ---------------------------------------------------------
   function boot() {
     bindAuditExports();
     console.log("EPTEC UI-CONTROL: Audit export bindings active");
@@ -2016,11 +2000,9 @@
   }
 
 })();
+
 /* =========================================================
    EPTEC APPEND F — SINGLE SCENE AUTHORITY (UI-Control)
-   - ensures only EPTEC_MASTER.Dramaturgy changes scenes
-   - if other code sets UI_STATE.scene/view directly, we log it
-   - non-destructive: does not block, but makes drift visible immediately
    ========================================================= */
 (() => {
   "use strict";
@@ -2044,7 +2026,6 @@
       if (!scene) return;
       if (last === null) { last = scene; return; }
       if (scene !== last) {
-        // If Dramaturgy exists, any scene change should have been via it
         const hasDram = !!window.EPTEC_MASTER?.Dramaturgy;
         safe(() => window.EPTEC_ACTIVITY?.log?.("scene.change", { from: last, to: scene, viaDramaturgy: hasDram }));
         last = scene;
@@ -2059,348 +2040,7 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 })();
-/* =========================================================
-   EPTEC UI-CONTROL APPEND — PROFILE PANEL (for APPEND G)
-   Role:
-   - Provides UI controls for EPTEC_PROFILE API
-   - Creates Profile modal dynamically (no index change)
-   - Wires buttons + inputs to Profile manager
-   - Safe, idempotent, UI-only
-   ========================================================= */
-(() => {
-  "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-  const $ = (id) => document.getElementById(id);
 
-  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-
-  function toast(msg, type="info", ms=2400) {
-    const bridged = safe(() => window.EPTEC_UI?.toast?.(msg, type, ms));
-    if (bridged !== undefined) return;
-    console.log(`[PROFILE:${type}]`, msg);
-  }
-
-  // ---------------------------------------------------------
-  // 1) Create modal shell (once)
-  // ---------------------------------------------------------
-  const IDS = {
-    overlay: "eptec-profile-overlay",
-    modal: "eptec-profile-modal",
-    openBtn: "eptec-profile-open",
-    closeBtn: "eptec-profile-close"
-  };
-
-  function ensureStyles() {
-    if ($("eptec-profile-style")) return;
-    const st = document.createElement("style");
-    st.id = "eptec-profile-style";
-    st.textContent = `
-      #${IDS.openBtn}{
-        position:fixed; right:16px; bottom:16px; z-index:9999;
-        padding:10px 14px; border-radius:999px;
-        background:#222; color:#fff; border:1px solid rgba(255,255,255,.2);
-        cursor:pointer;
-      }
-      #${IDS.overlay}{
-        position:fixed; inset:0; display:none;
-        background:rgba(0,0,0,.55);
-        z-index:10000; align-items:center; justify-content:center;
-      }
-      #${IDS.modal}{
-        width:min(92vw,520px);
-        background:#111; color:#fff;
-        border-radius:14px; padding:16px;
-        border:1px solid rgba(255,255,255,.2);
-      }
-      #${IDS.modal} h3{margin:0 0 10px 0;}
-      #${IDS.modal} input{width:100%;margin:6px 0;padding:8px;}
-      #${IDS.modal} button{margin-top:8px;}
-      #${IDS.closeBtn}{float:right;}
-    `;
-    document.head.appendChild(st);
-  }
-
-  function ensureModal() {
-    ensureStyles();
-
-    if (!$(IDS.overlay)) {
-      const ov = document.createElement("div");
-      ov.id = IDS.overlay;
-      ov.innerHTML = `
-        <div id="${IDS.modal}">
-          <button id="${IDS.closeBtn}">✕</button>
-          <h3>Profile / Account</h3>
-
-          <label>E-Mail</label>
-          <input id="profile-email" type="email" />
-          <button id="profile-email-change-submit">E-Mail ändern</button>
-
-          <hr/>
-
-          <label>Zahlungsmethode</label>
-          <input id="profile-payment-method" placeholder="Methode" />
-          <input id="profile-iban-masked" placeholder="IBAN (maskiert)" />
-          <label><input type="checkbox" id="profile-payment-confirmed"/> bestätigt</label>
-          <button id="profile-payment-change-submit">Zahlung ändern</button>
-
-          <hr/>
-
-          <label>Kündigung</label>
-          <input id="profile-cancel-reason" placeholder="Grund (optional)" />
-          <button id="profile-cancel-submit">Kündigen (3×)</button>
-        </div>
-      `;
-      document.body.appendChild(ov);
-
-      ov.addEventListener("click", (e) => {
-        if (e.target === ov) ov.style.display = "none";
-      });
-    }
-
-    if (!$(IDS.openBtn)) {
-      const b = document.createElement("button");
-      b.id = IDS.openBtn;
-      b.textContent = "Profile";
-      document.body.appendChild(b);
-    }
-  }
-
-  // ---------------------------------------------------------
-  // 2) Bind UI to Profile API
-  // ---------------------------------------------------------
-  function bind() {
-    const Profile = window.EPTEC_PROFILE;
-    if (!Profile) return;
-
-    const ov = $(IDS.overlay);
-    const open = $(IDS.openBtn);
-    const close = $(IDS.closeBtn);
-
-    if (open && !open.__b) {
-      open.__b = true;
-      open.addEventListener("click", () => ov.style.display = "flex");
-    }
-    if (close && !close.__b) {
-      close.__b = true;
-      close.addEventListener("click", () => ov.style.display = "none");
-    }
-
-    const be = $("profile-email-change-submit");
-    if (be && !be.__b) {
-      be.__b = true;
-      be.addEventListener("click", () => {
-        const v = $("profile-email")?.value;
-        const r = Profile.setEmail(v);
-        if (!r?.ok) toast("E-Mail konnte nicht geändert werden", "error");
-      });
-    }
-
-    const bp = $("profile-payment-change-submit");
-    if (bp && !bp.__b) {
-      bp.__b = true;
-      bp.addEventListener("click", () => {
-        Profile.setPayment({
-          method: $("profile-payment-method")?.value,
-          ibanMasked: $("profile-iban-masked")?.value,
-          confirmed: !!$("profile-payment-confirmed")?.checked
-        });
-      });
-    }
-
-    const bc = $("profile-cancel-submit");
-    if (bc && !bc.__b) {
-      bc.__b = true;
-      bc.addEventListener("click", () => {
-        const reason = $("profile-cancel-reason")?.value;
-        const r = Profile.cancel(reason);
-        if (r?.ok) ov.style.display = "none";
-      });
-    }
-  }
-
-  // ---------------------------------------------------------
-  // 3) Boot
-  // ---------------------------------------------------------
-  function boot() {
-    ensureModal();
-    bind();
-    console.log("EPTEC UI-CONTROL: Profile panel active");
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-
-})();
-/* =========================================================
-   EPTEC UI-CONTROL APPEND — ADMIN LANGUAGE EMERGENCY (H)
-   Purpose:
-   - Binds UI buttons/inputs to EPTEC_LANG_EMERGENCY (Append H)
-   - NO logic, NO state authority, NO side effects
-   - Safe if elements do not exist
-   ========================================================= */
-(() => {
-  "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-  const $ = (id) => document.getElementById(id);
-
-  function isAdmin() {
-    const st =
-      safe(() => window.EPTEC_MASTER?.UI_STATE?.get?.()) ||
-      safe(() => window.EPTEC_UI_STATE?.get?.()) || {};
-    return !!(st?.modes?.admin || st?.modes?.author);
-  }
-
-  function parseSelection() {
-    const el = $("admin-lang-select");
-    if (!el) return [];
-    if (el.tagName === "SELECT") {
-      return Array.from(el.selectedOptions || [])
-        .map(o => String(o.value || o.text || "").toUpperCase().trim())
-        .filter(Boolean);
-    }
-    return String(el.value || "")
-      .split(/[,\s]+/g)
-      .map(x => x.toUpperCase().trim())
-      .filter(Boolean);
-  }
-
-  function updateVisual() {
-    const btn = $("admin-lang-action");
-    const out = $("admin-lang-status");
-    if (!btn || !window.EPTEC_LANG_EMERGENCY) return;
-
-    const sel = parseSelection();
-    const first = sel[0] || "EN";
-    const s = safe(() => window.EPTEC_LANG_EMERGENCY.uiStatus(first));
-    if (!s) return;
-
-    btn.textContent = (s.label === "ACTIVATE") ? "Aktivieren" : "Deaktivieren";
-    btn.setAttribute("data-state", s.color);
-
-    if (out) {
-      out.textContent = s.pending
-        ? `Pending ${s.code} → wirksam ab ${s.effectiveAt}`
-        : s.disabled
-          ? `${s.code} ist deaktiviert`
-          : `${s.code} ist aktiv`;
-    }
-  }
-
-  function bindOnce(el, fn, key) {
-    if (!el) return;
-    const k = "__eptec_ui_lang_" + key;
-    if (el[k]) return;
-    el.addEventListener("click", fn);
-    el[k] = true;
-  }
-
-  function boot() {
-    const btn = $("admin-lang-action");
-    const sel = $("admin-lang-select");
-
-    bindOnce(btn, () => {
-      if (!isAdmin()) return;
-      const list = parseSelection();
-      if (!list.length) return;
-
-      const first = list[0];
-      const st = safe(() => window.EPTEC_LANG_EMERGENCY.uiStatus(first));
-      if (!st) return;
-
-      if (st.label === "ACTIVATE")
-        safe(() => window.EPTEC_LANG_EMERGENCY.activate(list));
-      else
-        safe(() => window.EPTEC_LANG_EMERGENCY.deactivate(list));
-
-      updateVisual();
-    }, "action");
-
-    bindOnce(sel, updateVisual, "select");
-    updateVisual();
-  }
-
-  if (document.readyState === "loading")
-    document.addEventListener("DOMContentLoaded", boot);
-  else
-    boot();
-
-})();
-/* =========================================================
-   EPTEC APPEND — UI-CONTROL ID REGISTRY SAFE INIT
-   Purpose:
-   - Ensures correct registration of all required IDs within UI-Control
-   - Guarantees stable view + logic registration without overrides
-   - No crashes, no side effects
-   ========================================================= */
-
-(() => {
-  "use strict";
-
-  // If EPTEC_ID_REGISTRY does not exist, initialize it.
-  if (!window.EPTEC_ID_REGISTRY) {
-    window.EPTEC_ID_REGISTRY = {
-      ids: [],
-      logicIds: [],
-      register(id) {
-        if (id && !this.ids.includes(id)) {
-          this.ids.push(id);
-        }
-      },
-      registerLogic(id) {
-        if (id && !this.logicIds.includes(id)) {
-          this.logicIds.push(id);
-        }
-      }
-    };
-
-    console.info("[EPTEC] UI-CONTROL ID_REGISTRY initialized (append)");
-  }
-
-  // Automatically register necessary UI-Control IDs
-  const registerUIControlIDs = () => {
-    // List of required IDs for UI-Control
-    const requiredIDs = [
-      "meadow-view",
-      "tunnel-view",
-      "doors-view",
-      "room-1-view",
-      "room-2-view",
-      "btn-login",
-      "btn-register",
-      "btn-forgot",
-      "btn-demo",
-      "btn-logout-doors",
-      "btn-logout-room1",
-      "btn-logout-room2",
-      "lang-toggle",
-      "lang-rail",
-      "profile-email-change-submit",
-      "profile-payment-change-submit",
-      "profile-cancel-submit"
-    ];
-
-    // Register each ID
-    requiredIDs.forEach(id => {
-      window.EPTEC_ID_REGISTRY.register(id);
-    });
-
-    console.info("[EPTEC] UI-Control IDs registered.");
-  };
-
-  // Call the function to register the IDs for UI-Control
-  registerUIControlIDs();
-})();
-/* =========================================================
-   EPTEC UI-CONTROL APPEND — TUNNEL TIMING MIRROR
-   Role:
-   - Visual/UI mirror for extended tunnel duration
-   - NO timing logic, NO scene authority
-   - Prevents duplicate transitions
-   ========================================================= */
 (() => {
   "use strict";
 
