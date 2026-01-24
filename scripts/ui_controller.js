@@ -2368,3 +2368,68 @@
     boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — UI-CONTROL ID REGISTRY SAFE INIT
+   Purpose:
+   - Ensures correct registration of all required IDs within UI-Control
+   - Guarantees stable view + logic registration without overrides
+   - No crashes, no side effects
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // If EPTEC_ID_REGISTRY does not exist, initialize it.
+  if (!window.EPTEC_ID_REGISTRY) {
+    window.EPTEC_ID_REGISTRY = {
+      ids: [],
+      logicIds: [],
+      register(id) {
+        if (id && !this.ids.includes(id)) {
+          this.ids.push(id);
+        }
+      },
+      registerLogic(id) {
+        if (id && !this.logicIds.includes(id)) {
+          this.logicIds.push(id);
+        }
+      }
+    };
+
+    console.info("[EPTEC] UI-CONTROL ID_REGISTRY initialized (append)");
+  }
+
+  // Automatically register necessary UI-Control IDs
+  const registerUIControlIDs = () => {
+    // List of required IDs for UI-Control
+    const requiredIDs = [
+      "meadow-view",
+      "tunnel-view",
+      "doors-view",
+      "room-1-view",
+      "room-2-view",
+      "btn-login",
+      "btn-register",
+      "btn-forgot",
+      "btn-demo",
+      "btn-logout-doors",
+      "btn-logout-room1",
+      "btn-logout-room2",
+      "lang-toggle",
+      "lang-rail",
+      "profile-email-change-submit",
+      "profile-payment-change-submit",
+      "profile-cancel-submit"
+    ];
+
+    // Register each ID
+    requiredIDs.forEach(id => {
+      window.EPTEC_ID_REGISTRY.register(id);
+    });
+
+    console.info("[EPTEC] UI-Control IDs registered.");
+  };
+
+  // Call the function to register the IDs for UI-Control
+  registerUIControlIDs();
+})();
