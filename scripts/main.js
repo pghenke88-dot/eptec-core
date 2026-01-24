@@ -1475,3 +1475,146 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC HARD SCENE ROUTER — FINAL (LOCKED)
+   - Enforces CLOSED rooms (visual + audio)
+   - 28s tunnel (hard)
+   - No meadow bleed
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const SAFE = (fn) => { try { return fn(); } catch (e) { console.warn("[SCENE]", e); } };
+
+  /* -----------------------------
+     CONFIG (FIXED)
+  ----------------------------- */
+  const TUNNEL_DURATION_MS = 28000;
+
+  const AUDIO = {
+    meadow:  "wind",
+    tunnel:  "tunnelFall",
+    doors:   "doors",
+    room1:   "room1",
+    room2:   "room2"
+  };
+
+  /* -----------------------------
+     HELPERS
+  ----------------------------- */
+  function getState(){
+    const S = window.EPTEC_UI_STATE;
+    return SAFE(() => S?.get?.() || S?.state) || {};
+  }
+
+  function setState(patch){
+    SAFE(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  function showOnly(id){
+    document.querySelectorAll(".scene").forEach(el => {
+      el.style.display = "none";
+    });
+    const el = document.getElementById(id);
+    if (el) el.style.display = "flex";
+  }
+
+  function stopAllAudio(){
+    SAFE(() => window.SoundEngine?.stopAll?.());
+    SAFE(() => window.SoundEngine?.stopAmbient?.());
+    SAFE(() => window.SoundEngine?.stopTunnel?.());
+  }
+
+  function playAudio(key){
+    const SE = window.SoundEngine;
+    if (!SE) return;
+
+    stopAllAudio();
+
+    if (key === "tunnel") return SAFE(() => SE.tunnelFall?.());
+    if (key === "meadow") return SAFE(() => SE.startAmbient?.());
+    if (key === "doors")  return SAFE(() => SE.startDoorsAmbient?.());
+    if (key === "room1")  return SAFE(() => SE.startRoom1Ambient?.());
+    if (key === "room2")  return SAFE(() => SE.startRoom2Ambient?.());
+  }
+
+  /* -----------------------------
+     SCENE TRANSITIONS
+  ----------------------------- */
+  let tunnelTimer = null;
+  let lastView = null;
+
+  function enter(view){
+    if (view === lastView) return;
+    lastView = view;
+
+    // HARD RESET
+    if (tunnelTimer){
+      clearTimeout(tunnelTimer);
+      tunnelTimer = null;
+    }
+
+    stopAllAudio();
+
+    switch(view){
+
+      case "meadow":
+        showOnly("meadow-view");
+        playAudio("meadow");
+        break;
+
+      case "tunnel":
+        showOnly("tunnel-view");
+        playAudio("tunnel");
+
+        tunnelTimer = setTimeout(() => {
+          setState({ view: "doors" });
+        }, TUNNEL_DURATION_MS);
+        break;
+
+      case "doors":
+        showOnly("doors-view");
+        playAudio("doors");
+        break;
+
+      case "room1":
+        showOnly("room-1-view");
+        playAudio("room1");
+        break;
+
+      case "room2":
+        showOnly("room-2-view");
+        playAudio("room2");
+        break;
+
+      default:
+        // fallback safety
+        showOnly("meadow-view");
+        playAudio("meadow");
+    }
+  }
+
+  /* -----------------------------
+     SUBSCRIBE TO STATE
+  ----------------------------- */
+  function boot(){
+    enter(getState().view || "meadow");
+
+    SAFE(() => window.EPTEC_UI_STATE?.subscribe?.((st) => {
+      enter(st.view || "meadow");
+    }));
+
+    // Audio unlock on first interaction
+    document.addEventListener("pointerdown", () => {
+      SAFE(() => window.SoundEngine?.unlockAudio?.());
+    }, { once:true });
+
+    console.log("EPTEC HARD SCENE ROUTER ACTIVE (28s tunnel)");
+  }
+
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", boot);
+  else
+    boot();
+
+})();
