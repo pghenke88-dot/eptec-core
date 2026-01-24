@@ -196,4 +196,39 @@
     snapshot
   };
 })();
+/* =========================================================
+   EPTEC APPEND — UI STATE EXTENSION
+   Role: Manage and apply UI specific states
+   Authority: UI Control
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function updateUIState(newUIState) {
+    const currentUIState = window.EPTEC_UI_STATE?.get?.();
+    const mergedUIState = { ...currentUIState, ...newUIState };
+    window.EPTEC_UI_STATE?.set?.(mergedUIState);
+    console.log("UI State Updated:", mergedUIState);
+  }
+
+  function applyLanguageChange(lang) {
+    updateUIState({ lang: lang });
+    console.log(`Language changed to: ${lang}`);
+  }
+
+  function boot() {
+    // Example: Automatically change language after 10 seconds
+    setTimeout(() => {
+      applyLanguageChange("de");
+    }, 10000);
+
+    console.log("EPTEC APPEND: UI State extension active");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
+})();
 
