@@ -2433,3 +2433,211 @@
   // Call the function to register the IDs for UI-Control
   registerUIControlIDs();
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — TUNNEL TIMING MIRROR
+   Role:
+   - Visual/UI mirror for extended tunnel duration
+   - NO timing logic, NO scene authority
+   - Prevents duplicate transitions
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() {
+    return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
+  }
+
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function normalize(scene) {
+    const s = String(scene || "").toLowerCase();
+    if (s === "viewdoors") return "doors";
+    if (s === "room-1") return "room1";
+    if (s === "room-2") return "room2";
+    return s;
+  }
+
+  let lastScene = null;
+
+  function apply(st) {
+    const current = normalize(st.scene || st.view);
+    if (!current) return;
+
+    // prevent duplicate UI reactions
+    if (current === lastScene) return;
+    lastScene = current;
+
+    // visual state only
+    document.body.setAttribute("data-scene", current);
+
+    // optional hooks (non-blocking)
+    safe(() => window.EPTEC_ACTIVITY?.log?.(
+      "ui.scene.mirror",
+      { scene: current }
+    ));
+  }
+
+  function boot() {
+    const s = store();
+    if (!s || s.__eptec_tunnel_ui_bound) return;
+    s.__eptec_tunnel_ui_bound = true;
+
+    const sub = (st) => apply(st);
+
+    if (typeof s.subscribe === "function") s.subscribe(sub);
+    else if (typeof s.onChange === "function") s.onChange(sub);
+    else setInterval(() => apply(getState()), 250);
+
+    apply(getState());
+    console.log("EPTEC UI-CONTROL: Tunnel timing mirror active");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+})();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — ORB ROOM SWITCH (SINGLE OWNER)
+   Role: UI-only orb for switching Room1 <-> Room2
+   Authority: UI-Control (no logic duplication)
+   Rules:
+   - Visible only in room1/room2
+   - Allowed for demo + author/admin (exactly as you wanted)
+   - Uses Dramaturgy.to if available, else safe UI_STATE set fallback
+   - No intervals, no polling, no double bind
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_ORB_SWITCH_SINGLE__) return;
+  window.__EPTEC_UI_ORB_SWITCH_SINGLE__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+  function subscribe(fn) {
+    const s = store();
+    if (typeof s?.subscribe === "function") return s.subscribe(fn);
+    if (typeof s?.onChange === "function") return s.onChange(fn);
+    return () => {};
+  }
+
+  function normScene(st) {
+    const raw = String(st?.scene || st?.view || "").toLowerCase().trim();
+    if (raw === "viewdoors" || raw === "doors") return "doors";
+    if (raw === "room1" || raw === "room-1") return "room1";
+    if (raw === "room2" || raw === "room-2") return "room2";
+    if (raw === "start" || raw === "meadow") return "start";
+    return raw || "start";
+  }
+
+  function allowed(st) {
+    const m = st?.modes || {};
+    return !!m.demo || !!m.author || !!m.admin;
+  }
+
+  function ensureOrb() {
+    let orb = document.getElementById("author-orb");
+    if (orb) return orb;
+
+    orb = document.createElement("div");
+    orb.id = "author-orb";
+    orb.textContent = "◯";
+    orb.setAttribute("aria-label", "Switch room");
+    orb.style.position = "fixed";
+    orb.style.right = "18px";
+    orb.style.top = "50%";
+    orb.style.transform = "translateY(-50%)";
+    orb.style.zIndex = "99999";
+    orb.style.width = "44px";
+    orb.style.height = "44px";
+    orb.style.borderRadius = "999px";
+    orb.style.display = "none";
+    orb.style.alignItems = "center";
+    orb.style.justifyContent = "center";
+    orb.style.cursor = "pointer";
+    orb.style.background = "rgba(255,255,255,0.10)";
+    orb.style.border = "1px solid rgba(255,255,255,0.25)";
+    orb.style.backdropFilter = "blur(6px)";
+    orb.style.color = "#fff";
+    orb.style.userSelect = "none";
+
+    document.body.appendChild(orb);
+    return orb;
+  }
+
+  function go(scene) {
+    const D = window.EPTEC_MASTER?.Dramaturgy;
+    if (D && typeof D.to === "function") return safe(() => D.to(scene, { via: "orb" }));
+    // fallback if Dramaturgy not present
+    setState({ scene, view: scene });
+  }
+
+  let lastShow = null;
+
+  function render(st) {
+    const scene = normScene(st);
+    const orb = ensureOrb();
+
+    const inRoom = (scene === "room1" || scene === "room2");
+    const show = allowed(st) && inRoom;
+
+    // avoid redundant DOM writes
+    if (show === lastShow) return;
+    lastShow = show;
+
+    orb.style.display = show ? "flex" : "none";
+    orb.style.pointerEvents = show ? "auto" : "none";
+  }
+
+  function bindClick() {
+    const orb = ensureOrb();
+    if (orb.__eptec_bound) return;
+    orb.__eptec_bound = true;
+
+    orb.addEventListener("click", () => {
+      const st = getState();
+      const scene = normScene(st);
+      if (!allowed(st)) return;
+
+      safe(() => window.SoundEngine?.uiConfirm?.());
+
+      if (scene === "room1") return go("room2");
+      if (scene === "room2") return go("room1");
+    });
+  }
+
+  function boot() {
+    const s = store();
+    if (!s) return;
+
+    bindClick();
+    render(getState());
+
+    // single subscription: no polling
+    subscribe(render);
+
+    console.log("EPTEC UI-CONTROL: Orb room switch active (single owner).");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
