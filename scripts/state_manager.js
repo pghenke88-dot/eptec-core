@@ -800,3 +800,43 @@
   }
 
 })();
+/* =========================================================
+   EPTEC APPEND — STATE MANAGER EXTENSION
+   Role: Handle extended system states
+   Authority: State Management
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function updateState(newState) {
+    const currentState = window.EPTEC_STATE_MANAGER?.get?.();
+    const mergedState = { ...currentState, ...newState };
+    window.EPTEC_STATE_MANAGER?.set?.(mergedState);
+    console.log("State Updated:", mergedState);
+  }
+
+  function toggleFeature(feature) {
+    const currentState = window.EPTEC_STATE_MANAGER?.get?.();
+    const updatedFeatureState = { ...currentState, [feature]: !currentState[feature] };
+    updateState(updatedFeatureState);
+    console.log(`${feature} toggled: ${updatedFeatureState[feature]}`);
+  }
+
+  function boot() {
+    // Initialize features
+    toggleFeature("systemActive");
+
+    // Example: Automatically update states every 5 seconds
+    setInterval(() => {
+      updateState({ lastUpdated: new Date().toISOString() });
+    }, 5000);
+
+    console.log("EPTEC APPEND: State Manager extension active");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else boot();
+})();
