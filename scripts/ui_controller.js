@@ -1800,102 +1800,63 @@
 
 })();
 /* =========================================================
-   EPTEC APPEND — UI CONTROL: CONSENT GUARD
-   - Ensures that all actions requiring consent are blocked until consent is confirmed.
-   - Non-blocking UI: Shows messages when action is blocked.
+   EPTEC UI-CONTROL APPEND — CONSENT UI (SAFE, NO-CRASH)
+   - Mirrors EPTEC_CONSENT (Append B) without assuming DOM IDs
+   - Never throws if EPTEC_CONSENT is missing/late
    ========================================================= */
 (() => {
   "use strict";
 
+  if (window.__EPTEC_UI_CONSENT_SAFE__) return;
+  window.__EPTEC_UI_CONSENT_SAFE__ = true;
+
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const $ = (id) => document.getElementById(id);
 
-  // Get the current state (from EPTEC_MASTER or EPTEC_UI_STATE)
-  function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
-  }
-  function setState(patch) {
-    const s = store();
-    if (typeof s?.set === "function") return safe(() => s.set(patch));
-    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  function toast(msg, type="info", ms=2600) {
+    const t = safe(() => window.EPTEC_UI?.toast?.(String(msg), String(type), ms));
+    if (t !== undefined) return;
+    console.log(`[CONSENT:${type}]`, msg);
   }
 
-  // Consent Guard Logic
-  const Consent = window.EPTEC_CONSENT || {};
+  function API() { return window.EPTEC_CONSENT || null; }
 
-  // Apply consent check to UI actions
-  function applyConsentToUI(actionName, buttonId) {
-    const consentStatus = Consent.require(actionName);
-    const button = $(buttonId);
-    if (button) {
-      if (consentStatus.ok) {
-        button.disabled = false;
-        button.title = "Click to proceed with the action.";
-      } else {
-        button.disabled = true;
-        button.title = "You must agree to the terms before proceeding.";
-      }
-    }
-  }
+  // Public helper for other UI code (optional)
+  window.EPTEC_UI_CONSENT = window.EPTEC_UI_CONSENT || {};
+  window.EPTEC_UI_CONSENT.require = window.EPTEC_UI_CONSENT.require || ((action) => {
+    const r = safe(() => API()?.require?.(action));
+    if (r && r.ok === false) toast("Bitte AGB + Verpflichtung bestätigen.", "error", 2600);
+    return r || { ok: true };
+  });
 
-  // Function to show consent request in the UI
-  function showConsentMessage(message) {
-    const consentMessage = $("#consent-message");
-    if (consentMessage) {
-      consentMessage.textContent = message;
-      consentMessage.style.display = "block";
-    }
-  }
+  // Optional UI elements (only if you later add them)
+  // IDs (optional): consent-agb, consent-obligation, consent-submit
+  function bindOptionalUI() {
+    const agb = $("consent-agb");
+    const obl = $("consent-obligation");
+    const btn = $("consent-submit");
 
-  // Consent dialog handling (e.g., Agree/Decline buttons)
-  function bindConsentDialog() {
-    const agreeButton = $("#consent-agree");
-    const declineButton = $("#consent-decline");
-
-    if (agreeButton && declineButton) {
-      agreeButton.addEventListener("click", () => {
-        Consent.set({ agb: true, obligation: true });
-        showConsentMessage("Thank you for agreeing to the terms!");
-        applyConsentToUI("apply_discount", "apply-discount-button");
-      });
-
-      declineButton.addEventListener("click", () => {
-        Consent.set({ agb: false, obligation: false });
-        showConsentMessage("You must agree to the terms to proceed.");
+    if (btn && !btn.__b) {
+      btn.__b = true;
+      btn.addEventListener("click", () => {
+        const api = API();
+        if (!api?.set) return toast("Consent-System nicht bereit.", "error", 2200);
+        api.set({ agb: !!agb?.checked, obligation: !!obl?.checked });
+        toast("Consent gespeichert.", "ok", 1800);
       });
     }
   }
 
-  // Function to check and update the UI on consent changes
-  function updateConsentUI() {
-    const consentState = Consent.get();
-    if (consentState.agb && consentState.obligation) {
-      // Enable actions if consent is given
-      applyConsentToUI("apply_discount", "apply-discount-button");
-    } else {
-      // Disable actions if consent is not given
-      applyConsentToUI("apply_discount", "apply-discount-button");
-    }
+  function boot() {
+    // Never crash if EPTEC_CONSENT loads later
+    bindOptionalUI();
+    console.log("EPTEC UI-CONTROL: Consent safe mirror active.");
   }
 
-  // Initialize the consent UI elements
-  function initConsentUI() {
-    // Check and update consent status when the page loads
-    updateConsentUI();
-    // Bind consent dialog buttons
-    bindConsentDialog();
-  }
-
-  // Run the consent UI setup
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initConsentUI);
-  } else {
-    initConsentUI();
-  }
-
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 })();
+
 /* =========================================================
    EPTEC APPEND C — CAPABILITIES MATRIX (can(feature))
    - prevents accidental unlocks across appends
