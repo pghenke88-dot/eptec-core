@@ -2449,3 +2449,133 @@
 
   console.log("UI-Kontrollen für Login und Registrierung aktiviert.");
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — CRITICAL ACTION WIRING (LOGIN/REGISTER/DOORS/ROOMS)
+   Purpose:
+   - makes clicks work again by binding the critical UI actions directly to Kernel APIs
+   - single append, idempotent, no-crash
+   - runs in capture-phase so it wins even if other UI listeners exist
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_CRITICAL_WIRING__) return;
+  window.__EPTEC_UI_CRITICAL_WIRING__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function K() { return window.EPTEC_MASTER || null; }
+  function Entry() { return K()?.Entry || null; }
+  function Doors() { return K()?.Doors || null; }
+  function Auth() { return K()?.Auth || null; }
+  function Dram() { return K()?.Dramaturgy || null; }
+
+  function bindCapture(el, fn, key) {
+    if (!el) return;
+    const k = `__eptec_bind_${key}`;
+    if (el[k]) return;
+    el[k] = true;
+
+    el.addEventListener("click", (e) => {
+      // win against other handlers
+      e.preventDefault();
+      e.stopPropagation();
+      try { e.stopImmediatePropagation(); } catch {}
+      safe(() => fn(e));
+    }, true);
+  }
+
+  function wire() {
+    const entry = Entry();
+    const doors = Doors();
+    const auth  = Auth();
+    const dram  = Dram();
+
+    // Wait until Kernel is ready
+    if (!entry || !auth || !dram || !doors) return false;
+
+    // LOGIN
+    bindCapture($("btn-login"), () => {
+      const u = String($("login-username")?.value || "").trim();
+      const p = String($("login-password")?.value || "").trim();
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      safe(() => entry.userLogin(u, p));
+    }, "btn_login");
+
+    // DEMO
+    bindCapture($("btn-demo"), () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      safe(() => entry.demo());
+    }, "btn_demo");
+
+    // ADMIN / START MASTER
+    bindCapture($("admin-submit"), () => {
+      const code = String($("admin-code")?.value || "").trim();
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      safe(() => entry.authorStartMaster(code));
+    }, "admin_submit");
+
+    // REGISTER / FORGOT (Modal via state, kernel-friendly)
+    bindCapture($("btn-register"), () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "register" }));
+    }, "btn_register");
+
+    bindCapture($("btn-forgot"), () => {
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "forgot" }));
+    }, "btn_forgot");
+
+    // DOORS (enter rooms) — delegate to kernel Doors.clickDoor
+    document.querySelectorAll("[data-logic-id='doors.door1']").forEach((el, i) => {
+      bindCapture(el, () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        safe(() => doors.clickDoor("door1"));
+      }, `door1_${i}`);
+    });
+
+    document.querySelectorAll("[data-logic-id='doors.door2']").forEach((el, i) => {
+      bindCapture(el, () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        safe(() => doors.clickDoor("door2"));
+      }, `door2_${i}`);
+    });
+
+    // DOOR CODES (present/vip/master)
+    bindCapture($("door1-present-apply"), () => safe(() => doors.applyPresent("door1", $("door1-present")?.value)), "d1_present");
+    bindCapture($("door1-vip-apply"),     () => safe(() => doors.applyVip("door1", $("door1-vip")?.value)),       "d1_vip");
+    bindCapture($("door1-master-apply"),  () => safe(() => doors.applyMaster("door1", $("door1-master")?.value)), "d1_master");
+
+    bindCapture($("door2-present-apply"), () => safe(() => doors.applyPresent("door2", $("door2-present")?.value)), "d2_present");
+    bindCapture($("door2-vip-apply"),     () => safe(() => doors.applyVip("door2", $("door2-vip")?.value)),         "d2_vip");
+    bindCapture($("door2-master-apply"),  () => safe(() => doors.applyMaster("door2", $("door2-master")?.value)),   "d2_master");
+
+    // LOGOUT (all places)
+    ["btn-logout-doors","btn-logout-room1","btn-logout-room2","btn-logout"].forEach((id) => {
+      bindCapture($(id), () => {
+        safe(() => window.SoundEngine?.uiConfirm?.());
+        safe(() => auth.logout());
+      }, `logout_${id}`);
+    });
+
+    // ROOM HOTSPOTS (delegate by data-logic-id to kernel handlers already bound in Logic Bind)
+    // Nothing to do here; they are already data-logic-id based and logic.js Bind.init handles them.
+
+    return true;
+  }
+
+  function boot() {
+    // retry briefly until kernel ready
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      const ok = wire();
+      if (ok || tries > 80) clearInterval(t);
+    }, 50);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
