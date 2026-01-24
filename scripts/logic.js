@@ -4136,4 +4136,178 @@ PASTE HERE:
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC APPEND — HOUSE ROUTER SAFE (Rooms as closed units)
+   ---------------------------------------------------------
+   Goal:
+   - "House" behavior: each room begins/ends in BOTH image + audio
+   - Single source of truth: state.view (and scene mirrors view)
+   - NO security bypass: does NOT bind door click handlers
+   - Works with your existing Doors logic (paywall/master/demo)
+   - Provides lifecycle events for audio (optional integration)
+   ---------------------------------------------------------
+   Patches:
+   1) Dramaturgy.startToDoors() -> deterministic tunnel duration
+   2) Dramaturgy.doorsToRoom(roomScene) -> view normalization room1/room2
+   ---------------------------------------------------------
+   Place at END of scripts/logic.js
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn, fb) => { try { return fn(); } catch (e) { console.warn("[EPTEC:HOUSE_SAFE]", e); return fb; } };
+
+  // Prevent double insertion
+  if (window.__EPTEC_HOUSE_SAFE__) return;
+  window.__EPTEC_HOUSE_SAFE__ = true;
+
+  // ----- Canonical room keys -----
+  const ROOM = Object.freeze({
+    MEADOW: "meadow",
+    TUNNEL: "tunnel",
+    DOORS:  "doors",
+    ROOM1:  "room1",
+    ROOM2:  "room2"
+  });
+
+  // ----- Room Profiles (image+audio semantics) -----
+  // image is resolved via CSS by view IDs.
+  // audio is a list of keys you can map to files in your sound engine/router.
+  const PROFILE = Object.freeze({
+    [ROOM.MEADOW]: { view: "meadow", image: "meadow", audio: ["wind"] },
+    [ROOM.TUNNEL]: { view: "tunnel", image: "tunnel", audio: ["tunnelfall"] },
+    [ROOM.DOORS]:  { view: "doors",  image: "doors",  audio: [] },
+    [ROOM.ROOM1]:  { view: "room1",  image: "room1",  audio: [] },
+    [ROOM.ROOM2]:  { view: "room2",  image: "room2",  audio: [] }
+  });
+
+  // ----- UI_STATE helpers -----
+  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state), {}) || {};
+  }
+  function setState(patch) {
+    const s = store();
+    if (typeof s?.set === "function") return safe(() => s.set(patch));
+    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
+  }
+
+  // ----- Normalize incoming keys to our canonical ROOM -----
+  function normRoomFromState(st) {
+    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
+    if (!raw || raw === "start") return ROOM.MEADOW;
+    if (raw === "meadow") return ROOM.MEADOW;
+    if (raw === "tunnel") return ROOM.TUNNEL;
+    if (raw === "viewdoors" || raw === "doors") return ROOM.DOORS;
+    if (raw === "room-1" || raw === "room1") return ROOM.ROOM1;
+    if (raw === "room-2" || raw === "room2") return ROOM.ROOM2;
+    return ROOM.MEADOW;
+  }
+
+  // ----- Lifecycle event hub (room_enter/room_exit) -----
+  const Lifecycle = {
+    current: null,
+    subs: new Set(),
+    on(fn) { if (typeof fn === "function") this.subs.add(fn); return () => this.subs.delete(fn); },
+    emit(evt) { this.subs.forEach(fn => safe(() => fn(evt))); }
+  };
+
+  // Expose globally for your Sound Router / UI
+  window.EPTEC_HOUSE = window.EPTEC_HOUSE || {};
+  window.EPTEC_HOUSE.ROOM = ROOM;
+  window.EPTEC_HOUSE.PROFILE = PROFILE;
+  window.EPTEC_HOUSE.onRoomEvent = (fn) => Lifecycle.on(fn);
+
+  // ----- Core "enter room" (begin/end semantics) -----
+  function enterRoom(next, meta = {}) {
+    const prev = Lifecycle.current;
+    if (prev === next) return;
+
+    // End previous room (audio+image)
+    if (prev) {
+      Lifecycle.emit({ type: "room_exit", room: prev, profile: PROFILE[prev], meta });
+    }
+
+    // Start next room
+    Lifecycle.current = next;
+    Lifecycle.emit({ type: "room_enter", room: next, profile: PROFILE[next], meta });
+
+    // Single truth: view + scene
+    setState({ view: PROFILE[next].view, scene: PROFILE[next].view });
+  }
+
+  // Keep lifecycle aligned with current state (refresh / reload)
+  function syncFromState() {
+    const st = getState();
+    const r = normRoomFromState(st);
+    if (Lifecycle.current !== r) enterRoom(r, { cause: "sync" });
+  }
+
+  // =========================================================
+  // PATCH 1: Dramaturgy.startToDoors() tunnel duration
+  // =========================================================
+  const D = safe(() => window.EPTEC_MASTER?.Dramaturgy, null);
+  const TERMS = safe(() => window.EPTEC_MASTER?.TERMS, null);
+
+  // Set tunnel duration here (you can change freely)
+  const TUNNEL_MS = 28000; // change e.g. to 60000 for 60s
+  const WHITEOUT_MS = 520;
+
+  if (D && !D.__eptec_house_safe_patched) {
+    D.__eptec_house_safe_patched = true;
+
+    const origStartToDoors = safe(() => D.startToDoors?.bind(D), null);
+    D.startToDoors = function () {
+      // Begin tunnel as a closed unit
+      enterRoom(ROOM.TUNNEL, { cause: "startToDoors" });
+
+      // Use original for any logging/sfx side effects, but we control timing
+      safe(() => origStartToDoors?.());
+
+      // After tunnel duration -> doors
+      setTimeout(() => {
+        enterRoom(ROOM.DOORS, { cause: "tunnel_end" });
+        // Optional: also call original "to doors" if it exists in your dramaturgy
+        safe(() => this.to?.(TERMS?.scenes?.viewdoors || "viewdoors", { from: "tunnel" }));
+      }, TUNNEL_MS);
+    };
+
+    // =========================================================
+    // PATCH 2: Dramaturgy.doorsToRoom(roomScene) view normalization
+    // =========================================================
+    const origDoorsToRoom = safe(() => D.doorsToRoom?.bind(D), null);
+    if (origDoorsToRoom) {
+      D.doorsToRoom = function (roomScene) {
+        // Keep your existing whiteout behavior (optional)
+        safe(() => this.to?.(TERMS?.scenes?.whiteout || "whiteout", { from: "doors" }));
+
+        setTimeout(() => {
+          const key = String(roomScene || "").toLowerCase();
+          if (key.includes("room1")) enterRoom(ROOM.ROOM1, { cause: "doorsToRoom" });
+          else if (key.includes("room2")) enterRoom(ROOM.ROOM2, { cause: "doorsToRoom" });
+
+          // Call original to preserve any internal side effects
+          safe(() => origDoorsToRoom(roomScene));
+        }, WHITEOUT_MS);
+      };
+    }
+  }
+
+  // Boot: align lifecycle to state
+  function boot() {
+    syncFromState();
+
+    // Keep in sync on state changes
+    const s = store();
+    if (s?.subscribe) s.subscribe(() => syncFromState());
+    setInterval(syncFromState, 800);
+
+    console.log("EPTEC HOUSE SAFE active (no door bypass).");
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
 
