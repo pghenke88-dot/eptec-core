@@ -13,11 +13,22 @@
 
   <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe, hard but working)
-       - Removed overly-broad connect-src https:
-       - Kept img-src 'self' data: (fixes favicon + images)
-       - Kept script-src 'self' (no inline scripts allowed)
        ========================================================= -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; img-src 'self' data:; media-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    base-uri 'self';
+    object-src 'none';
+    frame-ancestors 'none';
+    form-action 'self';
+    upgrade-insecure-requests;
+
+    img-src 'self' data:;
+    media-src 'self' data:;
+    font-src 'self' data:;
+    style-src 'self' 'unsafe-inline';
+    script-src 'self';
+    connect-src 'self';
+  ">
 
   <!-- =========================================================
        STYLES
@@ -60,14 +71,11 @@
     <div class="sun"></div>
     <div class="stream"></div>
 
-    <!-- TITLE STACK -->
     <h1 id="eptec-title">Contract Office</h1>
     <h2 id="eptec-subtitle">by Johannes Büngener</h2>
 
-    <!-- DATE / TIME -->
     <div id="system-clock"></div>
 
-    <!-- LOGIN BOX -->
     <div class="login-box">
 
       <input id="login-username" type="text" />
@@ -76,38 +84,36 @@
         <input id="login-password" type="password" autocomplete="off" />
       </div>
 
-      <button id="btn-login">Login</button>
+      <button id="btn-login" type="button">Login</button>
       <div id="login-message" class="system-msg"></div>
 
-      <button id="btn-register">Register</button>
-      <button id="btn-forgot">Forgot password</button>
+      <button id="btn-register" type="button">Register</button>
+      <button id="btn-forgot" type="button">Forgot password</button>
 
-      <!-- DEMO -->
       <button id="btn-demo" type="button">Demo</button>
 
-      <!-- ADMIN / MASTER -->
       <div class="pw-wrap">
         <input id="admin-code" type="password" autocomplete="off" />
       </div>
-      <button id="admin-submit">Enter</button>
+      <button id="admin-submit" type="button">Enter</button>
     </div>
 
     <!-- LANGUAGE SWITCHER -->
     <div id="language-switcher">
-      <button id="lang-toggle">🌍</button>
+      <button id="lang-toggle" type="button">🌍</button>
       <div id="lang-rail">
-        <button class="lang-item" data-lang="en">EN</button>
-        <button class="lang-item" data-lang="de">DE</button>
-        <button class="lang-item" data-lang="es">ES</button>
-        <button class="lang-item" data-lang="fr">FR</button>
-        <button class="lang-item" data-lang="it">IT</button>
-        <button class="lang-item" data-lang="pt">PT</button>
-        <button class="lang-item" data-lang="nl">NL</button>
-        <button class="lang-item" data-lang="ru">RU</button>
-        <button class="lang-item" data-lang="uk">UK</button>
-        <button class="lang-item" data-lang="ar">AR</button>
-        <button class="lang-item" data-lang="cn">CN</button>
-        <button class="lang-item" data-lang="jp">JP</button>
+        <button class="lang-item" data-lang="en" type="button">EN</button>
+        <button class="lang-item" data-lang="de" type="button">DE</button>
+        <button class="lang-item" data-lang="es" type="button">ES</button>
+        <button class="lang-item" data-lang="fr" type="button">FR</button>
+        <button class="lang-item" data-lang="it" type="button">IT</button>
+        <button class="lang-item" data-lang="pt" type="button">PT</button>
+        <button class="lang-item" data-lang="nl" type="button">NL</button>
+        <button class="lang-item" data-lang="ru" type="button">RU</button>
+        <button class="lang-item" data-lang="uk" type="button">UK</button>
+        <button class="lang-item" data-lang="ar" type="button">AR</button>
+        <button class="lang-item" data-lang="zh" type="button">CN</button>
+        <button class="lang-item" data-lang="ja" type="button">JP</button>
       </div>
     </div>
 
@@ -132,30 +138,30 @@
         <h2>Construction</h2>
 
         <input id="door1-present" type="text" />
-        <button id="door1-present-apply">Apply</button>
+        <button id="door1-present-apply" type="button">Apply</button>
 
         <input id="door1-vip" type="text" />
-        <button id="door1-vip-apply">Apply</button>
+        <button id="door1-vip-apply" type="button">Apply</button>
 
         <div class="pw-wrap">
           <input id="door1-master" type="password" autocomplete="off" />
         </div>
-        <button id="door1-master-apply">Enter</button>
+        <button id="door1-master-apply" type="button">Enter</button>
       </div>
 
       <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
         <h2>Contract Controlling</h2>
 
         <input id="door2-present" type="text" />
-        <button id="door2-present-apply">Apply</button>
+        <button id="door2-present-apply" type="button">Apply</button>
 
         <input id="door2-vip" type="text" />
-        <button id="door2-vip-apply">Apply</button>
+        <button id="door2-vip-apply" type="button">Apply</button>
 
         <div class="pw-wrap">
           <input id="door2-master" type="password" autocomplete="off" />
         </div>
-        <button id="door2-master-apply">Enter</button>
+        <button id="door2-master-apply" type="button">Enter</button>
       </div>
 
     </div>
@@ -183,10 +189,10 @@
        FOOTER
        ========================================================= -->
   <footer id="eptec-footer">
-    <a id="link-imprint">Imprint</a>
-    <a id="link-terms">Terms</a>
-    <a id="link-support">Support</a>
-    <a id="link-privacy-footer">Privacy</a>
+    <a id="link-imprint" href="#">Imprint</a>
+    <a id="link-terms" href="#">Terms</a>
+    <a id="link-support" href="#">Support</a>
+    <a id="link-privacy-footer" href="#">Privacy</a>
   </footer>
 
 </body>
