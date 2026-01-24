@@ -1701,3 +1701,101 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROLLER APPEND — CANONICAL ID REGISTRY (UI ONLY)
+   Role:
+   - single source of truth for required IDs / data-logic-id
+   - non-blocking: logs missing IDs instead of crashing
+   - UI-Control layer only (DOM checks belong here)
+   Authority: UI-Control (no state writes, no business logic)
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UI_ID_REGISTRY_APPEND__) return;
+  window.__EPTEC_UI_ID_REGISTRY_APPEND__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  const REG = (window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {});
+
+  // Canonical requirements (exactly as your appendix)
+  if (!REG.required) {
+    REG.required = Object.freeze({
+      // Global UI
+      ids: [
+        "language-switcher", "lang-toggle", "lang-rail",
+        "system-clock"
+      ],
+      // Start
+      ids_start: [
+        "btn-login", "btn-demo", "btn-register", "btn-forgot",
+        "login-username", "login-password",
+        "admin-code", "admin-submit"
+      ],
+      // Doors view + under-door inputs
+      ids_doors: [
+        "door1-present", "door1-present-apply",
+        "door1-vip", "door1-vip-apply",
+        "door1-master", "door1-master-apply",
+        "door2-present", "door2-present-apply",
+        "door2-vip", "door2-vip-apply",
+        "door2-master", "door2-master-apply"
+      ],
+      // Password reset window (if present)
+      ids_reset: [
+        "master-reset-token", "master-reset-new", "master-reset-new-confirm", "master-reset-submit"
+      ],
+      // Profile logout (legacy; your index uses btn-logout-doors/room1/room2, so this may remain missing)
+      ids_profile: ["btn-logout"],
+
+      // data-logic-id (hotspots)
+      logicIds: [
+        "doors.door1", "doors.door2",
+        "r1.savepoint", "r1.table.download", "r1.mirror.download", "r1.traffic.enable",
+        "r2.hotspot.center", "r2.hotspot.left1", "r2.hotspot.left2", "r2.hotspot.right1", "r2.hotspot.right2",
+        "r2.plant.backup"
+      ]
+    });
+  }
+
+  // Non-blocking check function
+  REG.check = REG.check || function check() {
+    const missing = { ids: [], logicIds: [] };
+
+    const allIdLists = []
+      .concat(REG.required.ids || [])
+      .concat(REG.required.ids_start || [])
+      .concat(REG.required.ids_doors || [])
+      .concat(REG.required.ids_reset || [])
+      .concat(REG.required.ids_profile || []);
+
+    for (const id of allIdLists) {
+      if (!document.getElementById(id)) missing.ids.push(id);
+    }
+
+    const needLogic = REG.required.logicIds || [];
+    for (const lid of needLogic) {
+      const found = document.querySelector(`[data-logic-id="${lid}"]`);
+      if (!found) missing.logicIds.push(lid);
+    }
+
+    safe(() => window.EPTEC_ACTIVITY?.log?.("id.check", missing));
+
+    if (missing.ids.length || missing.logicIds.length) {
+      console.warn("EPTEC_ID_REGISTRY missing:", missing);
+    }
+    return missing;
+  };
+
+  // Run once on DOM ready (idempotent)
+  if (!REG.__ran_ui) {
+    REG.__ran_ui = true;
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => REG.check());
+    } else {
+      REG.check();
+    }
+  }
+
+})();
