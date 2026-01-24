@@ -819,7 +819,10 @@
 
   function toggleFeature(feature) {
     const currentState = window.EPTEC_STATE_MANAGER?.get?.();
-    const updatedFeatureState = { ...currentState, [feature]: !currentState[feature] };
+  const updatedFeatureState = {
+  ...currentState,
+  [feature]: !Boolean(currentState?.[feature])
+};
     updateState(updatedFeatureState);
     console.log(`${feature} toggled: ${updatedFeatureState[feature]}`);
   }
