@@ -1,10 +1,3 @@
-<!-- =========================================================
-     PATCH: Add missing Kernel-trigger UI hooks
-     - Adds: admin-camera-toggle, btn-logout
-     - Fills: room-1-view + room-2-view with data-logic-id hotspots
-     - Keeps everything else unchanged
-     ========================================================= -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +11,18 @@
   <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe, hard but working)
        ========================================================= -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; img-src 'self' data:; media-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 base-uri 'self';
+                 object-src 'none';
+                 frame-ancestors 'none';
+                 form-action 'self';
+                 upgrade-insecure-requests;
+                 img-src 'self' data:;
+                 media-src 'self' data:;
+                 style-src 'self' 'unsafe-inline';
+                 script-src 'self';
+                 connect-src 'self';">
 
   <!-- =========================================================
        STYLES
@@ -53,229 +57,178 @@
 
 <body>
 
-  <!-- =========================================================
-       START / MEADOW
-       ========================================================= -->
-  <section id="meadow-view" class="scene grassy-meadow">
+<!-- =========================================================
+     START / MEADOW
+     ========================================================= -->
+<section id="meadow-view" class="scene grassy-meadow">
 
-    <div class="sun"></div>
-    <div class="stream"></div>
+  <div class="sun"></div>
+  <div class="stream"></div>
 
-    <!-- TITLE STACK -->
-    <h1 id="eptec-title">Contract Office</h1>
-    <h2 id="eptec-subtitle">by Johannes Büngener</h2>
+  <h1 id="eptec-title">Contract Office</h1>
+  <h2 id="eptec-subtitle">by Johannes Büngener</h2>
 
-    <!-- DATE / TIME -->
-    <div id="system-clock"></div>
+  <div id="system-clock"></div>
 
-    <!-- LOGIN BOX -->
-    <div class="login-box">
+  <div class="login-box">
 
-      <input id="login-username" type="text" />
+    <input id="login-username" type="text" />
+
+    <div class="pw-wrap">
+      <input id="login-password" type="password" autocomplete="off" />
+    </div>
+
+    <button id="btn-login">Login</button>
+    <div id="login-message" class="system-msg"></div>
+
+    <button id="btn-register">Register</button>
+    <button id="btn-forgot">Forgot password</button>
+
+    <button id="btn-demo" type="button">Demo</button>
+
+    <div class="pw-wrap">
+      <input id="admin-code" type="password" autocomplete="off" />
+    </div>
+
+    <button id="admin-submit">Enter</button>
+
+    <label class="admin-camera-row" for="admin-camera-toggle" style="display:block; margin-top:10px;">
+      <input id="admin-camera-toggle" type="checkbox" />
+      <span>Camera (Admin option)</span>
+    </label>
+
+  </div>
+
+  <div id="language-switcher">
+    <button id="lang-toggle">🌍</button>
+    <div id="lang-rail">
+      <button class="lang-item" data-lang="en">EN</button>
+      <button class="lang-item" data-lang="de">DE</button>
+      <button class="lang-item" data-lang="es">ES</button>
+      <button class="lang-item" data-lang="fr">FR</button>
+      <button class="lang-item" data-lang="it">IT</button>
+      <button class="lang-item" data-lang="pt">PT</button>
+      <button class="lang-item" data-lang="nl">NL</button>
+      <button class="lang-item" data-lang="ru">RU</button>
+      <button class="lang-item" data-lang="uk">UK</button>
+      <button class="lang-item" data-lang="ar">AR</button>
+      <button class="lang-item" data-lang="cn">CN</button>
+      <button class="lang-item" data-lang="jp">JP</button>
+    </div>
+  </div>
+
+</section>
+
+<!-- =========================================================
+     TUNNEL
+     ========================================================= -->
+<section id="tunnel-view" class="scene tunnel-hidden">
+  <div class="tunnel-wall"></div>
+</section>
+
+<div id="eptec-white-flash" class="whiteout-hidden"></div>
+
+<!-- =========================================================
+     DOORS
+     ========================================================= -->
+<section id="doors-view" class="scene modal-hidden">
+  <div class="doors-wrapper">
+
+    <div class="door-block" id="door-construction" data-logic-id="doors.door1">
+      <h2>Construction</h2>
+
+      <input id="door1-present" type="text" />
+      <button id="door1-present-apply">Apply</button>
+
+      <input id="door1-vip" type="text" />
+      <button id="door1-vip-apply">Apply</button>
 
       <div class="pw-wrap">
-        <input id="login-password" type="password" autocomplete="off" />
+        <input id="door1-master" type="password" autocomplete="off" />
       </div>
+      <button id="door1-master-apply">Enter</button>
+    </div>
 
-      <button id="btn-login">Login</button>
-      <div id="login-message" class="system-msg"></div>
+    <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
+      <h2>Contract Controlling</h2>
 
-      <button id="btn-register">Register</button>
-      <button id="btn-forgot">Forgot password</button>
+      <input id="door2-present" type="text" />
+      <button id="door2-present-apply">Apply</button>
 
-      <!-- DEMO -->
-      <button id="btn-demo" type="button">Demo</button>
+      <input id="door2-vip" type="text" />
+      <button id="door2-vip-apply">Apply</button>
 
-      <!-- ADMIN / MASTER -->
       <div class="pw-wrap">
-        <input id="admin-code" type="password" autocomplete="off" />
+        <input id="door2-master" type="password" autocomplete="off" />
       </div>
-
-      <button id="admin-submit">Enter</button>
-
-      <!-- =========================================================
-           PATCH: admin camera option (Kernel Entry.setCameraOption)
-           ========================================================= -->
-      <label class="admin-camera-row" for="admin-camera-toggle" style="display:block; margin-top:10px;">
-        <input id="admin-camera-toggle" type="checkbox" />
-        <span>Camera (Admin option)</span>
-      </label>
-
+      <button id="door2-master-apply">Enter</button>
     </div>
 
-    <!-- LANGUAGE SWITCHER -->
-    <div id="language-switcher">
-      <button id="lang-toggle">🌍</button>
-      <div id="lang-rail">
-        <button class="lang-item" data-lang="en">EN</button>
-        <button class="lang-item" data-lang="de">DE</button>
-        <button class="lang-item" data-lang="es">ES</button>
-        <button class="lang-item" data-lang="fr">FR</button>
-        <button class="lang-item" data-lang="it">IT</button>
-        <button class="lang-item" data-lang="pt">PT</button>
-        <button class="lang-item" data-lang="nl">NL</button>
-        <button class="lang-item" data-lang="ru">RU</button>
-        <button class="lang-item" data-lang="uk">UK</button>
-        <button class="lang-item" data-lang="ar">AR</button>
-        <button class="lang-item" data-lang="cn">CN</button>
-        <button class="lang-item" data-lang="jp">JP</button>
-      </div>
+    <div style="width:100%; margin-top:16px; text-align:center;">
+      <button id="btn-logout-doors" type="button">Logout</button>
     </div>
 
-  </section>
+  </div>
+</section>
 
-  <!-- =========================================================
-       TUNNEL
-       ========================================================= -->
-  <section id="tunnel-view" class="scene tunnel-hidden">
-    <div class="tunnel-wall"></div>
-  </section>
+<!-- =========================================================
+     ROOM 1
+     ========================================================= -->
+<section id="room-1-view" class="scene modal-hidden">
+  <div class="room room1">
 
-  <div id="eptec-white-flash" class="whiteout-hidden"></div>
+    <h2>Room 1</h2>
 
-  <!-- =========================================================
-       DOORS
-       ========================================================= -->
-  <section id="doors-view" class="scene modal-hidden">
-    <div class="doors-wrapper">
+    <button data-logic-id="r1.savepoint">Savepoint (Download)</button>
+    <button data-logic-id="r1.table.download">Download: Composed Text</button>
+    <button data-logic-id="r1.mirror.download">Download: Snippets + Law</button>
+    <button data-logic-id="r1.traffic.enable">Activate Traffic Light</button>
 
-      <div class="door-block" id="door-construction" data-logic-id="doors.door1">
-        <h2>Construction</h2>
+    <button id="btn-logout-room1" type="button">Logout</button>
 
-        <input id="door1-present" type="text" />
-        <button id="door1-present-apply">Apply</button>
+  </div>
+</section>
 
-        <input id="door1-vip" type="text" />
-        <button id="door1-vip-apply">Apply</button>
+<!-- =========================================================
+     ROOM 2
+     ========================================================= -->
+<section id="room-2-view" class="scene modal-hidden">
+  <div class="room room2">
 
-        <div class="pw-wrap">
-          <input id="door1-master" type="password" autocomplete="off" />
-        </div>
-        <button id="door1-master-apply">Enter</button>
-      </div>
+    <h2>Room 2</h2>
 
-      <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
-        <h2>Contract Controlling</h2>
+    <button data-logic-id="r2.hotspot.left1">Left 1</button>
+    <button data-logic-id="r2.hotspot.left2">Left 2</button>
+    <button data-logic-id="r2.hotspot.center">Center</button>
+    <button data-logic-id="r2.hotspot.right1">Right 1</button>
+    <button data-logic-id="r2.hotspot.right2">Right 2</button>
 
-        <input id="door2-present" type="text" />
-        <button id="door2-present-apply">Apply</button>
+    <button data-logic-id="r2.plant.backup">Plant: Backup Protocol</button>
 
-        <input id="door2-vip" type="text" />
-        <button id="door2-vip-apply">Apply</button>
+    <button id="btn-logout-room2" type="button">Logout</button>
 
-        <div class="pw-wrap">
-          <input id="door2-master" type="password" autocomplete="off" />
-        </div>
-        <button id="door2-master-apply">Enter</button>
-      </div>
+  </div>
+</section>
 
-      <!-- =========================================================
-           PATCH: Logout trigger available in Doors (Kernel Auth.logout)
-           ========================================================= -->
-      <div style="width:100%; margin-top:16px; text-align:center;">
-        <button id="btn-logout" type="button">Logout</button>
-      </div>
+<!-- =========================================================
+     MODALS
+     ========================================================= -->
+<section id="register-screen" class="modal modal-hidden"></section>
+<section id="forgot-screen" class="modal modal-hidden"></section>
 
-    </div>
-  </section>
+<section id="legal-screen" class="modal modal-hidden">
+  <button id="legal-close">Close</button>
+  <h2 id="legal-title"></h2>
+  <div id="legal-body"></div>
+</section>
 
-  <!-- =========================================================
-       ROOMS
-       ========================================================= -->
-
-  <!-- =======================
-       PATCH: ROOM 1 UI HOOKS
-       matches Logic Bindings:
-       - r1.savepoint
-       - r1.table.download
-       - r1.mirror.download
-       - r1.traffic.enable
-       ======================= -->
-  <section id="room-1-view" class="scene modal-hidden">
-    <div class="room room1">
-
-      <h2>Room 1</h2>
-
-      <div class="room-row">
-        <button type="button" data-logic-id="r1.savepoint">Savepoint (Download)</button>
-      </div>
-
-      <div class="room-row">
-        <button type="button" data-logic-id="r1.table.download">Download: Composed Text</button>
-      </div>
-
-      <div class="room-row">
-        <button type="button" data-logic-id="r1.mirror.download">Download: Snippets + Law</button>
-      </div>
-
-      <div class="room-row">
-        <button type="button" data-logic-id="r1.traffic.enable">Activate Traffic Light</button>
-      </div>
-
-      <div class="room-row" style="margin-top:16px;">
-        <button id="btn-logout" type="button">Logout</button>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- =======================
-       PATCH: ROOM 2 UI HOOKS
-       matches Logic Bindings:
-       - r2.hotspot.center
-       - r2.hotspot.left1
-       - r2.hotspot.left2
-       - r2.hotspot.right1
-       - r2.hotspot.right2
-       - r2.plant.backup
-       ======================= -->
-  <section id="room-2-view" class="scene modal-hidden">
-    <div class="room room2">
-
-      <h2>Room 2</h2>
-
-      <div class="room-grid">
-        <button type="button" data-logic-id="r2.hotspot.left1">Left 1 (Download)</button>
-        <button type="button" data-logic-id="r2.hotspot.left2">Left 2 (Upload)</button>
-
-        <button type="button" data-logic-id="r2.hotspot.center">Center (Upload)</button>
-
-        <button type="button" data-logic-id="r2.hotspot.right1">Right 1 (Download)</button>
-        <button type="button" data-logic-id="r2.hotspot.right2">Right 2 (Upload)</button>
-      </div>
-
-      <div class="room-row" style="margin-top:16px;">
-        <button type="button" data-logic-id="r2.plant.backup">Plant: Backup Protocol</button>
-      </div>
-
-      <div class="room-row" style="margin-top:16px;">
-        <button id="btn-logout" type="button">Logout</button>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- =========================================================
-       MODALS
-       ========================================================= -->
-  <section id="register-screen" class="modal modal-hidden"></section>
-  <section id="forgot-screen" class="modal modal-hidden"></section>
-
-  <section id="legal-screen" class="modal modal-hidden">
-    <button id="legal-close" type="button">Close</button>
-    <h2 id="legal-title"></h2>
-    <div id="legal-body"></div>
-  </section>
-
-  <!-- =========================================================
-       FOOTER
-       ========================================================= -->
-  <footer id="eptec-footer">
-    <a id="link-imprint">Imprint</a>
-    <a id="link-terms">Terms</a>
-    <a id="link-support">Support</a>
-    <a id="link-privacy-footer">Privacy</a>
-  </footer>
+<footer id="eptec-footer">
+  <a id="link-imprint">Imprint</a>
+  <a id="link-terms">Terms</a>
+  <a id="link-support">Support</a>
+  <a id="link-privacy-footer">Privacy</a>
+</footer>
 
 </body>
 </html>
+
