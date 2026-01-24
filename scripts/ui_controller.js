@@ -286,3 +286,58 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC UI APPEND — APPLY ROOM IMAGE VARIANT CLASS
+   Uses: EPTEC_ROOM_REGISTRY.REGISTRY[view].images[]
+   ========================================================= */
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+
+  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+  function getState(){ const s=store(); return safe(()=> (typeof s?.get==="function"?s.get():s?.state))||{}; }
+
+  function subscribe(fn){
+    const s=store();
+    if (s?.subscribe) return s.subscribe(fn);
+    setInterval(() => fn(getState()), 400);
+  }
+
+  function norm(st){
+    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
+    if (!raw || raw === "start" || raw === "meadow") return "meadow";
+    if (raw === "tunnel") return "tunnel";
+    if (raw === "viewdoors" || raw === "doors") return "doors";
+    if (raw === "room1" || raw === "room-1") return "room1";
+    if (raw === "room2" || raw === "room-2") return "room2";
+    return "meadow";
+  }
+
+  function applyVariant() {
+    const st = getState();
+    const view = norm(st);
+    const R = window.EPTEC_ROOM_REGISTRY;
+    if (!R) return;
+
+    // choose variant:
+    // - default = first image
+    // - or allow state.imageVariant to pick one
+    const variants = R.REGISTRY[view]?.images || [];
+    const want = String(st?.imageVariant || variants[0] || "");
+
+    // clear previous room-classes
+    document.documentElement.className = document.documentElement.className
+      .split(" ")
+      .filter(c => !c.startsWith("room-"))
+      .join(" ");
+
+    if (want) document.documentElement.classList.add(`room-${view}--${want}`);
+  }
+
+  function boot(){
+    applyVariant();
+    subscribe(applyVariant);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
