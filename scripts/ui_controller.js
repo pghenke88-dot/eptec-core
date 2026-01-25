@@ -1322,3 +1322,60 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC FORCE APPEND — UI BASICS (CLICK + LANG + AUDIO)
+   - guarantees: audio unlock on first interaction
+   - guarantees: globe toggles language rail
+   - guarantees: language item applies EPTEC_I18N.apply(lang)
+   - append-only: does NOT block other handlers (no stopPropagation)
+   ========================================================= */
+(() => {
+  "use strict";
+  if (window.__EPTEC_FORCE_UI_BASICS__) return;
+  window.__EPTEC_FORCE_UI_BASICS__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch {} };
+  const $ = (id) => document.getElementById(id);
+
+  function unlockAudio() {
+    safe(() => window.SoundEngine?.unlockAudio?.());
+    safe(() => window.EPTEC_MASTER?.Audio?.unlockOnce?.());
+  }
+
+  function uiConfirm() {
+    unlockAudio();
+    safe(() => window.SoundEngine?.uiConfirm?.());
+  }
+
+  function boot() {
+    // 1) unlock on first real user gesture
+    document.addEventListener("pointerdown", unlockAudio, { once: true, passive: true, capture: true });
+
+    // 2) globe toggles rail (works even if css/other code fails)
+    const globe = $("lang-toggle");
+    if (globe && !globe.__eptec_force_bound) {
+      globe.__eptec_force_bound = true;
+      globe.addEventListener("click", () => {
+        uiConfirm();
+        const rail = $("lang-rail");
+        if (rail) rail.classList.toggle("open");
+      }, true);
+    }
+
+    // 3) language items always apply language
+    document.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".lang-item,[data-lang]");
+      if (!btn) return;
+      const lang = btn.getAttribute("data-lang");
+      if (!lang) return;
+
+      uiConfirm();
+      safe(() => window.EPTEC_I18N?.apply?.(lang));
+      const rail = $("lang-rail");
+      if (rail) rail.classList.remove("open");
+    }, true);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
