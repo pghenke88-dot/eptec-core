@@ -2251,3 +2251,65 @@
 
   // Beispiel-Trigger für deine Buttons (in die Logik einbauen):
   // document.getElementById('to-register').onclick = () => EPTEC_FORCE_ROOM('register');
+// =======================================================================
+  // EPTEC RELAY-SYSTEM: GESICHERTE WEITERGABE (INDEX -> LOGIK -> CONTROLLER)
+  // =======================================================================
+
+  /**
+   * Dieser Enforcer stellt sicher, dass Aufträge der Logik 
+   * zwangsweise an den UI-Controller und die Setz-Skripte gehen.
+   */
+  const EPTEC_RELAY = {
+    // Der zentrale Hub für die Auftrags-Weitergabe
+    sendOrder: function(task, payload) {
+      console.log(`[RELAY] Auftrag '${task}' von Logik empfangen.`);
+
+      // 1. SCHRITT: Weitergabe an den UI-Controller zur Konkretisierung
+      // Wir erzwingen den Zugriff, egal wo der Controller im Skript steht.
+      if (typeof UIController !== 'undefined') {
+        UIController.konkretisiere(task, payload);
+        console.log(`[RELAY-CONTROLLER] Auftrag an Controller übergeben.`);
+      }
+
+      // 2. SCHRITT: Direkte physische Setzung (Die Gewalt-Ebene)
+      // Das sorgt dafür, dass die Skripte 'setze' etc. sofort reagieren.
+      this.enforcePhysicalSet(task, payload);
+    },
+
+    // Schreibt den Befehl direkt ins DOM, damit alle Dateien reagieren
+    enforcePhysicalSet: function(task, payload) {
+      // Setzt den Raum-Zustand global (für CSS und andere JS-Dateien)
+      if (task === 'SET_ROOM') {
+        document.documentElement.setAttribute('data-eptec-current-room', payload.room);
+        console.log(`[RELAY-DOM] Raum '${payload.room}' physisch gesetzt.`);
+      }
+
+      // Setzt die Sprache im gesamten System
+      if (task === 'SET_LANG') {
+        document.documentElement.setAttribute('data-eptec-lang', payload.lang);
+        if (typeof setLanguage === 'function') setLanguage(payload.lang);
+      }
+    }
+  };
+
+  // Macht das Relay für die Index.html und andere Skripte verfügbar
+  window.EPTEC_LOGIC_ORDER = (task, payload) => EPTEC_RELAY.sendOrder(task, payload);
+
+  // =======================================================================
+  // INITIALER KETTEN-START (Sobald die Main geladen ist)
+  // =======================================================================
+  (function activateChain() {
+    console.log("[MAIN-END] Logik-Kette gesichert. Initialisiere Start-Raum.");
+    
+    // Kleiner Delay, damit der UI-Controller Zeit zum 'Atmen' hat
+    setTimeout(() => {
+      // Wir erzwingen den Start-Zustand (Login) über die gesicherte Kette
+      window.EPTEC_LOGIC_ORDER('SET_ROOM', { room: 'login' });
+      
+      // Weltkugel-Reiter (Sprach-Orb) aktivieren
+      if (typeof initLanguageOrb === 'function') initLanguageOrb();
+    }, 100);
+  })();
+
+// --- HIER ENDET DIE MAIN.JS ---
+})();
