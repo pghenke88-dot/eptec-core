@@ -1,71 +1,152 @@
 (() => {
   "use strict";
 
-  /* =========================================================
-     UI-CONTROL — Referenz auf Logik und ClickChain-Aktivierung
-     ========================================================= */
+ /* =========================================================
+   EPTEC UI-CONTROL — DVO-ONLY (NO INVENTED WORDS)
+   ---------------------------------------------------------
+   Rule: UI-Control uses ONLY:
+   - EPTEC_KAMEL_HEAD.DVO.scenes
+   - EPTEC_KAMEL_HEAD.DVO.triggers
+   - EPTEC_KAMEL_HEAD.DVO.docs
+   - EPTEC_KAMEL_HEAD.DVO.mediaSets
+   ========================================================= */
 
-  // Referenz auf die Logik (Logik-Modul muss diese Funktionen aufrufen)
-  const Logic = window.EPTEC_LOGIC || {}; // Diese Referenz wird von der Logik bereitgestellt
+(() => {
+  "use strict";
 
-  // Funktion, die von der Logik aufgerufen wird, um Aufträge zu übergeben
-  function triggerUIControlAction(action, payload) {
-    switch (action) {
-      case 'activateClickChain': // Aufruf zur Aktivierung der ClickChain
-        activateClickChain(payload);
-        break;
-      case 'playSound': // Falls Sound abgespielt werden muss (z.B. bei Klick)
-        playSound(payload);
-        break;
-      case 'loadImage': // Bild laden und anzeigen
-        loadImage(payload);
-        break;
-      default:
-        console.error(`Unrecognized action: ${action}`);
-    }
+  const Safe = {
+    try(fn, scope="UICTRL_DVO"){ try { return fn(); } catch(e){ console.error(`[EPTEC:${scope}]`, e); return undefined; } }
+  };
+
+  const HEAD = () => window.EPTEC_KAMEL_HEAD || null;
+  const DVO  = () => HEAD()?.DVO || null;
+  const K    = () => window.EPTEC_MASTER || window.EPTEC?.kernel || null;   // scripts/logic.js
+
+  function dvoTrigger(name){
+    // name MUST be one of DVO.triggers.* keys (boot, login, demo, door1, ...)
+    return DVO()?.triggers?.[name] || null;
+  }
+  function dvoScene(name){
+    return DVO()?.scenes?.[name] || null;
+  }
+  function dvoDoc(name){
+    return DVO()?.docs?.[name] || null;
   }
 
-  // Funktion zur Aktivierung der ClickChain (aus der Logik aufgerufen)
-  function activateClickChain(payload) {
-    // Wir geben hier den Auftrag an die ClickChain-Datei weiter
-    if (payload && payload.sound) {
-      playSound(payload.sound); // Sound abspielen, wenn im Payload angegeben
-    }
-    if (payload && payload.image) {
-      loadImage(payload.image); // Bild laden, wenn im Payload angegeben
-    }
-    console.log("ClickChain aktiviert mit Payload: ", payload);
+  // ---------------------------------------------------------
+  // DVO-KANÄLE (ClickChains) – KEINE erfundenen Namen
+  // Key = exakter Trigger-String aus DVO.triggers.*
+  // ---------------------------------------------------------
+  const KANAELE = Object.create(null);
+
+  // system.boot
+  KANAELE[dvoTrigger("boot")] = () => {
+    const scene = dvoScene("start");
+    Safe.try(() => K()?.Dramaturgy?.to?.(scene, { boot:true }), "BOOT:Dramaturgy.to"); // scripts/logic.js
+  };
+
+  // btn-login
+  KANAELE[dvoTrigger("login")] = () => {
+    const u = String(document.getElementById("login-username")?.value || "");
+    const p = String(document.getElementById("login-password")?.value || "");
+    Safe.try(() => K()?.Entry?.userLogin?.(u, p), "LOGIN:Entry.userLogin"); // scripts/logic.js
+  };
+
+  // btn-demo
+  KANAELE[dvoTrigger("demo")] = () => {
+    Safe.try(() => K()?.Entry?.demo?.(), "DEMO:Entry.demo"); // scripts/logic.js
+  };
+
+  // admin-submit
+  KANAELE[dvoTrigger("masterEnter")] = () => {
+    const code = String(document.getElementById("admin-code")?.value || "");
+    Safe.try(() => K()?.Entry?.authorStartMaster?.(code), "MASTER:Entry.authorStartMaster"); // scripts/logic.js
+  };
+
+  // doors.door1 / doors.door2
+  KANAELE[dvoTrigger("door1")] = () => {
+    Safe.try(() => K()?.Doors?.clickDoor?.(K()?.TERMS?.doors?.door1 || "door1"), "DOOR1:Doors.clickDoor"); // scripts/logic.js
+  };
+  KANAELE[dvoTrigger("door2")] = () => {
+    Safe.try(() => K()?.Doors?.clickDoor?.(K()?.TERMS?.doors?.door2 || "door2"), "DOOR2:Doors.clickDoor"); // scripts/logic.js
+  };
+
+  // Footer docs (imprint/terms/support/privacyFooter)
+  function openDoc(docKey){
+    // delegation target: transparency_ui.js (optional API) OR your own loader later
+    Safe.try(() => window.TransparencyUI?.openLegal?.(docKey), "DOC:TransparencyUI.openLegal"); // scripts/transparency_ui.js
   }
 
-  // Funktion zum Abspielen von Sound
-  function playSound(soundName) {
-    const sound = document.getElementById(soundName);
-    if (sound) {
-      sound.play();
-      console.log(`Sound "${soundName}" abgespielt.`);
-    } else {
-      console.error(`Sound "${soundName}" nicht gefunden.`);
+  KANAELE[dvoTrigger("imprint")] = () => openDoc(dvoDoc("imprint"));
+  KANAELE[dvoTrigger("terms")]   = () => openDoc(dvoDoc("terms"));
+  KANAELE[dvoTrigger("support")] = () => openDoc(dvoDoc("support"));
+  KANAELE[dvoTrigger("privacyFooter")] = () => openDoc(dvoDoc("privacy"));
+
+  // logout.any
+  KANAELE[dvoTrigger("logoutAny")] = () => {
+    Safe.try(() => K()?.Auth?.logout?.(), "LOGOUT:Auth.logout"); // scripts/logic.js
+  };
+
+  // ---------------------------------------------------------
+  // DVO-TRIGGER RESOLVER (data-logic-id oder id)
+  // ---------------------------------------------------------
+  function resolveDvoTriggerFromEventTarget(t){
+    if (!t) return null;
+
+    // lang-item is its own DVO trigger (DVO.triggers.langItem)
+    if (t.classList?.contains("lang-item")) return dvoTrigger("langItem");
+
+    const dl = t.getAttribute?.("data-logic-id");
+    if (dl) return dl;
+
+    const id = t.id;
+    if (id) {
+      // camera toggle mapping to DVO triggers cameraOn/cameraOff
+      if (id === "admin-camera-toggle") return t.checked ? dvoTrigger("cameraOn") : dvoTrigger("cameraOff");
+      // normal ids may match DVO triggers directly (btn-login etc.)
+      return id;
     }
+    return null;
   }
 
-  // Funktion zum Laden eines Bildes
-  function loadImage(imageName) {
-    const imageElement = document.getElementById('image-container'); // Container für das Bild
-    if (imageElement) {
-      imageElement.src = `assets/images/${imageName}.jpg`; // Bildpfad und Erweiterung
-      console.log(`Bild "${imageName}" geladen.`);
-    } else {
-      console.error(`Bild-Container nicht gefunden.`);
-    }
-  }
+  // ---------------------------------------------------------
+  // GLOBAL CAPTURE: Jeder Klick kommt an → führt DVO-Kanal aus
+  // ---------------------------------------------------------
+  document.addEventListener("click", (e) => {
+    const trig = resolveDvoTriggerFromEventTarget(e.target);
+    if (!trig) return;
 
-  // Weitergabe des Auftrags an die Logik
-  if (Logic) {
-    Logic.triggerUIControlAction = triggerUIControlAction;
-    console.log("UI-Control bereit, Aufträge von Logik entgegenzunehmen.");
-  } else {
-    console.error("Logik-Modul nicht verfügbar.");
-  }
+    const fn = KANAELE[trig];
+    if (!fn) return; // unknown trigger -> no crash (AXIOM 8 spirit)
+
+    Safe.try(() => fn(), `KANAL:${trig}`);
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    e.stopImmediatePropagation?.();
+  }, true);
+
+  document.addEventListener("change", (e) => {
+    const trig = resolveDvoTriggerFromEventTarget(e.target);
+    if (!trig) return;
+
+    const fn = KANAELE[trig];
+    if (!fn) return;
+
+    Safe.try(() => fn(), `KANAL:${trig}`);
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    e.stopImmediatePropagation?.();
+  }, true);
+
+  // Boot via DVO trigger
+  document.addEventListener("DOMContentLoaded", () => {
+    const bootTrig = dvoTrigger("boot");
+    const fn = KANAELE[bootTrig];
+    if (fn) Safe.try(() => fn(), "KANAL:system.boot");
+  }, { once:true });
+
+})();
+
 
 })();
 /* =========================================================
