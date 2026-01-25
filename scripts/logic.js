@@ -10,6 +10,234 @@
 
 (() => {
   "use strict";
+/* =========================================================
+   EPTEC KAMEL — FIRST MODULE (KERNEL HEAD CONTRACT)
+   Place: TOP OF scripts/logic.js (FIRST!)
+   ---------------------------------------------------------
+   Purpose:
+   - Provide ONE stable reference surface for UI-Control.
+   - Define canonical contracts: phases, triggers, docs, roles, media-set IDs.
+   - Provide activation hooks: UI-Control can call .wireClickmaster(...)
+   - NO DOM binding here. NO audio. NO visuals. NO chain execution.
+   - AXIOM-safe: append-only, non-destructive.
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // Idempotent: never redefine/overwrite
+  if (window.EPTEC_KAMEL_HEAD && window.EPTEC_KAMEL_HEAD.__ACTIVE) return;
+
+  const Safe = {
+    try(fn, scope = "KAMEL_HEAD") { try { return fn(); } catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; } },
+    str(x) { return String(x ?? ""); },
+    isFn(x) { return typeof x === "function"; },
+    isObj(x) { return x && typeof x === "object" && !Array.isArray(x); },
+    now() { return Date.now(); },
+    iso() { return new Date().toISOString(); }
+  };
+
+  /* ---------------------------------------------------------
+     CANONICAL DVO TERMS — single naming contract for UI-Control
+     (UI-Control must reference these, not invent its own words)
+     --------------------------------------------------------- */
+  const DVO = Object.freeze({
+    // Scenes / phases (must align with your TERMS.scenes later)
+    scenes: Object.freeze({
+      start: "start",
+      tunnel: "tunnel",
+      viewdoors: "viewdoors",
+      whiteout: "whiteout",
+      room1: "room1",
+      room2: "room2"
+    }),
+
+    // Roles
+    roles: Object.freeze({
+      demo: "demo",
+      user: "user",
+      vip: "vip",
+      author: "author"
+    }),
+
+    // Fixed timings (single truth)
+    durations: Object.freeze({
+      tunnelMs: 20000,   // you decided: 20 seconds (change ONLY here)
+      whiteoutMs: 380
+    }),
+
+    // Consent doc keys (Local/Dock)
+    docs: Object.freeze({
+      imprint: "imprint",
+      terms: "terms",
+      support: "support",
+      privacy: "privacy",
+
+      // Special purpose consents/partials (optional)
+      terms_bundle: "terms_bundle",
+      terms_sharing: "terms_sharing"
+    }),
+
+    // MediaSet IDs (JWG stable names; mapping to assets happens elsewhere)
+    mediaSets: Object.freeze({
+      START: "JWG_START",
+      TUNNEL: "JWG_TUNNEL",
+      DOORS: "JWG_DOORS",
+      ROOM1: "JWG_ROOM1",
+      ROOM2: "JWG_ROOM2"
+    }),
+
+    // Global triggers (canonical click IDs / system events)
+    triggers: Object.freeze({
+      boot: "system.boot",
+      tunnelExpired: "timer.tunnel.expired",
+      logoutAny: "logout.any",
+
+      login: "btn-login",
+      register: "btn-register",
+      forgot: "btn-forgot",
+      demo: "btn-demo",
+      masterEnter: "admin-submit",
+
+      cameraOn: "admin-camera-toggle:on",
+      cameraOff: "admin-camera-toggle:off",
+
+      door1: "doors.door1",
+      door2: "doors.door2",
+
+      langToggle: "lang-toggle",
+      langItem: "lang-item",
+
+      imprint: "link-imprint",
+      terms: "link-terms",
+      support: "link-support",
+      privacyFooter: "link-privacy-footer",
+
+      legalAccept: "legal-accept",
+      legalClose: "legal-close"
+    })
+  });
+
+  /* ---------------------------------------------------------
+     ROLE POLICY — what is allowed (UI-Control uses this)
+     --------------------------------------------------------- */
+  const ROLE_POLICY = Object.freeze({
+    demo: Object.freeze({
+      canCapture: false,
+      canUnlock: false,
+      canEnterRooms: true,         // demo can "peek"
+      canUseRoomFunctions: false   // demo sees but can't do
+    }),
+    user: Object.freeze({
+      canCapture: false,
+      canUnlock: true,
+      canEnterRooms: true,
+      canUseRoomFunctions: true
+    }),
+    vip: Object.freeze({
+      canCapture: false,
+      canUnlock: true,
+      canEnterRooms: true,
+      canUseRoomFunctions: true
+    }),
+    author: Object.freeze({
+      canCapture: true,
+      canUnlock: true,
+      canEnterRooms: true,
+      canUseRoomFunctions: true
+    })
+  });
+
+  /* ---------------------------------------------------------
+     STABLE REFERENCES (set later by kernel)
+     UI-Control can read these to know kernel readiness.
+     --------------------------------------------------------- */
+  const Refs = {
+    kernel: null,        // window.EPTEC_MASTER (later)
+    uiState: null,       // window.EPTEC_UI_STATE (later)
+    uiControl: null,     // window.EPTEC_UI_CONTROLLER (optional)
+    clickmaster: null    // window.EPTEC_CLICKMASTER (external file) (optional)
+  };
+
+  function refreshRefs() {
+    Refs.kernel = window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+    Refs.uiState = window.EPTEC_UI_STATE || null;
+    Refs.uiControl = window.EPTEC_UI_CONTROLLER || null;
+    Refs.clickmaster = window.EPTEC_CLICKMASTER || null;
+    return Refs;
+  }
+
+  function isKernelReady() {
+    refreshRefs();
+    const k = Refs.kernel;
+    const s = Refs.uiState;
+    return !!(k && s && Safe.isFn(s.get) && Safe.isFn(s.set));
+  }
+
+  /* ---------------------------------------------------------
+     WIRING HOOK (this is what you asked for!)
+     UI-Control can reference this FIRST MODULE and get instructions.
+     --------------------------------------------------------- */
+
+  /**
+   * wireClickmaster()
+   * - Called by UI-Control (or by kernel later) once everything exists.
+   * - Connects UI-Control to external Clickmaster file if you have one.
+   * - Does NOT bind DOM itself. Does NOT execute chains.
+   */
+  function wireClickmaster(options = {}) {
+    refreshRefs();
+
+    const k = Refs.kernel;
+    const ui = Refs.uiState;
+
+    // If kernel not ready yet, we do nothing (UI-Control can retry)
+    if (!k || !ui) return { ok: false, reason: "kernel_not_ready" };
+
+    // Update refs from options
+    if (options.uiControl && Safe.isObj(options.uiControl)) Refs.uiControl = options.uiControl;
+    if (options.clickmaster && Safe.isObj(options.clickmaster)) Refs.clickmaster = options.clickmaster;
+
+    // If an external clickmaster exists and has activate(), UI-Control may call it
+    const cm = Refs.clickmaster;
+    const canActivate = !!(cm && Safe.isFn(cm.activate));
+
+    return {
+      ok: true,
+      kernelReady: true,
+      canActivateClickmaster: canActivate,
+      refs: { kernel: !!k, uiState: !!ui, uiControl: !!Refs.uiControl, clickmaster: !!cm },
+      dvo: DVO,
+      policy: ROLE_POLICY
+    };
+  }
+
+  /* ---------------------------------------------------------
+     PUBLIC OBJECT (THIS is the reference UI-Control uses)
+     --------------------------------------------------------- */
+  const HEAD = Object.freeze({
+    __ACTIVE: true,
+    createdAt: Safe.iso(),
+
+    // The DVO words/keys UI-Control must use
+    DVO,
+
+    // Role policy
+    ROLE_POLICY,
+
+    // Live refs + readiness helpers
+    refreshRefs,
+    isKernelReady,
+
+    // The wiring hook UI-Control calls
+    wireClickmaster
+  });
+
+  window.EPTEC_KAMEL_HEAD = HEAD;
+
+  console.log("[EPTEC] KAMEL_HEAD ACTIVE (first module).");
+
+})();
 
   /* =========================================================
      CORE AXIOMS – SYSTEM-GOVERNING RULES
