@@ -2762,10 +2762,7 @@ PASTE HERE:
 
     safe(() => window.EPTEC_ACTIVITY?.log?.("id.check", missing));
     // No crash — only log to console for you during dev
-    if (missing.ids.length || missing.logicIds.length) {
-      console.warn("EPTEC_ID_REGISTRY missing:", missing);
-    }
-    return missing;
+   
   };
 
   // run once on DOM ready (idempotent)
