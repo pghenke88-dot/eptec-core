@@ -1,243 +1,84 @@
 /**
- * scripts/ui_state.js
- * EPTEC UI-STATE — FINAL (i18n.lang canonical, lang alias accepted)
+ * scripts/main.js
+ * EPTEC MAIN — BOOT ORCHESTRATOR (NO DECISIONS)
  *
- * Goals:
- * - Pure state only (no DOM, no backend, no audio)
- * - Canonical: i18n.lang + i18n.dir
- * - Accepts legacy input: lang / locale (alias), but normalizes into i18n.*
- * - Keeps a synchronized read-only mirror "lang" for legacy readers (optional)
+ * Purpose:
+ * - Ensure all critical globals exist (UI_STATE, KAMEL_HEAD, MASTER, MOCK_BACKEND)
+ * - Run ONE deterministic boot step when ready
+ * - Never binds UI events (UI-Control/Clickmaster handle that)
+ * - Never changes business logic
  */
 
 (() => {
   "use strict";
 
-  const STORAGE_LANG = "EPTEC_LANG";
-  const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+  if (window.__EPTEC_MAIN_BOOT__) return;
+  window.__EPTEC_MAIN_BOOT__ = true;
 
-  function deepMerge(base, patch) {
-    if (!isObj(base)) base = {};
-    if (!isObj(patch)) return base;
-    for (const k of Object.keys(patch)) {
-      const bv = base[k], pv = patch[k];
-      if (isObj(bv) && isObj(pv)) base[k] = deepMerge({ ...bv }, pv);
-      else base[k] = pv;
-    }
-    return base;
-  }
-
-  function normLang(raw) {
-    const s = String(raw || "en").toLowerCase().trim();
-    if (s === "ua") return "uk";
-    if (s === "zh") return "cn";
-    if (s === "ja") return "jp";
-    if (["en","de","es","fr","it","pt","nl","ru","uk","ar","cn","jp"].includes(s)) return s;
-    return "en";
-  }
-
-  function loadLang() {
-    try {
-      const v = localStorage.getItem(STORAGE_LANG);
-      if (v) return normLang(v);
-    } catch {}
-    return null;
-  }
-
-  function saveLang(lang) {
-    try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
-  }
-
-  function normView(raw) {
-    const x = String(raw || "meadow").trim().toLowerCase();
-
-    if (x === "meadow") return "meadow";
-    if (x === "tunnel") return "tunnel";
-    if (x === "doors") return "doors";
-    if (x === "room1") return "room1";
-    if (x === "room2") return "room2";
-
-    if (x === "wiese" || x === "start" || x === "entry") return "meadow";
-    if (x === "viewdos" || x === "zwischenraum" || x === "doors-view") return "doors";
-    if (x === "r1") return "room1";
-    if (x === "r2") return "room2";
-
-    if (x === "viewdoors") return "doors";
-    if (x === "whiteout") return "doors";
-
-    return "meadow";
-  }
-
-  function normScene(raw) {
-    const x = String(raw || "").trim().toLowerCase();
-    if (!x) return "";
-    if (x === "start") return "start";
-    if (x === "tunnel") return "tunnel";
-    if (x === "viewdoors") return "viewdoors";
-    if (x === "whiteout") return "whiteout";
-    if (x === "room1") return "room1";
-    if (x === "room2") return "room2";
-    return x;
-  }
-
-  const DEFAULTS = {
-    view: "meadow",
-    scene: "",
-
-    modal: null,
-    legalKey: null,
-
-    // canonical i18n
-    i18n: { lang: "en", dir: "ltr" },
-
-    // Kernel may use richer mode objects; keep flexible
-    modes: {},
-
-    transition: { tunnelActive: false, whiteout: false, last: null }
+  const Safe = {
+    try(fn, scope="MAIN") { try { return fn(); } catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; } },
+    iso() { return new Date().toISOString(); }
   };
 
-  let state = deepMerge({}, DEFAULTS);
-  const listeners = new Set();
+  function isReady() {
+    return !!(
+      window.EPTEC_UI_STATE &&
+      typeof window.EPTEC_UI_STATE.get === "function" &&
+      typeof window.EPTEC_UI_STATE.set === "function" &&
+      typeof window.EPTEC_UI_STATE.subscribe === "function" &&
 
-  function snapshot() {
-    return JSON.parse(JSON.stringify(state));
+      window.EPTEC_KAMEL_HEAD &&
+      window.EPTEC_KAMEL_HEAD.DVO &&
+      window.EPTEC_KAMEL_HEAD.DVO.triggers &&
+
+      window.EPTEC_MASTER &&
+      window.EPTEC_MASTER.Dramaturgy &&
+      window.EPTEC_MASTER.Entry &&
+      window.EPTEC_MASTER.Auth
+    );
   }
 
-  function normalize(next) {
-    const n = deepMerge(deepMerge({}, DEFAULTS), isObj(next) ? next : {});
-
-    // --- canonicalize legalKey
-    if (n.legalKey == null && n.legalKind != null) n.legalKey = n.legalKind;
-    if ("legalKind" in n) delete n.legalKind;
-
-    // scene/view normalization
-    n.scene = normScene(n.scene);
-    if (n.scene) {
-      if (n.scene === "start") n.view = "meadow";
-      else if (n.scene === "viewdoors") n.view = "doors";
-      else if (n.scene === "room1") n.view = "room1";
-      else if (n.scene === "room2") n.view = "room2";
-      else if (n.scene === "tunnel") n.view = "tunnel";
-      else if (n.scene === "whiteout") n.view = normView(n.view || "doors");
-      else n.view = normView(n.view || "meadow");
-    } else {
-      n.view = normView(n.view);
-    }
-
-    // --- language: accept alias "lang"/"locale" but store in i18n.lang
-    const persisted = loadLang();
-    n.i18n = isObj(n.i18n) ? n.i18n : {};
-
-    // priority: explicit i18n.lang > explicit lang > persisted > default
-    const rawLang = n.i18n.lang || n.lang || persisted || "en";
-    const lang = normLang(rawLang);
-
-    n.i18n.lang = lang;
-    n.i18n.dir = (lang === "ar") ? "rtl" : "ltr";
-    saveLang(lang);
-
-    // keep a synchronized mirror for legacy readers (read-only by convention)
-    n.lang = lang;
-
-    // keep flexible
-    n.modes = isObj(n.modes) ? n.modes : {};
-    n.transition = isObj(n.transition) ? n.transition : { tunnelActive: false, whiteout: false, last: null };
-
-    return n;
+  function logBoot(label, extra) {
+    Safe.try(() => window.EPTEC_MASTER?.Compliance?.log?.("BOOT", label, { at: Safe.iso(), ...(extra || {}) }));
+    console.log("[EPTEC:BOOT]", label, extra || "");
   }
 
-  let notifying = false;
-  let lastJson = "";
+  function bootOnce() {
+    if (window.__EPTEC_MAIN_READY__) return;
+    if (!isReady()) return;
 
-  function set(patch = {}) {
-    const before = snapshot();
-    const merged = deepMerge(before, isObj(patch) ? patch : {});
-    const next = normalize(merged);
+    window.__EPTEC_MAIN_READY__ = true;
 
-    const nextJson = JSON.stringify(next);
-    if (nextJson === lastJson) return snapshot();
+    logBoot("READY", {
+      hasMockBackend: !!window.EPTEC_MOCK_BACKEND,
+      hasSound: !!window.SoundEngine
+    });
 
-    state = next;
-    lastJson = nextJson;
+    // Set initial view if not set (pure UX baseline, not business logic)
+    Safe.try(() => {
+      const st = window.EPTEC_UI_STATE.get();
+      if (!st.view) window.EPTEC_UI_STATE.set({ view: "meadow" });
+    });
 
-    if (notifying) return snapshot();
-    notifying = true;
+    // Optionally run ID registry check if present (dev visibility)
+    Safe.try(() => window.EPTEC_ID_REGISTRY?.check?.());
 
-    const snap = snapshot();
-    for (const fn of listeners) {
-      try { fn(snap); } catch {}
-    }
-    notifying = false;
-
-    return snap;
+    // No click bindings here. UI-Control/Clickmaster handle clicks.
   }
 
-  function get() {
-    return snapshot();
+  function waitUntilReady() {
+    // quick loop until all globals exist (no infinite CPU; 50ms)
+    const tick = () => {
+      bootOnce();
+      if (!window.__EPTEC_MAIN_READY__) setTimeout(tick, 50);
+    };
+    tick();
   }
 
-  function subscribe(fn) {
-    if (typeof fn !== "function") return () => {};
-    listeners.add(fn);
-    try { fn(snapshot()); } catch {}
-    return () => listeners.delete(fn);
-  }
-
-  function onChange(fn) {
-    return subscribe(fn);
-  }
-
-  state = normalize(state);
-  lastJson = JSON.stringify(state);
-
-  window.EPTEC_UI_STATE = {
-    get,
-    set,
-    subscribe,
-    onChange,
-    get state() { return snapshot(); },
-    snapshot
-  };
-})();
-/* =========================================================
-   EPTEC APPEND — MAIN FUNCTIONALITY EXTENSION
-   Role: Extend Main Logic
-   Authority: Kernel + UI Control
-   ========================================================= */
-(() => {
-  "use strict";
-
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  /* ---------- MAIN FUNCTIONALITY EXTENSION ---------- */
-  function initializeSystem() {
-    console.log("EPTEC: Initializing System...");
-    // Trigger initial states
-    window.EPTEC_UI?.setState?.({ mode: "init" });
-    window.EPTEC_STATE_MANAGER?.set?.({ systemInitialized: true });
-
-    // Additional initialization logic if required
-    // Further API calls or logic can go here
-  }
-
-  function handleUserInteraction(event) {
-    if (event.target.id === "btn-login") {
-      window.EPTEC_UI?.toast?.("User interaction detected", "info");
-      // Perform login logic, invoke related functions here
-    }
-  }
-
-  function boot() {
-    // Hook for System Initialization
-    initializeSystem();
-
-    // Adding event listener for user interactions
-    document.addEventListener("click", handleUserInteraction);
-
-    console.log("EPTEC APPEND: Main functionality extension active");
-  }
-
-  // Ensure system boots when DOM is ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else boot();
+    document.addEventListener("DOMContentLoaded", waitUntilReady, { once: true });
+  } else {
+    waitUntilReady();
+  }
+
 })();
