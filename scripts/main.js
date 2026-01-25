@@ -1617,3 +1617,81 @@
     boot();
 
 })();
+/* =========================================================
+   EPTEC FORCE APPEND — CORE ROUTES (LOGIN/DEMO/MASTER/LOGOUT/CAMERA)
+   - guarantees: these buttons always delegate into kernel
+   - uses your existing targets (Zieldateien via globals):
+     - scripts/logic.js    -> EPTEC_MASTER.Entry / EPTEC_MASTER.Auth
+     - scripts/ui_state.js -> EPTEC_UI_STATE.set(camera.requested)
+   - append-only: no overwrites, no global blocks
+   ========================================================= */
+(() => {
+  "use strict";
+  if (window.__EPTEC_FORCE_CORE_ROUTES__) return;
+  window.__EPTEC_FORCE_CORE_ROUTES__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch {} };
+  const $ = (id) => document.getElementById(id);
+
+  function K(){ return window.EPTEC_MASTER || null; }
+  function S(){ return window.EPTEC_UI_STATE || null; }
+
+  function unlockAudio() {
+    safe(() => window.SoundEngine?.unlockAudio?.());
+  }
+  function uiConfirm() {
+    unlockAudio();
+    safe(() => window.SoundEngine?.uiConfirm?.());
+  }
+
+  function setCameraRequested(flag){
+    const st = safe(() => S()?.get?.()) || {};
+    safe(() => S()?.set?.({ camera: { ...(st.camera || {}), requested: !!flag } }));
+  }
+
+  function bindOnce(id, fn){
+    const el = $(id);
+    if (!el) return;
+    const k = "__eptec_force_bound_" + id;
+    if (el[k]) return;
+    el[k] = true;
+
+    el.addEventListener("click", (e) => {
+      uiConfirm();
+      safe(() => fn(e));
+    }, true);
+  }
+
+  function boot(){
+    // LOGIN -> scripts/logic.js (EPTEC_MASTER.Entry.userLogin)
+    bindOnce("btn-login", () => {
+      const u = String($("login-username")?.value || "").trim();
+      const p = String($("login-password")?.value || "").trim();
+      safe(() => K()?.Entry?.userLogin?.(u, p));
+    });
+
+    // DEMO -> scripts/logic.js (EPTEC_MASTER.Entry.demo)
+    bindOnce("btn-demo", () => safe(() => K()?.Entry?.demo?.()));
+
+    // MASTER -> scripts/logic.js (EPTEC_MASTER.Entry.authorStartMaster)
+    bindOnce("admin-submit", () => {
+      const code = String($("admin-code")?.value || "").trim();
+      safe(() => K()?.Entry?.authorStartMaster?.(code));
+    });
+
+    // LOGOUT buttons -> scripts/logic.js (EPTEC_MASTER.Auth.logout)
+    ["btn-logout-tunnel","btn-logout-doors","btn-logout-room1","btn-logout-room2"].forEach((id) => {
+      bindOnce(id, () => safe(() => K()?.Auth?.logout?.()));
+    });
+
+    // CAMERA checkbox -> scripts/ui_state.js (camera.requested)
+    const cam = $("admin-camera-toggle");
+    if (cam && !cam.__eptec_force_cam) {
+      cam.__eptec_force_cam = true;
+      cam.addEventListener("change", () => setCameraRequested(!!cam.checked), true);
+    }
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
