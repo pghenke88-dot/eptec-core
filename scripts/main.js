@@ -2209,4 +2209,45 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+// =======================================================================
+  // EPTEC ROOM ENGINE - FOURIER FORCE SWITCH (Gewalt-Modus)
+  // =======================================================================
+  
+  /**
+   * Erzwingt den Wechsel zwischen den 3 Räumen (Login, Register, Dashboard).
+   * 'Gewalt' bedeutet: Wir löschen alle Zustände, bevor wir den neuen setzen.
+   */
+  window.EPTEC_FORCE_ROOM = function(targetRoom) {
+    console.log("[FORIER] Triggere Gewalt-Übergang zu: " + targetRoom);
+    
+    // Die 3 definierten Räume
+    const rooms = ['room-login', 'room-register', 'room-dashboard'];
+    
+    // 1. Gewalt-Phase: Alle Räume radikal abschalten
+    rooms.forEach(room => {
+      const el = document.getElementById(room);
+      if (el) {
+        el.style.display = 'none';
+        el.classList.remove('active', 'fade-in');
+      }
+    });
 
+    // 2. Fourier-Phase: Den Ziel-Raum isolieren und erzwingen
+    const activeRoom = document.getElementById('room-' + targetRoom);
+    if (activeRoom) {
+      activeRoom.style.display = 'block';
+      // Wir erzwingen einen Reflow für die CSS-Animation
+      void activeRoom.offsetWidth; 
+      activeRoom.classList.add('active', 'fade-in');
+      
+      // Update des globalen State
+      if(window.EPTEC_UI_STATE) window.EPTEC_UI_STATE.state.currentRoom = targetRoom;
+      
+      console.log("[FORIER] Raum-Isolation abgeschlossen: " + targetRoom);
+    } else {
+      console.error("[GEWALT] Ziel-Raum existiert nicht: " + targetRoom);
+    }
+  };
+
+  // Beispiel-Trigger für deine Buttons (in die Logik einbauen):
+  // document.getElementById('to-register').onclick = () => EPTEC_FORCE_ROOM('register');
