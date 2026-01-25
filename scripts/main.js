@@ -1617,3 +1617,133 @@
     boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — HARD SCENE SYNC (AUDIO + VISUAL)
+   - listens to EPTEC_UI_STATE (scene/view)
+   - enforces visible section + audio on every change
+   - no business logic, no overwrites, append-only
+   ========================================================= */
+(() => {
+  "use strict";
+  if (window.__EPTEC_HARD_SCENE_SYNC__) return;
+  window.__EPTEC_HARD_SCENE_SYNC__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[HARD_SCENE_SYNC]", e); } };
+
+  // Canonical mapping (matches your index.html ids)
+  const VIEW_TO_SECTION = {
+    meadow: "meadow-view",
+    start: "meadow-view",
+
+    tunnel: "tunnel-view",
+
+    doors: "doors-view",
+    viewdoors: "doors-view",
+
+    room1: "room-1-view",
+    "room-1": "room-1-view",
+
+    room2: "room-2-view",
+    "room-2": "room-2-view",
+
+    whiteout: null // handled separately (flash)
+  };
+
+  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
+
+  function norm(st) {
+    const s = String(st?.scene || "").toLowerCase().trim();
+    const v = String(st?.view  || "").toLowerCase().trim();
+    // prefer scene if present, else view
+    const raw = s || v || "meadow";
+    if (raw === "viewdoors") return "viewdoors";
+    if (raw === "start") return "start";
+    return raw;
+  }
+
+  function showSection(viewKey) {
+    const id = VIEW_TO_SECTION[viewKey];
+    // hide all sections
+    safe(() => document.querySelectorAll("section").forEach(sec => (sec.style.display = "none")));
+    // whiteout overlay toggling is handled by logic; we only ensure scene visibility
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.style.display = "block";
+  }
+
+  function whiteout(st) {
+    const w = document.getElementById("eptec-white-flash");
+    if (!w) return;
+    const scene = String(st?.scene || "").toLowerCase().trim();
+    const on = (scene === "whiteout") || !!st?.transition?.whiteout;
+    if (on) w.classList.remove("whiteout-hidden");
+    else w.classList.add("whiteout-hidden");
+  }
+
+  function applyAudio(viewKey) {
+    const SE = window.SoundEngine;
+    if (!SE) return;
+
+    // unlock once on first possible user gesture (best effort)
+    safe(() => SE.unlockAudio?.());
+
+    // hard stop previous (best effort)
+    safe(() => SE.stopAll?.());
+    safe(() => SE.stopAmbient?.());
+    safe(() => SE.stopTunnel?.());
+
+    if (viewKey === "tunnel") {
+      return safe(() => SE.tunnelFall?.());
+    }
+
+    // Start ambient for meadow/doors/rooms (your core mood)
+    if (viewKey === "start" || viewKey === "meadow" || viewKey === "viewdoors" || viewKey === "doors" || viewKey === "room1" || viewKey === "room2") {
+      // if you have room-specific ambients use them, else fallback to startAmbient
+      if (viewKey === "viewdoors" || viewKey === "doors") return safe(() => SE.startDoorsAmbient?.() ?? SE.startAmbient?.());
+      if (viewKey === "room1") return safe(() => SE.startRoom1Ambient?.() ?? SE.startAmbient?.());
+      if (viewKey === "room2") return safe(() => SE.startRoom2Ambient?.() ?? SE.startAmbient?.());
+      return safe(() => SE.startAmbient?.());
+    }
+  }
+
+  let last = null;
+
+  function onState(st) {
+    const v = norm(st);
+    whiteout(st);
+
+    if (v === last) return;
+    last = v;
+
+    showSection(v);
+    applyAudio(v);
+
+    // proof log (optional)
+    safe(() => window.EPTEC_MASTER?.Compliance?.log?.("SCENE_SYNC", `VIEW=${v}`, { scene: st?.scene, view: st?.view }));
+    console.log("[EPTEC] SCENE_SYNC:", v);
+  }
+
+  function boot() {
+    const S = store();
+    if (!S) return;
+
+    // initial apply
+    safe(() => onState(typeof S.get === "function" ? S.get() : S.state));
+
+    // subscribe
+    if (typeof S.subscribe === "function") {
+      S.subscribe(onState);
+    } else if (typeof S.onChange === "function") {
+      S.onChange(onState);
+    } else {
+      // fallback polling (rare)
+      setInterval(() => safe(() => onState(S.get ? S.get() : S.state)), 250);
+    }
+
+    // ensure audio unlock on first interaction
+    document.addEventListener("pointerdown", () => safe(() => window.SoundEngine?.unlockAudio?.()), { once: true, passive: true });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
