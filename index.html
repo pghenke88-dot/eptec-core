@@ -12,7 +12,15 @@
   <link rel="icon" href="./favicon.ico" />
 
   <!-- =========================================================
-       SECURITY — SINGLE CSP (GitHub Pages safe, syntactically correct)
+       INPUT LAYER (canonical)
+       - ensures legacy Bind.init is not executed (if you use the gate in logic.js)
+       ========================================================= -->
+  <script>
+    window.EPTEC_INPUT_LAYER = "UICONTROL";
+  </script>
+
+  <!-- =========================================================
+       SECURITY — SINGLE CSP (GitHub Pages safe)
        ========================================================= -->
   <meta http-equiv="Content-Security-Policy"
         content="
@@ -38,28 +46,38 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       CLICKMASTER DVO — LOAD FIRST
-       (waits internally for kernel/state readiness)
+       SCRIPTS — CANONICAL ORDER (BOOTLOADER CORRECT)
+       ---------------------------------------------------------
+       0) UI_STATE (foundation)
+       1) LOGIC (Kernel + KAMEL_HEAD + Axioms + EPTEC_MASTER)
+       2) CLICKMASTER DVO (uses kernel/state; can wait but should come after)
+       3) UI_CONTROL (mediator; needs DVO + kernel + state)
+       4) EFFECTS / ASSISTANTS (sound/legal/registration/rooms)
+       5) BACKEND / API / MAIN
        ========================================================= -->
+
+  <!-- 0) FOUNDATION -->
+  <script src="./scripts/ui_state.js" defer></script>
+
+  <!-- 1) KERNEL / LOGIC (must exist before DVO + UI-Control delegates) -->
+  <script src="./scripts/logic.js" defer></script>
+
+  <!-- 2) CLICKMASTER DVO -->
   <script src="./scripts/eptec_clickmaster_dvo.js" defer></script>
 
-  <!-- =========================================================
-       SCRIPTS — ORDER IS IMPORTANT (kernel + assistants)
-       ========================================================= -->
-  <script src="./scripts/ui_state.js" defer></script>
+  <!-- 3) UI-CONTROL (your DVO-only + append wiring lives here) -->
   <script src="./scripts/ui_controller.js" defer></script>
+
+  <!-- 4) EFFECTS / ASSISTANTS -->
   <script src="./scripts/sounds.js" defer></script>
-
-  <script src="./scripts/mock_backend.js" defer></script>
-  <script src="./scripts/api_client.js" defer></script>
-
-  <script src="./scripts/logic.js" defer></script>
-  <script src="./scripts/state_manager.js" defer></script>
-
   <script src="./scripts/registration_engine.js" defer></script>
   <script src="./scripts/transparency_ui.js" defer></script>
   <script src="./scripts/room1_framework_assistant.js" defer></script>
 
+  <!-- 5) BACKEND / API / STATE + MAIN -->
+  <script src="./scripts/mock_backend.js" defer></script>
+  <script src="./scripts/api_client.js" defer></script>
+  <script src="./scripts/state_manager.js" defer></script>
   <script src="./scripts/main.js" defer></script>
 
   <!-- DEMO (AFTER main) -->
@@ -140,7 +158,6 @@
 <section id="tunnel-view" class="scene tunnel-hidden" data-logic-id="scene.tunnel">
   <div class="tunnel-wall"></div>
 
-  <!-- LOGOUT available from tunnel onward (your rule) -->
   <div style="position:absolute; bottom:16px; width:100%; text-align:center;">
     <button id="btn-logout-tunnel" data-logic-id="btn-logout-tunnel">Logout</button>
   </div>
@@ -168,7 +185,6 @@
       </div>
       <button id="door1-master-apply">Enter</button>
 
-      <!-- IMPORTANT: explicit enter trigger for clickmaster -->
       <button id="door1-enter" data-logic-id="doors.door1" style="margin-top:10px;">Open Door</button>
     </div>
 
@@ -186,7 +202,6 @@
       </div>
       <button id="door2-master-apply">Enter</button>
 
-      <!-- IMPORTANT: explicit enter trigger for clickmaster -->
       <button id="door2-enter" data-logic-id="doors.door2" style="margin-top:10px;">Open Door</button>
     </div>
 
@@ -244,17 +259,14 @@
   <button id="legal-close">Close</button>
   <h2 id="legal-title"></h2>
   <div id="legal-body"></div>
-  <!-- Accept button will be injected by clickmaster (legal-accept) when needed -->
 </section>
 
 <footer id="eptec-footer">
-  <a id="link-imprint">Imprint</a>
-  <a id="link-terms">Terms</a>
-  <a id="link-support">Support</a>
-  <a id="link-privacy-footer">Privacy</a>
+  <a id="link-imprint" href="#">Imprint</a>
+  <a id="link-terms" href="#">Terms</a>
+  <a id="link-support" href="#">Support</a>
+  <a id="link-privacy-footer" href="#">Privacy</a>
 </footer>
 
 </body>
 </html>
-
-
