@@ -1379,3 +1379,235 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — DVO EXECUTION ENFORCER (HARD)
+   ---------------------------------------------------------
+   PURPOSE:
+   - UI-Control MUST execute all duties imposed by LOGIC:
+     EPTEC_KAMEL_HEAD.DVO.triggers (canonical reference words)
+   - Forces binding + execution readiness (retry until ready)
+   - Never overwrites logic, never deletes, never replaces
+   - No blocking of other code unless we successfully executed a duty
+
+   ZIELDATEIEN (Delegation):
+   - scripts/logic.js            -> window.EPTEC_MASTER (Entry/Auth/Doors/Dramaturgy)
+   - scripts/ui_state.js         -> window.EPTEC_UI_STATE (get/set/subscribe)
+   - scripts/sounds.js           -> window.SoundEngine (uiConfirm/unlockAudio)
+   - scripts/eptec_clickmaster_dvo.js -> window.EPTEC_CLICKMASTER (optional run/activate)
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_UICTRL_DVO_ENFORCER__) return;
+  window.__EPTEC_UICTRL_DVO_ENFORCER__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[DVO_ENFORCER]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  const HEAD = () => window.EPTEC_KAMEL_HEAD || null;
+  const DVO  = () => HEAD()?.DVO || null;
+
+  const UI   = () => window.EPTEC_UI_STATE || null;               // scripts/ui_state.js
+  const K    = () => window.EPTEC_MASTER || window.EPTEC?.kernel || null; // scripts/logic.js
+  const CM   = () => window.EPTEC_CLICKMASTER || null;            // eptec_clickmaster_dvo.js
+
+  function TR(name){ return DVO()?.triggers?.[name] || null; }
+
+  function uiConfirm() {
+    safe(() => window.SoundEngine?.unlockAudio?.());
+    safe(() => window.SoundEngine?.uiConfirm?.());
+  }
+
+  // -------- readiness gate (must be TRUE before we enforce)
+  function ready() {
+    return !!(
+      DVO()?.triggers &&
+      UI()?.get && UI()?.set && UI()?.subscribe &&
+      (K()?.Entry || K()?.Auth || K()?.Doors || K()?.Dramaturgy)
+    );
+  }
+
+  // -------- duty execution (NO invented words; only DVO triggers + real IDs)
+  // We enforce by binding to DOM and delegating to Kernel (logic.js) or Clickmaster.
+  function execDuty(triggerId, payload, ev) {
+    if (!triggerId) return false;
+
+    // 1) Prefer Clickmaster (if present)
+    const cm = CM();
+    if (cm && typeof cm.run === "function") {
+      safe(() => cm.run(ev || { type:"forced", triggerId, payload }), "CM.run");
+      return true;
+    }
+
+    // 2) Kernel fallbacks (only for the canonical core triggers)
+    const k = K();
+
+    const t = DVO()?.triggers || {};
+    if (triggerId === t.login) {
+      const u = String($("login-username")?.value || "").trim();
+      const p = String($("login-password")?.value || "").trim();
+      safe(() => k?.Entry?.userLogin?.(u, p));
+      return true;
+    }
+
+    if (triggerId === t.demo) {
+      safe(() => k?.Entry?.demo?.());
+      return true;
+    }
+
+    if (triggerId === t.masterEnter) {
+      const code = String($("admin-code")?.value || "").trim();
+      safe(() => k?.Entry?.authorStartMaster?.(code));
+      return true;
+    }
+
+    if (triggerId === t.logoutAny) {
+      safe(() => k?.Auth?.logout?.());
+      return true;
+    }
+
+    if (triggerId === t.door1) {
+      safe(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door1 || "door1"));
+      return true;
+    }
+
+    if (triggerId === t.door2) {
+      safe(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door2 || "door2"));
+      return true;
+    }
+
+    // language item duty: EPTEC_I18N.apply
+    if (triggerId === t.langItem) {
+      const lang = String(payload?.lang || "").trim();
+      if (lang) safe(() => window.EPTEC_I18N?.apply?.(lang));
+      return true;
+    }
+
+    // globe toggle duty: UI open/close rail (pure UI)
+    if (triggerId === t.langToggle) {
+      const rail = $("lang-rail");
+      if (rail) rail.classList.toggle("open");
+      return true;
+    }
+
+    // footer docs duty: delegate to transparency_ui.js if present
+    if (triggerId === t.imprint || triggerId === t.terms || triggerId === t.support || triggerId === t.privacyFooter) {
+      const docKey =
+        (triggerId === t.imprint) ? (DVO()?.docs?.imprint || "imprint") :
+        (triggerId === t.terms) ? (DVO()?.docs?.terms || "terms") :
+        (triggerId === t.support) ? (DVO()?.docs?.support || "support") :
+        (DVO()?.docs?.privacy || "privacy");
+      safe(() => window.TransparencyUI?.openLegal?.(docKey));
+      return true;
+    }
+
+    return false;
+  }
+
+  // -------- enforce bindings for every DVO trigger (no missing click chains)
+  function bindDvoTriggersOnce() {
+    const t = DVO()?.triggers;
+    if (!t) return;
+
+    // Helper: bind by ID OR data-logic-id (idempotent)
+    const bind = (selectorOrId, triggerId, payloadFn) => {
+      const el = selectorOrId.startsWith("#")
+        ? document.querySelector(selectorOrId)
+        : $(selectorOrId) || document.querySelector(`[data-logic-id="${selectorOrId}"]`);
+      if (!el) return;
+
+      const key = "__eptec_dvo_enforcer_" + triggerId;
+      if (el[key]) return;
+      el[key] = true;
+
+      el.style.pointerEvents = "auto";
+
+      el.addEventListener("click", (e) => {
+        // Only stop others if we successfully executed a duty
+        uiConfirm();
+        const payload = payloadFn ? payloadFn(e, el) : {};
+        const ok = execDuty(triggerId, payload, e);
+        if (ok) {
+          e.preventDefault?.();
+          e.stopPropagation?.();
+          e.stopImmediatePropagation?.();
+        }
+      }, true);
+    };
+
+    // Core
+    bind("btn-login",      t.login);
+    bind("btn-demo",       t.demo);
+    bind("admin-submit",   t.masterEnter);
+    bind("btn-logout-tunnel", t.logoutAny);
+    bind("btn-logout-doors",  t.logoutAny);
+    bind("btn-logout-room1",  t.logoutAny);
+    bind("btn-logout-room2",  t.logoutAny);
+
+    // Doors enter (your explicit buttons already have data-logic-id)
+    bind("doors.door1", t.door1);
+    bind("doors.door2", t.door2);
+
+    // Language globe + items
+    bind("lang-toggle", t.langToggle);
+    safe(() => document.querySelectorAll(".lang-item[data-lang]").forEach((btn) => {
+      const k = "__eptec_dvo_langitem";
+      if (btn[k]) return;
+      btn[k] = true;
+      btn.style.pointerEvents = "auto";
+      btn.addEventListener("click", (e) => {
+        uiConfirm();
+        const lang = btn.getAttribute("data-lang");
+        const ok = execDuty(t.langItem, { lang }, e);
+        if (ok) {
+          e.preventDefault?.();
+          e.stopPropagation?.();
+          e.stopImmediatePropagation?.();
+        }
+      }, true);
+    }));
+
+    // Footer docs
+    bind("link-imprint",        t.imprint);
+    bind("link-terms",          t.terms);
+    bind("link-support",        t.support);
+    bind("link-privacy-footer", t.privacyFooter);
+
+    // Camera checkbox: map to cameraOn/cameraOff (DVO words)
+    const cam = $("admin-camera-toggle");
+    if (cam && !cam.__eptec_dvo_cam) {
+      cam.__eptec_dvo_cam = true;
+      cam.addEventListener("change", () => {
+        uiConfirm();
+        const on = !!cam.checked;
+        const trig = on ? t.cameraOn : t.cameraOff;
+        // duty: write UI_STATE.camera.requested (append reacts)
+        const st = safe(() => UI()?.get?.()) || {};
+        safe(() => UI()?.set?.({ camera: { ...(st.camera||{}), requested: on } }));
+        execDuty(trig, {}, null);
+      }, true);
+    }
+  }
+
+  // -------- main enforcement loop (retry until ready)
+  function enforceLoop() {
+    if (!ready()) return false;
+    bindDvoTriggersOnce();
+    return true;
+  }
+
+  function boot() {
+    // Try immediately, then retry a few seconds (covers load timing)
+    if (enforceLoop()) return;
+
+    const t = setInterval(() => {
+      if (enforceLoop()) clearInterval(t);
+    }, 50);
+
+    setTimeout(() => clearInterval(t), 6000);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
