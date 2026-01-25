@@ -3876,3 +3876,45 @@ PASTE HERE:
   // Expose globally for UI + Sound Router
   window.EPTEC_ROOM_REGISTRY = { ROOM, REGISTRY };
 })();
+/* =========================================================
+   EPTEC APPEND — LANGUAGE CASCADE CONTRACT (LOGIC)
+   Authority: KERNEL / I18N
+   Role: Defines mandatory reaction chain on language change
+   NO DOM · NO UI · NO ASSETS
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  const CONTRACT = Object.freeze({
+    trigger: "LANGUAGE_CHANGE",
+
+    requires: [
+      "UPDATE_UI_STATE_LANG",
+      "LOAD_LOCALE_DICTIONARY",
+      "RERENDER_ALL_UI_TEXTS",
+      "REFRESH_DYNAMIC_FORMATS",
+      "RELOAD_OPEN_LEGAL_DOCS"
+    ],
+
+    sources: {
+      locales: "/locales/{lang}.json",
+      legalDocs: "/assets/legal/{lang}/"
+    },
+
+    guarantees: {
+      placeholders: true,
+      dashboardTexts: true,
+      userProfile: true,
+      masterProfile: true,
+      legalTexts: true,
+      dateTimeFormats: true
+    }
+  });
+
+  // Register contract globally (append-style)
+  window.EPTEC_LOGIC_CONTRACTS = window.EPTEC_LOGIC_CONTRACTS || {};
+  window.EPTEC_LOGIC_CONTRACTS.LANGUAGE_CASCADE = CONTRACT;
+
+  console.log("EPTEC LOGIC APPEND: Language Cascade Contract active.");
+})();
