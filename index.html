@@ -8,6 +8,9 @@
   <!-- Referrer -->
   <meta name="referrer" content="no-referrer" />
 
+  <!-- Favicon -->
+  <link rel="icon" href="./favicon.ico" />
+
   <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe, syntactically correct)
        ========================================================= -->
@@ -35,7 +38,13 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       SCRIPTS — ORDER IS IMPORTANT
+       CLICKMASTER DVO — LOAD FIRST
+       (waits internally for kernel/state readiness)
+       ========================================================= -->
+  <script src="./scripts/eptec_clickmaster_dvo.js" defer></script>
+
+  <!-- =========================================================
+       SCRIPTS — ORDER IS IMPORTANT (kernel + assistants)
        ========================================================= -->
   <script src="./scripts/ui_state.js" defer></script>
   <script src="./scripts/ui_controller.js" defer></script>
@@ -74,11 +83,11 @@
 
   <div class="login-box">
 
-    <input id="login-username" type="text" data-logic-id="login-username" />
+    <input id="login-username" type="text" data-logic-id="login-username" placeholder="Username" />
 
     <div class="pw-wrap">
       <input id="login-password" type="password" autocomplete="off"
-             data-logic-id="login-password" />
+             data-logic-id="login-password" placeholder="Password" />
     </div>
 
     <button id="btn-login" data-logic-id="btn-login">Login</button>
@@ -91,7 +100,7 @@
 
     <div class="pw-wrap">
       <input id="admin-code" type="password" autocomplete="off"
-             data-logic-id="admin-code" />
+             data-logic-id="admin-code" placeholder="Master password" />
     </div>
 
     <button id="admin-submit" data-logic-id="admin-submit">Enter</button>
@@ -99,7 +108,7 @@
     <label class="admin-camera-row" style="display:block; margin-top:10px;">
       <input id="admin-camera-toggle" type="checkbox"
              data-logic-id="admin-camera-toggle" />
-      <span>Camera (Admin option)</span>
+      <span>Screen Capture (Admin option)</span>
     </label>
 
   </div>
@@ -130,6 +139,11 @@
      ========================================================= -->
 <section id="tunnel-view" class="scene tunnel-hidden" data-logic-id="scene.tunnel">
   <div class="tunnel-wall"></div>
+
+  <!-- LOGOUT available from tunnel onward (your rule) -->
+  <div style="position:absolute; bottom:16px; width:100%; text-align:center;">
+    <button id="btn-logout-tunnel" data-logic-id="btn-logout-tunnel">Logout</button>
+  </div>
 </section>
 
 <div id="eptec-white-flash" class="whiteout-hidden"></div>
@@ -140,38 +154,44 @@
 <section id="doors-view" class="scene modal-hidden" data-logic-id="scene.doors">
   <div class="doors-wrapper">
 
-    <div class="door-block" id="door-construction" data-logic-id="doors.door1">
-      <h2>Construction</h2>
+    <div class="door-block" id="door-construction" data-logic-id="doors.block.door1">
+      <h2 data-logic-id="doors.title.door1">Construction</h2>
 
-      <input id="door1-present" type="text" />
+      <input id="door1-present" type="text" placeholder="Gift/Action code" />
       <button id="door1-present-apply">Apply</button>
 
-      <input id="door1-vip" type="text" />
+      <input id="door1-vip" type="text" placeholder="VIP code" />
       <button id="door1-vip-apply">Apply</button>
 
       <div class="pw-wrap">
-        <input id="door1-master" type="password" autocomplete="off" />
+        <input id="door1-master" type="password" autocomplete="off" placeholder="Master password" />
       </div>
       <button id="door1-master-apply">Enter</button>
+
+      <!-- IMPORTANT: explicit enter trigger for clickmaster -->
+      <button id="door1-enter" data-logic-id="doors.door1" style="margin-top:10px;">Open Door</button>
     </div>
 
-    <div class="door-block" id="door-controlling" data-logic-id="doors.door2">
-      <h2>Contract Controlling</h2>
+    <div class="door-block" id="door-controlling" data-logic-id="doors.block.door2">
+      <h2 data-logic-id="doors.title.door2">Contract Controlling</h2>
 
-      <input id="door2-present" type="text" />
+      <input id="door2-present" type="text" placeholder="Gift/Action code" />
       <button id="door2-present-apply">Apply</button>
 
-      <input id="door2-vip" type="text" />
+      <input id="door2-vip" type="text" placeholder="VIP code" />
       <button id="door2-vip-apply">Apply</button>
 
       <div class="pw-wrap">
-        <input id="door2-master" type="password" autocomplete="off" />
+        <input id="door2-master" type="password" autocomplete="off" placeholder="Master password" />
       </div>
       <button id="door2-master-apply">Enter</button>
+
+      <!-- IMPORTANT: explicit enter trigger for clickmaster -->
+      <button id="door2-enter" data-logic-id="doors.door2" style="margin-top:10px;">Open Door</button>
     </div>
 
     <div style="width:100%; margin-top:16px; text-align:center;">
-      <button id="btn-logout-doors">Logout</button>
+      <button id="btn-logout-doors" data-logic-id="btn-logout-doors">Logout</button>
     </div>
 
   </div>
@@ -190,7 +210,7 @@
     <button data-logic-id="r1.mirror.download">Download Snippets</button>
     <button data-logic-id="r1.traffic.enable">Traffic Light</button>
 
-    <button id="btn-logout-room1">Logout</button>
+    <button id="btn-logout-room1" data-logic-id="btn-logout-room1">Logout</button>
   </div>
 </section>
 
@@ -210,7 +230,7 @@
 
     <button data-logic-id="r2.plant.backup">Backup</button>
 
-    <button id="btn-logout-room2">Logout</button>
+    <button id="btn-logout-room2" data-logic-id="btn-logout-room2">Logout</button>
   </div>
 </section>
 
@@ -224,6 +244,7 @@
   <button id="legal-close">Close</button>
   <h2 id="legal-title"></h2>
   <div id="legal-body"></div>
+  <!-- Accept button will be injected by clickmaster (legal-accept) when needed -->
 </section>
 
 <footer id="eptec-footer">
@@ -235,4 +256,5 @@
 
 </body>
 </html>
+
 
