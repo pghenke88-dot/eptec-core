@@ -481,3 +481,382 @@
   });
 
 })();
+/* =========================================================
+   EPTEC UI-CONTROL APPEND — APPENDS WIRING (DVO)
+   Scope: UI-Control ONLY (no business logic)
+   Rule: reference → click-chain → delegate to appends/modules
+   Source: ONLY last post's appends
+   ========================================================= */
+(() => {
+  "use strict";
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.error("[UICTRL:APPENDS]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+  const on = (el, ev, fn, opt) => el && el.addEventListener(ev, fn, opt);
+
+  // ---- APPEND REFERENCES (GLOBALS) ----
+  // LOGIC append: MasterPasswords v4  -> (file: EPTEC APPEND — MASTER PASSWORDS v4)
+  const MP = () => window.EPTEC_MASTER_PASSWORDS;
+
+  // LOGIC append: Billing / Codes / Coupling -> (file: EPTEC APPENDIX 6 — BILLING...)
+  const BILL = () => window.EPTEC_BILLING;
+
+  // LOGIC append: Room1 framework -> (file: EPTEC APPEND 4 — ROOM1 FRAMEWORK...)
+  const R1 = () => window.EPTEC_ROOM1;
+
+  // LOGIC append: Room2 hotspots/backup/yellow -> (file: EPTEC APPEND 5 — ROOM2 HOTSPOTS...)
+  const R2 = () => window.EPTEC_ROOM2;
+
+  // LOGIC append: Language governance -> (file: EPTEC ADDEND 7 — LANGUAGE GOVERNANCE CORE)
+  const I18N = () => window.EPTEC_I18N;
+
+  // existing kernel (logic.js) + sound/renderer helpers
+  const K = () => window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+
+  function logClick(name, meta) {
+    safe(() => window.EPTEC_ACTIVITY?.log?.("ui.click", { name, ...(meta || {}) }));
+    safe(() => K()?.Compliance?.log?.("UI", String(name || "CLICK"), meta || null));
+  }
+
+  // =========================================================
+  // 1) MASTER RECOVERY (Forgot Master Password flow)
+  //    Uses: EPTEC_MASTER_PASSWORDS.requestReset/applyReset/getMailbox
+  //    Delegation targets:
+  //      - LOGIC: window.EPTEC_MASTER_PASSWORDS (MasterPasswords v4)
+  //      - STORAGE: localStorage keys inside that append
+  // =========================================================
+
+  // UI trigger IDs you already showed in screenshots (if your DOM uses others, map them here)
+  // - "reset link erzeugen" button id suggestion: master-reset-link
+  // - "reset anwenden" button id suggestion: master-reset-apply
+  // - inputs: master-reset-token, master-sec-answer, master-new-start, master-new-door, master-identity
+  function wireMasterRecoveryIfPresent() {
+    const btnCreate = $("master-reset-link") || document.querySelector("[data-logic-id='master.reset.link']");
+    const btnApply  = $("master-reset-apply") || document.querySelector("[data-logic-id='master.reset.apply']");
+
+    if (btnCreate && !btnCreate.__eptec_bound) {
+      btnCreate.__eptec_bound = true;
+      on(btnCreate, "click", () => {
+        logClick("master.reset.link");
+        const identity = safe(() => $("master-identity")?.value) || "";
+        const api = MP();
+        if (!api?.requestReset) return;
+
+        const res = safe(() => api.requestReset(identity));
+        // UI feedback is handled by your profile UI; we only log
+        safe(() => K()?.Compliance?.log?.("MASTER_RESET", "LINK_CREATED", res || null));
+        safe(() => R2()?.logUpload?.("MASTER_RESET", "ResetLinkCreated")); // uses Room2 backup append
+      });
+    }
+
+    if (btnApply && !btnApply.__eptec_bound) {
+      btnApply.__eptec_bound = true;
+      on(btnApply, "click", () => {
+        logClick("master.reset.apply");
+        const api = MP();
+        if (!api?.applyReset) return;
+
+        const token = safe(() => $("master-reset-token")?.value) || "";
+        const securityAnswer = safe(() => $("master-sec-answer")?.value) || "";
+        const newStartCode = safe(() => $("master-new-start")?.value) || "";
+        const newDoorCode  = safe(() => $("master-new-door")?.value) || "";
+
+        const res = safe(() => api.applyReset({ token, securityAnswer, newDoorCode, newStartCode }));
+        safe(() => K()?.Compliance?.log?.("MASTER_RESET", "APPLY_RESULT", res || null));
+        safe(() => R2()?.logUpload?.("MASTER_RESET", res?.ok ? "ResetApplied_OK" : `ResetApplied_FAIL_${res?.code || "ERR"}`));
+      });
+    }
+  }
+
+  // =========================================================
+  // 2) Appendix 6 — Billing / Codes / Coupling
+  //    - Aktionscode (profile): applyAktionscode(roomKey)
+  //    - Praesentcode (door): applyPraesentcode(roomKey, code)
+  //    - Coupling: updateCoupling()
+  //    Delegation targets:
+  //      - LOGIC: window.EPTEC_BILLING (Appendix6)
+  //      - UI state: EPTEC_UI_STATE (your kernel)
+  // =========================================================
+
+  // USER PROFILE: Aktionscode (50% next monthly) — triggers from profile UI
+  // Suggested triggers (map to your real buttons):
+  //  - data-logic-id="profile.actioncode.apply.room1"
+  //  - data-logic-id="profile.actioncode.apply.room2"
+  function handleAktionscodeApply(roomKey) {
+    logClick("billing.aktionscode.apply", { roomKey });
+    const b = BILL();
+    if (!b?.applyAktionscode) return;
+    const r = safe(() => b.applyAktionscode(roomKey));
+    safe(() => K()?.Compliance?.log?.("BILLING", "AKTIONSCODE_APPLIED", { roomKey, ok: !!r?.ok }));
+  }
+
+  // DOOR FIELDS: Praesentcode (waive one-time fee per room)
+  // You said under each door there is gift/present field; that is door1-present / door2-present.
+  function handlePraesentcodeDoor(doorKey) {
+    const roomKey = doorKey === "door1" ? "room1" : "room2";
+    const inputId = doorKey === "door1" ? "door1-present" : "door2-present";
+    const code = safe(() => $(inputId)?.value) || "";
+    logClick("billing.praesentcode.apply", { doorKey, roomKey });
+
+    const b = BILL();
+    if (!b?.applyPraesentcode) return;
+    const res = safe(() => b.applyPraesentcode(roomKey, code));
+    safe(() => K()?.Compliance?.log?.("BILLING", "PRAESENTCODE_APPLIED", { roomKey, ok: !!res?.ok }));
+  }
+
+  // Coupling update should be called after any product activation that can make room1+room2 active
+  function updateCoupling() {
+    const b = BILL();
+    if (!b?.updateCoupling) return;
+    const res = safe(() => b.updateCoupling());
+    safe(() => K()?.Compliance?.log?.("BILLING", "COUPLING_UPDATED", res || null));
+  }
+
+  // =========================================================
+  // 3) Room1 Append — framework selection / savepoint / premium compare
+  //    Delegation target: window.EPTEC_ROOM1 (Room1 Append)
+  // =========================================================
+
+  function wireRoom1Buttons() {
+    // Your HTML already has data-logic-id r1.savepoint etc.
+    safe(() => document.querySelectorAll("[data-logic-id='r1.savepoint']").forEach((el) => {
+      if (el.__eptec_bound) return;
+      el.__eptec_bound = true;
+      on(el, "click", () => {
+        logClick("room1.savepoint");
+        const api = R1();
+        if (!api?.savepoint) {
+          // fallback to kernel Room1.savepointDownload if present
+          safe(() => K()?.Room1?.savepointDownload?.());
+          return;
+        }
+        safe(() => api.savepoint());
+      });
+    }));
+
+    // Premium compare trigger (you will connect this to your compare UI button)
+    const compareBtn = document.querySelector("[data-logic-id='r1.contract.compare']") || $("r1-contract-compare");
+    if (compareBtn && !compareBtn.__eptec_bound) {
+      compareBtn.__eptec_bound = true;
+      on(compareBtn, "click", () => {
+        logClick("room1.compare");
+        const api = R1();
+        if (!api?.compare) return;
+        // deviation should be computed by your compare module; here we accept a numeric field if present
+        const dev = Number(safe(() => $("r1-deviation")?.value) || 0);
+        const res = safe(() => api.compare(dev));
+        safe(() => K()?.Compliance?.log?.("R1", "COMPARE_RESULT", res || null));
+      });
+    }
+  }
+
+  // =========================================================
+  // 4) Room2 Append — hotspots + backup plant + yellow stages + consent
+  //    Delegation target: window.EPTEC_ROOM2 (Room2 Append)
+  // =========================================================
+
+  function wireRoom2HotspotsAndAmpel() {
+    // Your HTML has data-logic-id r2.hotspot.*
+    safe(() => document.querySelectorAll("[data-logic-id^='r2.hotspot.']").forEach((el) => {
+      if (el.__eptec_bound) return;
+      el.__eptec_bound = true;
+      on(el, "click", () => {
+        const id = el.getAttribute("data-logic-id");
+        logClick("room2.hotspot.click", { id });
+
+        // actual upload/download logic is in your kernel Room2 module; we just log + trigger kernel
+        // (delegation: logic.js Room2.* already logs backup via Compliance)
+        const k = K();
+        if (id === "r2.hotspot.center") safe(() => k?.Room2?.uploadSomething?.("Room2_Center_Upload"));
+        if (id === "r2.hotspot.left1") safe(() => k?.Room2?.downloadSomething?.("Room2_Left1_Download"));
+        if (id === "r2.hotspot.left2") safe(() => k?.Room2?.uploadSomething?.("Room2_Left2_Upload"));
+        if (id === "r2.hotspot.right1") safe(() => k?.Room2?.downloadSomething?.("Room2_Right1_Download"));
+        if (id === "r2.hotspot.right2") safe(() => k?.Room2?.uploadSomething?.("Room2_Right2_Upload"));
+      });
+    }));
+
+    // Plant backup protocol button: r2.plant.backup
+    safe(() => document.querySelectorAll("[data-logic-id='r2.plant.backup']").forEach((el) => {
+      if (el.__eptec_bound) return;
+      el.__eptec_bound = true;
+      on(el, "click", () => {
+        logClick("room2.plant.backup");
+        const api = R2();
+        if (api?.exportBackup) return safe(() => api.exportBackup());
+        safe(() => K()?.Room2?.openBackupProtocol?.());
+      });
+    }));
+
+    // Yellow escalation stage click (your “3 hotspots übereinander” UI should call this)
+    const yellowBtn = document.querySelector("[data-logic-id='r2.yellow.click']") || $("r2-yellow-click");
+    if (yellowBtn && !yellowBtn.__eptec_bound) {
+      yellowBtn.__eptec_bound = true;
+      on(yellowBtn, "click", () => {
+        logClick("room2.yellow.bump");
+        const api = R2();
+        if (!api?.yellow?.bump) return;
+        const stage = safe(() => api.yellow.bump());
+        safe(() => K()?.Compliance?.log?.("R2", "YELLOW_STAGE", { stage }));
+      });
+    }
+  }
+
+  // =========================================================
+  // 5) Language Governance Append — language rail selection
+  //    Delegation target: window.EPTEC_I18N.apply(...)
+  // =========================================================
+
+  function wireLanguageButtons() {
+    // Your append already has capture-phase handler; UI-Control only needs to ensure rail toggles if you want.
+    const globe = $("lang-toggle");
+    if (globe && !globe.__eptec_bound) {
+      globe.__eptec_bound = true;
+      on(globe, "click", () => {
+        logClick("i18n.rail.toggle");
+        // Your UI rail can be CSS driven; no business logic here.
+        const rail = $("lang-rail");
+        if (rail) rail.classList.toggle("open");
+      });
+    }
+
+    // Language items (if you want explicit wiring; append already catches them)
+    safe(() => document.querySelectorAll(".lang-item[data-lang]").forEach((btn) => {
+      if (btn.__eptec_bound) return;
+      btn.__eptec_bound = true;
+      on(btn, "click", () => {
+        const code = btn.getAttribute("data-lang");
+        logClick("i18n.set", { code });
+        safe(() => I18N()?.apply?.(code));
+        // auto close
+        const rail = $("lang-rail");
+        if (rail) rail.classList.remove("open");
+      });
+    }));
+  }
+
+  // =========================================================
+  // 6) Door Apply wiring with Appendix6 + existing kernel Doors.apply*
+  //    - present under door => BILL.applyPraesentcode(roomKey, code)
+  //    - VIP/master are kernel (logic.js) + MasterPasswords patch already extends verify*
+  // =========================================================
+
+  function wireDoorFields() {
+    // Present (Praesentcode) apply: add Appendix6 effect + keep existing Doors.applyPresent if present
+    const d1p = $("door1-present-apply");
+    if (d1p && !d1p.__eptec_bound) {
+      d1p.__eptec_bound = true;
+      on(d1p, "click", () => {
+        logClick("door1.present.apply");
+        // appendix6 billing effect
+        handlePraesentcodeDoor("door1");
+        // existing kernel paywall effect (if used)
+        safe(() => K()?.Doors?.applyPresent?.(K()?.TERMS?.doors?.door1 || "door1", $("door1-present")?.value));
+        updateCoupling();
+      });
+    }
+
+    const d2p = $("door2-present-apply");
+    if (d2p && !d2p.__eptec_bound) {
+      d2p.__eptec_bound = true;
+      on(d2p, "click", () => {
+        logClick("door2.present.apply");
+        handlePraesentcodeDoor("door2");
+        safe(() => K()?.Doors?.applyPresent?.(K()?.TERMS?.doors?.door2 || "door2", $("door2-present")?.value));
+        updateCoupling();
+      });
+    }
+
+    // VIP apply (kernel)
+    const d1v = $("door1-vip-apply");
+    if (d1v && !d1v.__eptec_bound) {
+      d1v.__eptec_bound = true;
+      on(d1v, "click", () => {
+        logClick("door1.vip.apply");
+        safe(() => K()?.Doors?.applyVip?.(K()?.TERMS?.doors?.door1 || "door1", $("door1-vip")?.value));
+        updateCoupling();
+      });
+    }
+
+    const d2v = $("door2-vip-apply");
+    if (d2v && !d2v.__eptec_bound) {
+      d2v.__eptec_bound = true;
+      on(d2v, "click", () => {
+        logClick("door2.vip.apply");
+        safe(() => K()?.Doors?.applyVip?.(K()?.TERMS?.doors?.door2 || "door2", $("door2-vip")?.value));
+        updateCoupling();
+      });
+    }
+
+    // Master apply (kernel Auth.verifyDoorMaster is patched by MasterPasswords v4)
+    const d1m = $("door1-master-apply");
+    if (d1m && !d1m.__eptec_bound) {
+      d1m.__eptec_bound = true;
+      on(d1m, "click", () => {
+        logClick("door1.master.apply");
+        safe(() => K()?.Doors?.applyMaster?.(K()?.TERMS?.doors?.door1 || "door1", $("door1-master")?.value));
+        updateCoupling();
+      });
+    }
+
+    const d2m = $("door2-master-apply");
+    if (d2m && !d2m.__eptec_bound) {
+      d2m.__eptec_bound = true;
+      on(d2m, "click", () => {
+        logClick("door2.master.apply");
+        safe(() => K()?.Doors?.applyMaster?.(K()?.TERMS?.doors?.door2 || "door2", $("door2-master")?.value));
+        updateCoupling();
+      });
+    }
+  }
+
+  // =========================================================
+  // 7) Logout everywhere (you said: from tunnel onward)
+  //    Delegation target: kernel Auth.logout + capture stop (if you use screen capture module)
+  // =========================================================
+
+  function wireLogout() {
+    ["btn-logout-tunnel", "btn-logout-doors", "btn-logout-room1", "btn-logout-room2"].forEach((id) => {
+      const el = $(id);
+      if (!el || el.__eptec_bound) return;
+      el.__eptec_bound = true;
+      on(el, "click", () => {
+        logClick("logout", { id });
+        // If your screen capture is handled in another file, UI-Control only dispatches:
+        safe(() => window.EPTEC_SCREEN_CAPTURE?.forceStop?.("logout"));
+        // Always call kernel logout
+        safe(() => K()?.Auth?.logout?.());
+      });
+    });
+  }
+
+  // =========================================================
+  // 8) BOOT (idempotent)
+  // =========================================================
+  function boot() {
+    // These are UI-control bindings; logic stays in appends.
+    wireDoorFields();
+    wireRoom1Buttons();
+    wireRoom2HotspotsAndAmpel();
+    wireLanguageButtons();
+    wireLogout();
+    wireMasterRecoveryIfPresent();
+
+    // Profile bindings (Aktionscode apply) — connect your real profile UI buttons to these ids
+    const a1 = document.querySelector("[data-logic-id='profile.actioncode.apply.room1']");
+    if (a1 && !a1.__eptec_bound) {
+      a1.__eptec_bound = true;
+      on(a1, "click", () => handleAktionscodeApply("room1"));
+    }
+    const a2 = document.querySelector("[data-logic-id='profile.actioncode.apply.room2']");
+    if (a2 && !a2.__eptec_bound) {
+      a2.__eptec_bound = true;
+      on(a2, "click", () => handleAktionscodeApply("room2"));
+    }
+
+    safe(() => K()?.Compliance?.log?.("UICTRL", "APPENDS_WIRING_READY"));
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
