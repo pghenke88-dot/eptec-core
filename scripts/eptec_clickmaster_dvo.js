@@ -961,12 +961,7 @@
         Audit.log("SYSTEM", "CLICKMASTER_READY", { afterMs: Safe.now() - start });
         return;
       }
-      if (Safe.now() - start > timeoutMs) {
-        console.warn("[EPTEC] Clickmaster loaded but kernel/state not ready (timeout).");
-        // still bind clicks so you see logs
-        bindGlobalClickCapture();
-        return;
-      }
+      
       setTimeout(tick, 25);
     };
 
