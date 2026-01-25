@@ -860,3 +860,107 @@
   else boot();
 
 })();
+/* =========================================================
+   EPTEC APPEND — UI CONTROL LANGUAGE CASCADE
+   Authority: UI-CONTROLLER
+   Role: Executes LANGUAGE_CASCADE contract
+   ========================================================= */
+
+(() => {
+  "use strict";
+  const safe = (fn) => { try { return fn(); } catch {} };
+
+  const CONTRACT = window.EPTEC_LOGIC_CONTRACTS?.LANGUAGE_CASCADE;
+  if (!CONTRACT) return;
+
+  /* --------------------------------------------
+     1. CLICK → LANGUAGE CHANGE
+     -------------------------------------------- */
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-lang]");
+    if (!btn) return;
+
+    const lang = btn.getAttribute("data-lang");
+    if (!lang) return;
+
+    // REFERENZ: LOGIC CONTRACT
+    safe(() => window.EPTEC_I18N.apply(lang));
+
+    document.dispatchEvent(
+      new CustomEvent("eptec:language:changed", {
+        detail: { lang }
+      })
+    );
+  }, true); // capture phase (unblockable)
+  
+
+  /* --------------------------------------------
+     2. EXECUTE CASCADE
+     -------------------------------------------- */
+  document.addEventListener("eptec:language:changed", async (e) => {
+    const lang = e.detail?.lang || "en";
+
+    // STEP 1 — Load locale dictionary
+    await safe(() => window.EPTEC_I18N.loadLocale(lang));
+
+    // STEP 2 — Re-render all UI texts
+    safe(() => reRenderTexts());
+
+    // STEP 3 — Refresh date / time
+    safe(() => refreshDynamicFormats());
+
+    // STEP 4 — Reload open legal docs (if any)
+    safe(() => reloadLegalDocs(lang));
+  });
+
+
+  /* --------------------------------------------
+     UI TEXT REBUILD
+     -------------------------------------------- */
+  function reRenderTexts() {
+    document
+      .querySelectorAll("[data-i18n-key]")
+      .forEach(el => {
+        const key = el.getAttribute("data-i18n-key");
+        if (!key) return;
+        el.textContent = window.EPTEC_I18N.t(key);
+      });
+
+    document
+      .querySelectorAll("[data-i18n-placeholder]")
+      .forEach(el => {
+        const key = el.getAttribute("data-i18n-placeholder");
+        if (!key) return;
+        el.setAttribute("placeholder", window.EPTEC_I18N.t(key));
+      });
+  }
+
+  /* --------------------------------------------
+     DATE / TIME REFRESH
+     -------------------------------------------- */
+  function refreshDynamicFormats() {
+    document.querySelectorAll("[data-datetime]").forEach(el => {
+      const ts = el.getAttribute("data-datetime");
+      if (!ts) return;
+      el.textContent = new Date(ts).toLocaleString(
+        window.EPTEC_I18N.getLocale?.() || "en-US"
+      );
+    });
+  }
+
+  /* --------------------------------------------
+     LEGAL DOCS RELOAD
+     -------------------------------------------- */
+  function reloadLegalDocs(lang) {
+    const modal = document.querySelector("[data-legal-open]");
+    if (!modal) return;
+
+    const doc = modal.getAttribute("data-legal-open");
+    fetch(`/assets/legal/${lang}/${doc}.html`)
+      .then(r => r.text())
+      .then(html => modal.innerHTML = html)
+      .catch(() => {});
+  }
+
+  console.log("EPTEC UI CONTROL APPEND: Language cascade executor active.");
+})();
