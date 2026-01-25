@@ -295,9 +295,17 @@
    * - remove existing features
    * - bypass existing security
    *
-   * In case of overlap, the system resolves behavior by:
-   * UNION, not replacement.
+   * In case of overlap, the system resolves behavior by: UNION, not replacement.
    */
+  if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
+    // Legacy path (old system)
+    Bind.init();
+    Compliance.log("SYSTEM", "INPUT_LAYER=LEGACY_BIND");
+  } else {
+    // Canonical path (UI-Control / Clickchains)
+    // Bind.init stays intact and permanent, just not used here.
+    Compliance.log("SYSTEM", "INPUT_LAYER=UICONTROL");
+  }
 
   /**
    * AXIOM 4 — FILE-INDEPENDENT BINDING
