@@ -1045,3 +1045,280 @@
 
   console.log("EPTEC UI CONTROL APPEND: Language cascade executor active.");
 })();
+/* =========================================================
+   UI-CONTROL OVERFUEHRUNG — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE
+   ---------------------------------------------------------
+   REFERENZWORTE (1:1 aus EPTEC_KAMEL_HEAD.DVO):
+   - DVO.triggers.demo
+   - DVO.triggers.cameraOn
+   - DVO.triggers.cameraOff
+   - DVO.triggers.masterEnter
+   - DVO.triggers.logoutAny
+   - DVO.roles.author / DVO.roles.demo (nur als Referenz, kein eigenes Rule-Set)
+   - DVO.scenes.start / tunnel / viewdoors / room1 / room2 (nur Referenz)
+
+   ZIELDATEIEN (konkret):
+   - scripts/logic.js            -> window.EPTEC_MASTER.Entry.demo()
+                                 -> window.EPTEC_MASTER.Entry.authorStartMaster(code)
+                                 -> window.EPTEC_MASTER.Auth.logout()
+   - scripts/ui_state.js         -> window.EPTEC_UI_STATE.get()/set()
+   - DEMO/CAMERA APPEND FILE     -> toggles [data-eptec-demo-placeholder]
+                                 -> records if (author && camera.requested)
+                                 -> patches Auth.logout() to stop + download
+   - scripts/sounds.js (optional)-> window.SoundEngine.uiConfirm()
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // Idempotent guard for THIS wiring block
+  if (window.__EPTEC_UICTRL_DEMO_CAM_WIRING__) return;
+  window.__EPTEC_UICTRL_DEMO_CAM_WIRING__ = true;
+
+  const Safe = {
+    try(fn, scope="UICTRL_DEMO_CAM"){ try { return fn(); } catch(e){ console.error(`[EPTEC:${scope}]`, e); return undefined; } },
+    str(x){ return String(x ?? ""); },
+    byId(id){ return document.getElementById(id); },
+    qsa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); },
+    iso(){ return new Date().toISOString(); }
+  };
+
+  // --- Canonical contract (KAMEL HEAD) ---
+  const HEAD = () => window.EPTEC_KAMEL_HEAD || null;
+  const DVO  = () => HEAD()?.DVO || null;
+
+  function TR(name){ return DVO()?.triggers?.[name] || null; }
+  function ROLE(name){ return DVO()?.roles?.[name] || null; }
+  function SCENE(name){ return DVO()?.scenes?.[name] || null; }
+
+  // --- Kernel + State ---
+  const K = () => window.EPTEC_MASTER || window.EPTEC?.kernel || null;   // scripts/logic.js
+  const UI = () => window.EPTEC_UI_STATE || null;                        // scripts/ui_state.js
+
+  // --- Optional sound confirm (delegation to scripts/sounds.js) ---
+  function uiConfirm(){
+    Safe.try(() => window.SoundEngine?.uiConfirm?.(), "SOUND.uiConfirm");
+  }
+
+  // --- Logging (delegation to scripts/logic.js Compliance + Activity) ---
+  function log(type, detail, meta){
+    Safe.try(() => K()?.Compliance?.log?.(type, detail, meta || null), "LOG.Compliance"); // scripts/logic.js
+    Safe.try(() => window.EPTEC_ACTIVITY?.log?.(type, { detail, ...(meta||{}) }), "LOG.Activity");
+  }
+
+  // ---------------------------------------------------------
+  // KANAELE map: use existing global union map if present
+  // ---------------------------------------------------------
+  const KANAELE = window.__EPTEC_KANAELE__ = window.__EPTEC_KANAELE__ || Object.create(null);
+
+  // =========================================================
+  // A) DEMO MODE (DVO.triggers.demo)
+  // =========================================================
+  // Klickkette:
+  // 1) UI-Control registriert Trigger: demo
+  // 2) Delegation: scripts/logic.js -> Entry.demo()
+  //    - setzt modes.demo=true, auth.userId="DEMO", dramaturgy startToDoors()
+  // 3) Append reagiert automatisch:
+  //    - applyDemoPlaceholders(st) zeigt Elemente mit [data-eptec-demo-placeholder]
+  //    - Funktionen bleiben gesperrt durch Guards/Cap (nicht hier!)
+  KANAELE[TR("demo")] = () => {
+    log("UI", "DVO.demo", { trigger: TR("demo"), at: Safe.iso() });
+
+    // ZIELDATEI: scripts/logic.js
+    Safe.try(() => K()?.Entry?.demo?.(), "DEMO.Entry.demo");
+
+    uiConfirm();
+  };
+
+  // =========================================================
+  // B) AUTHOR ENTER (DVO.triggers.masterEnter)
+  // =========================================================
+  // Klickkette:
+  // 1) UI-Control -> masterEnter Trigger
+  // 2) Delegation: scripts/logic.js -> Entry.authorStartMaster(code)
+  // 3) Append reagiert automatisch über State:
+  //    - wenn camera.requested=true und author-mode aktiv -> Camera.start()
+  KANAELE[TR("masterEnter")] = () => {
+    const code = Safe.str(Safe.byId("admin-code")?.value).trim();
+
+    log("UI", "DVO.masterEnter", { trigger: TR("masterEnter"), at: Safe.iso(), codePresent: !!code });
+
+    // ZIELDATEI: scripts/logic.js
+    Safe.try(() => K()?.Entry?.authorStartMaster?.(code), "AUTHOR.Entry.authorStartMaster");
+
+    uiConfirm();
+  };
+
+  // =========================================================
+  // C) CAMERA REQUEST ON/OFF (DVO.triggers.cameraOn / cameraOff)
+  // =========================================================
+  // Das Append will NICHT, dass UI-Control Kamera startet/stoppt.
+  // UI-Control setzt nur: UI_STATE.camera.requested = true/false
+  // Append macht:
+  //  - shouldCameraRun(st) -> author && requested
+  //  - syncCamera(st) -> start/stop
+  function setCameraRequested(flag){
+    const st = Safe.try(() => UI()?.get?.(), "STATE.get") || {};
+    const cam = (st.camera && typeof st.camera === "object") ? st.camera : {};
+    Safe.try(() => UI()?.set?.({ camera: { ...cam, requested: !!flag } }), "STATE.set.camera.requested");
+  }
+
+  KANAELE[TR("cameraOn")] = () => {
+    log("UI", "DVO.cameraOn", { trigger: TR("cameraOn"), at: Safe.iso() });
+    // ZIELDATEI: scripts/ui_state.js
+    setCameraRequested(true);
+    uiConfirm();
+  };
+
+  KANAELE[TR("cameraOff")] = () => {
+    log("UI", "DVO.cameraOff", { trigger: TR("cameraOff"), at: Safe.iso() });
+    // ZIELDATEI: scripts/ui_state.js
+    setCameraRequested(false);
+    uiConfirm();
+  };
+
+  // =========================================================
+  // D) LOGOUT ANY (DVO.triggers.logoutAny)
+  // =========================================================
+  // Klickkette:
+  // 1) UI-Control -> Auth.logout() (Kernel)
+  // 2) Append patchLogout() intercepts Auth.logout:
+  //    - Camera.stop({ offerDownload:true })
+  //    - resets camera flags
+  // 3) Danach original logout reset state
+  KANAELE[TR("logoutAny")] = () => {
+    log("UI", "DVO.logoutAny", { trigger: TR("logoutAny"), at: Safe.iso() });
+
+    // ZIELDATEI: scripts/logic.js
+    Safe.try(() => K()?.Auth?.logout?.(), "Auth.logout (patched by append)");
+
+    uiConfirm();
+  };
+
+  // =========================================================
+  // E) UI-CONTROL REQUIRED UI ELEMENTS (pure wiring support)
+  // =========================================================
+
+  // 1) Ensure demo placeholders exist is NOT UI-Control’s job,
+  //    but UI-Control can log if none exist so you notice immediately.
+  function warnIfNoDemoPlaceholders(){
+    const els = Safe.qsa("[data-eptec-demo-placeholder]");
+    if (!els.length) {
+      log("UICTRL", "DEMO_PLACEHOLDERS_MISSING", {
+        hint: 'Add elements with data-eptec-demo-placeholder="start" and/or "doors".'
+      });
+    }
+  }
+
+  // 2) Create a CAMERA-OFF icon/button (your requirement: “sofort erscheint ein Icon zum Abschalten”)
+  //    IMPORTANT: No new trigger word; it emits DVO.cameraOff.
+  function ensureCameraOffIcon(){
+    // only create once
+    if (Safe.byId("eptec-camera-off")) return;
+
+    const btn = document.createElement("button");
+    btn.id = "eptec-camera-off";
+    btn.type = "button";
+    btn.textContent = "📴"; // camera off icon
+    btn.title = "Camera OFF";
+    btn.setAttribute("aria-label", "Camera OFF");
+
+    // style lightweight (you can override in CSS)
+    btn.style.position = "fixed";
+    btn.style.top = "12px";
+    btn.style.right = "12px";
+    btn.style.zIndex = "99999";
+    btn.style.display = "none";
+    btn.style.cursor = "pointer";
+
+    // Click: trigger cameraOff via DVO trigger string
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const fn = KANAELE[TR("cameraOff")];
+      if (typeof fn === "function") fn();
+    }, true);
+
+    document.body.appendChild(btn);
+
+    // Show/hide based on UI_STATE.camera.requested OR camera.active (append sets active)
+    const refresh = () => {
+      const st = Safe.try(() => UI()?.get?.(), "STATE.get") || {};
+      const cam = st.camera || {};
+      const requested = !!cam.requested;
+      const active = !!cam.active;
+      btn.style.display = (requested || active) ? "block" : "none";
+    };
+
+    // subscribe if possible
+    const store = UI();
+    if (store && typeof store.subscribe === "function") {
+      store.subscribe(() => refresh());
+      refresh();
+    } else {
+      setInterval(refresh, 400);
+    }
+  }
+
+  // 3) Wire the checkbox to DVO cameraOn/cameraOff (so it *always* routes through DVO words)
+  function wireCameraCheckboxToDVO(){
+    const t = Safe.byId("admin-camera-toggle");
+    if (!t || t.__uictrl_dvo_bound) return;
+    t.__uictrl_dvo_bound = true;
+
+    t.addEventListener("change", (e) => {
+      const onFlag = !!t.checked;
+      // Route through DVO triggers (no invented words)
+      const id = onFlag ? TR("cameraOn") : TR("cameraOff");
+      const fn = KANAELE[id];
+      if (typeof fn === "function") fn();
+    });
+  }
+
+  // 4) Wire logout buttons (all ids starting with btn-logout*) to DVO.logoutAny
+  function wireLogoutButtonsToDVO(){
+    Safe.qsa("[id^='btn-logout']").forEach((btn) => {
+      if (btn.__uictrl_dvo_bound) return;
+      btn.__uictrl_dvo_bound = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const fn = KANAELE[TR("logoutAny")];
+        if (typeof fn === "function") fn();
+      }, true);
+    });
+  }
+
+  // =========================================================
+  // BOOT this wiring block
+  // =========================================================
+  function boot(){
+    // reference sanity: DVO must exist
+    if (!DVO()?.triggers) {
+      console.warn("[EPTEC] UI-Control wiring: DVO.triggers missing (KAMEL_HEAD not ready yet). Retrying...");
+      setTimeout(boot, 50);
+      return;
+    }
+
+    warnIfNoDemoPlaceholders();      // logs missing placeholder elements
+    ensureCameraOffIcon();           // adds OFF icon + state-driven visibility
+    wireCameraCheckboxToDVO();       // checkbox always goes through DVO trigger words
+    wireLogoutButtonsToDVO();        // all logout buttons route through DVO.logoutAny
+
+    log("UICTRL", "DEMO_CAM_WIRING_READY", {
+      demo: TR("demo"),
+      masterEnter: TR("masterEnter"),
+      cameraOn: TR("cameraOn"),
+      cameraOff: TR("cameraOff"),
+      logoutAny: TR("logoutAny"),
+      roleAuthor: ROLE("author"),
+      roleDemo: ROLE("demo")
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+
+})();
