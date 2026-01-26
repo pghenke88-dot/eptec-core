@@ -12,15 +12,8 @@
   <link rel="icon" href="./favicon.ico" />
 
   <!-- =========================================================
-       INPUT LAYER (canonical)
-       - ensures legacy Bind.init is not executed (if you use the gate in logic.js)
-       ========================================================= -->
-  <script>
-    window.EPTEC_INPUT_LAYER = "UICONTROL";
-  </script>
-
-  <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe)
+       NOTE: inline <script> is blocked (script-src 'self')
        ========================================================= -->
   <meta http-equiv="Content-Security-Policy"
         content="
@@ -46,41 +39,55 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       SCRIPTS — CANONICAL ORDER (BOOTLOADER CORRECT)
+       SCRIPTS — CANONICAL ORDER (CSP-safe, boot-correct)
        ---------------------------------------------------------
-       0) UI_STATE (foundation)
-       1) LOGIC (Kernel + KAMEL_HEAD + Axioms + EPTEC_MASTER)
-       2) CLICKMASTER DVO (uses kernel/state; can wait but should come after)
-       3) UI_CONTROL (mediator; needs DVO + kernel + state)
-       4) EFFECTS / ASSISTANTS (sound/legal/registration/rooms)
-       5) BACKEND / API / MAIN
+       0) BOOT FLAGS (CSP-safe replacements for inline flags)
+       1) UI_STATE (foundation)
+       2) MOCK BACKEND (Phase 1 surface)
+       3) STATE MANAGER (adapter backend<->ui_state)
+       4) KERNEL / LOGIC (EPTEC_MASTER + KAMEL_HEAD + Axioms)
+       5) CLICKMASTER DVO
+       6) EFFECTS (Sound should exist before UI-Control click confirm)
+       7) UI_CONTROL (mediator; delegates only)
+       8) Assistants (registration/legal/rooms)
+       9) API / MAIN
+       10) DEMO (after main)
        ========================================================= -->
 
-  <!-- 0) FOUNDATION -->
+  <!-- 0) BOOT FLAGS (NO INLINE JS allowed by CSP) -->
+  <script src="./scripts/boot_input_layer.js" defer></script>
+
+  <!-- 1) FOUNDATION -->
   <script src="./scripts/ui_state.js" defer></script>
 
-  <!-- 1) KERNEL / LOGIC (must exist before DVO + UI-Control delegates) -->
+  <!-- 2) BACKEND (Phase 1) -->
+  <script src="./scripts/mock_backend.js" defer></script>
+
+  <!-- 3) STATE ADAPTER -->
+  <script src="./scripts/state_manager.js" defer></script>
+
+  <!-- 4) KERNEL / LOGIC -->
   <script src="./scripts/logic.js" defer></script>
 
-  <!-- 2) CLICKMASTER DVO -->
+  <!-- 5) CLICKMASTER DVO -->
   <script src="./scripts/eptec_clickmaster_dvo.js" defer></script>
 
-  <!-- 3) UI-CONTROL (your DVO-only + append wiring lives here) -->
+  <!-- 6) EFFECTS -->
+  <script src="./scripts/sounds.js" defer></script>
+
+  <!-- 7) UI-CONTROL (DVO-only mediator) -->
   <script src="./scripts/ui_controller.js" defer></script>
 
-  <!-- 4) EFFECTS / ASSISTANTS -->
-  <script src="./scripts/sounds.js" defer></script>
+  <!-- 8) ASSISTANTS -->
   <script src="./scripts/registration_engine.js" defer></script>
   <script src="./scripts/transparency_ui.js" defer></script>
   <script src="./scripts/room1_framework_assistant.js" defer></script>
 
-  <!-- 5) BACKEND / API / STATE + MAIN -->
-  <script src="./scripts/mock_backend.js" defer></script>
+  <!-- 9) API / MAIN -->
   <script src="./scripts/api_client.js" defer></script>
-  <script src="./scripts/state_manager.js" defer></script>
   <script src="./scripts/main.js" defer></script>
 
-  <!-- DEMO (AFTER main) -->
+  <!-- 10) DEMO (AFTER main) -->
   <script src="./scripts/eptec_demo_allinone.js" defer></script>
 </head>
 
@@ -174,7 +181,7 @@
     <div class="door-block" id="door-construction" data-logic-id="doors.block.door1">
       <h2 data-logic-id="doors.title.door1">Construction</h2>
 
-      <input id="door1-present" type="text" placeholder="Gift/Action code" />
+      <input id="door1-present" type="text" placeholder="Action code" />
       <button id="door1-present-apply">Apply</button>
 
       <input id="door1-vip" type="text" placeholder="VIP code" />
@@ -191,7 +198,7 @@
     <div class="door-block" id="door-controlling" data-logic-id="doors.block.door2">
       <h2 data-logic-id="doors.title.door2">Contract Controlling</h2>
 
-      <input id="door2-present" type="text" placeholder="Gift/Action code" />
+      <input id="door2-present" type="text" placeholder="Action code" />
       <button id="door2-present-apply">Apply</button>
 
       <input id="door2-vip" type="text" placeholder="VIP code" />
@@ -270,3 +277,4 @@
 
 </body>
 </html>
+
