@@ -44,9 +44,9 @@
   const DVO = Object.freeze({
     // Scenes / phases (must align with your TERMS.scenes later)
     scenes: Object.freeze({
-      start: "start",
+      meadow: "meadow",
       tunnel: "tunnel",
-      viewdoors: "viewdoors",
+      doors: "doors",
       whiteout: "whiteout",
       room1: "room1",
       room2: "room2"
@@ -340,7 +340,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
  * AXIOM 6 — DRAMATURGY & STATE INTEGRATION (CLARIFIED)
  * ---------------------------------------------------
  * Appends apply system-wide to:
- * - dramaturgical flow (start → tunnel → doors → rooms)
+ * - dramaturgical flow (meadow → tunnel → doors → rooms)
  * - audio transitions
  * - visual transitions
  * - UI_STATE presence/availability
@@ -416,6 +416,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
   console.log("EPTEC CORE AXIOM PATCH ACTIVE — APPENDS ARE UNIVERSAL AND PERMANENT.");
 
 })();
+
 /* =========================================================
    EPTEC MASTER LOGIC v1 (Canonical Dramaturgy Kernel)
    - full restructure allowed by user
@@ -476,9 +477,9 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
       author: "author" // you = Autor/Admin
     }),
     scenes: Object.freeze({
-      start: "start",
+      meadow: "meadow",
       tunnel: "tunnel",
-      viewdoors: "viewdoors",
+      doors: "doors",
       whiteout: "whiteout",
       room1: "room1",
       room2: "room2"
@@ -536,8 +537,8 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
   }
 
   const DEFAULT_UI = {
-    scene: TERMS.scenes.start,
-    view: TERMS.scenes.start, // alias for old code expectations
+    scene: TERMS.scenes.meadow,
+    view: TERMS.scenes.meadow, // alias for old code expectations
     transition: { tunnelActive: false, whiteout: false, last: "boot" },
     lang: "de",
     locale: "de-DE",
@@ -645,15 +646,15 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
       // you said: audio valid only for the dramaturgy section
       // -> stop previous ambient when leaving/entering as needed
       if (window.SoundEngine) {
-        if (s === TERMS.scenes.start) {
-          Safe.try(() => window.SoundEngine.stopAmbient?.(), "Audio.stopAmbient.start");
+        if (s === TERMS.scenes.meadow) {
+          Safe.try(() => window.SoundEngine.stopAmbient?.(), "Audio.stopAmbient.meadow");
           // no mandatory sound here unless you want
         }
         if (s === TERMS.scenes.tunnel) {
           Safe.try(() => window.SoundEngine.stopAmbient?.(), "Audio.stopAmbient.tunnel");
           Safe.try(() => window.SoundEngine.tunnelFall?.(), "Audio.tunnelFall");
         }
-        if (s === TERMS.scenes.viewdoors || s === TERMS.scenes.room1 || s === TERMS.scenes.room2) {
+        if (s === TERMS.scenes.doors || s === TERMS.scenes.room1 || s === TERMS.scenes.room2) {
           Safe.try(() => window.SoundEngine.startAmbient?.(), "Audio.ambient.wind");
         }
         if (s === TERMS.scenes.whiteout) {
@@ -664,7 +665,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
       // fallback tags
       if (s === TERMS.scenes.tunnel) this.playTag("snd-wurmloch", 1);
-      if (s === TERMS.scenes.viewdoors || s === TERMS.scenes.room1 || s === TERMS.scenes.room2) this.playTag("snd-wind", 0.35);
+      if (s === TERMS.scenes.doors || s === TERMS.scenes.room1 || s === TERMS.scenes.room2) this.playTag("snd-wind", 0.35);
     }
   };
 
@@ -701,7 +702,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
   /* =========================================================
      6) AUTH / MODES
      - Demo: no unlocks anywhere (doors, tunnel, rooms)
-     - Author: master START on start screen
+     - Author: master START on meadow screen
      - Door Master: master DOOR under each door grants author entry for that door (and room switch orb)
      ========================================================= */
   const Auth = {
@@ -719,7 +720,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
       return { ok: true, userId: `U-${Safe.hashMini(u)}`, tariff: "base" };
     },
 
-    // Admin start master on start screen
+    // Admin start master on meadow screen
     verifyStartMaster(code) {
       return Safe.str(code).trim() === TERMS.master.START;
     },
@@ -744,14 +745,14 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
     logout() {
       UI_STATE.set({
-        scene: TERMS.scenes.start,
-        view: TERMS.scenes.start,
+        scene: TERMS.scenes.meadow,
+        view: TERMS.scenes.meadow,
         transition: { tunnelActive: false, whiteout: false, last: "logout" },
         modes: { demo: false, user: false, vip: false, author: false },
         auth: { isAuthed: false, userId: null }
       });
       Compliance.log("AUTH", "LOGOUT");
-      Audio.cue(TERMS.scenes.start, "enter");
+      Audio.cue(TERMS.scenes.meadow, "enter");
     }
   };
 
@@ -793,13 +794,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      8) TRAFFIC LIGHT (Room1)
-     - enabled only when user activates compare
-     - score numeric only shown after enabled
-     - yellow if <50% deviation? (your text: "unter 50 abweichung gelb bei über 50 rot")
-       -> interpret: deviation percentage:
-          deviation < 50 => YELLOW
-          deviation >= 50 => RED
-       If you meant similarity instead of deviation, flip later.
      ========================================================= */
   const TrafficLight = {
     enable() {
@@ -838,9 +832,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      9) ESCALATION + BACKUP PROTOCOL (Room2)
-     - logs all uploads/downloads in rooms
-     - plant hotspot shows backup protocol
-     - first yellow click adds escalation note
      ========================================================= */
   const Escalation = {
     onFirstYellowClick() {
@@ -888,28 +879,19 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      10) DRAMATURGY STATE MACHINE
-     - the only place allowed to change scene transitions
-     - deterministic + logged
      ========================================================= */
   const Dramaturgy = {
     to(scene, meta = null) {
       const target = Safe.str(scene);
       const st = UI_STATE.get();
 
-      // demo mode never unlocks: but it may travel as "view-only" (your requirement)
-      // => demo can go tunnel + doors + rooms visually, but functions remain locked.
-      // If you want demo to never pass doors/rooms, set this to block below.
-      // We'll implement your explicit text: "Demo hat keine Funktionen freischalten,
-      // weder im Tunnel noch vor den zwei Türen noch in den Räumen dahinter."
-      // -> demo can still go through scenes, but any unlock actions are blocked by guards.
-
       // transition flags
       let transition = { ...(st.transition || {}) };
       if (target === TERMS.scenes.tunnel) transition = { tunnelActive: true, whiteout: false, last: "to_tunnel" };
-      if (target === TERMS.scenes.viewdoors) transition = { tunnelActive: false, whiteout: false, last: "to_doors" };
+      if (target === TERMS.scenes.doors) transition = { tunnelActive: false, whiteout: false, last: "to_doors" };
       if (target === TERMS.scenes.whiteout) transition = { tunnelActive: false, whiteout: true, last: "to_whiteout" };
       if (target === TERMS.scenes.room1 || target === TERMS.scenes.room2) transition = { tunnelActive: false, whiteout: false, last: "arrive_room" };
-      if (target === TERMS.scenes.start) transition = { tunnelActive: false, whiteout: false, last: "to_start" };
+      if (target === TERMS.scenes.meadow) transition = { tunnelActive: false, whiteout: false, last: "to_meadow" };
 
       UI_STATE.set({ scene: target, view: target, transition });
       Compliance.log("SCENE", `SET=${target}`, { meta, transition });
@@ -919,11 +901,11 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
       return target;
     },
 
-    // start → tunnel → viewdoors
+    // meadow → tunnel → doors
     startToDoors() {
-      this.to(TERMS.scenes.tunnel, { from: "start" });
+      this.to(TERMS.scenes.tunnel, { from: "meadow" });
       // tunnel duration (you used 650ms earlier)
-      setTimeout(() => this.to(TERMS.scenes.viewdoors, { from: "tunnel" }), 650);
+      setTimeout(() => this.to(TERMS.scenes.doors, { from: "tunnel" }), 650);
     },
 
     // doors → whiteout → room
@@ -935,15 +917,13 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      11) RENDERER (non-invasive)
-     - works with existing sections if IDs exist
-     - does not crash if missing
      ========================================================= */
   const Renderer = {
     // mapping can be aligned with your real DOM
     ids: {
-      start: ["meadow-view", "entry-view", "start-view"],
+      meadow: ["meadow-view", "entry-view", "start-view"],
       tunnel: ["tunnel-view"],
-      viewdoors: ["doors-view", "viewdoors-view"],
+      doors: ["doors-view", "viewdoors-view"],
       room1: ["room-1-view", "room1-view"],
       room2: ["room-2-view", "room2-view"]
     },
@@ -972,10 +952,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      12) FEATURE GUARDS (Demo/User/VIP/Author)
-     - Demo: everything locked except navigation visuals and logout
-     - User: room actions allowed if door paid
-     - VIP: upload allowed in room2, extra features
-     - Author: can switch rooms via orb and bypass paywalls via master
      ========================================================= */
   const Guard = {
     mode() {
@@ -1014,7 +990,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      13) ROOM LOGIC (hotspots)
-     - attach by data-logic-id OR by explicit element ids
      ========================================================= */
   const Hotspots = {
     // generic click binder
@@ -1045,7 +1020,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      14) UI HELPER (toast/messages)
-     - bridges to your existing EPTEC_UI if present
      ========================================================= */
   const UI = {
     toast(msg, type = "info") {
@@ -1060,8 +1034,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      15) AUTHOR ORB (room quick switch)
-     - only visible/active for author
-     - top right wobbly ball is UI; logic is here
      ========================================================= */
   const AuthorOrb = {
     init() {
@@ -1093,7 +1065,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
     // door click opens whiteout -> room if door is allowed
     clickDoor(doorKey) {
       const st = UI_STATE.get();
-      if (st.scene !== TERMS.scenes.viewdoors) return;
+      if (st.scene !== TERMS.scenes.doors) return;
 
       // demo can *enter* rooms visually but functions remain locked.
       // If you want demo to never enter rooms, hard-block here:
@@ -1249,8 +1221,6 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      20) APPEND-RECOGNITION (MODULE REGISTRY)
-     - any appended script can call EPTEC.registerModule(...)
-     - kernel resolves dependencies, logs them, and gives them guarded APIs
      ========================================================= */
   const Modules = (() => {
     const reg = new Map();     // id -> module
@@ -1434,13 +1404,13 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
 
   /* =========================================================
      22) BOOT
-     - set initial scene start and bind
+     - set initial scene meadow and bind
      - start appended modules afterwards (so they can hook into kernel)
      ========================================================= */
   function boot() {
     Safe.try(() => {
-      // default start
-      Dramaturgy.to(TERMS.scenes.start, { boot: true });
+      // default meadow
+      Dramaturgy.to(TERMS.scenes.meadow, { boot: true });
 
       // bindings
       Bind.init();
@@ -1490,7 +1460,7 @@ PASTE HERE:
 
 ========================================================= */
 /* =========================================================
-   EPTEC APPEND — MASTER PASSWORDS v4 (LOGIC / KERNEL EXTENSION)
+   EPTEC APPEND 1 — MASTER PASSWORDS v4 (LOGIC / KERNEL EXTENSION)
    Role: Security + Recovery + Kernel Auth extension (NO DOM)
    Authority: Kernel
    ========================================================= */
@@ -1753,7 +1723,7 @@ PASTE HERE:
 })();
 
 /* =========================================================
-   EPTEC APPEND — AUDIO BRIDGE
+   EPTEC APPEND 2 — AUDIO BRIDGE
    Role: Technical Bridge ONLY
    Authority: Kernel Audio.cue
    ========================================================= */
@@ -1772,7 +1742,7 @@ PASTE HERE:
 })();
 
 /* =========================================================
-   EPTEC APPEND — SCENE VISUAL MIRROR
+   EPTEC APPEND 3  — SCENE VISUAL MIRROR
    Role: Visual Reflection
    Authority: Kernel Scene
    ========================================================= */
@@ -2007,7 +1977,7 @@ PASTE HERE:
 
 })();
 /* =========================================================
-   EPTEC APPENDIX 6 — BILLING, AKTIONSCODE, PRÄSENTCODE & COUPLING CORE
+   EPTEC APPEND 6 — BILLING, AKTIONSCODE, PRÄSENTCODE & COUPLING CORE
    Status: CANONICAL LOGIC EXTENSION
    Scope: GLOBAL · PERMANENT · AGB-RELEVANT
    ---------------------------------------------------------
@@ -2021,7 +1991,7 @@ PASTE HERE:
 
    B) PRÄSENTCODE  (ALT: Geschenkcode / Neukunden-Code)
       - Zweck: Wegfall der EINMALZAHLUNG bei Anmeldung zu einem Tarif (Signup-Fee Waiver)
-      - Unbefristet gültig (bis deaktiviert – Deaktivierung ist Admin-Sache, nicht Teil dieses Appendix)
+      - Unbefristet gültig (bis deaktiviert – Deaktivierung ist Admin-Sache, nicht Teil dieses Appen)
       - Raumgebunden
       - Codes für BEIDE Räume dürfen NUR generiert werden,
         wenn der Ersteller beide Räume aktiv besitzt
@@ -2190,7 +2160,7 @@ PASTE HERE:
   window.EPTEC_BILLING = Billing;
 
   safe(() => window.EPTEC_ACTIVITY?.log?.(
-    "appendix6.loaded",
+    "append6.loaded",
     { ts: nowISO() }
   ));
 
@@ -2198,7 +2168,7 @@ PASTE HERE:
 
 
 /* =========================================================
-   EPTEC ADDEND 7 — LANGUAGE GOVERNANCE CORE (UNBLOCKABLE · GLOBAL · DETERMINISTIC)
+   EPTEC APPEND 7 — LANGUAGE GOVERNANCE CORE (UNBLOCKABLE · GLOBAL · DETERMINISTIC)
    Purpose:
    - Canonical 12 language codes (UI): EN DE ES FR IT PT NL RU UK AR CN JP
    - Internal keys: en de es fr it pt nl ru uk ar cn jp
@@ -2494,10 +2464,9 @@ PASTE HERE:
   else boot();
 
 })();
-
 /* =========================================================
-   EPTEC APPEND — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE (RECORD UNTIL LOGOUT)
-   - Demo: show placeholder icons (start + doors) without enabling functions
+   EPTEC APPEND 8 — DEMO PLACEHOLDERS + AUTHOR CAMERA MODE (RECORD UNTIL LOGOUT)
+   - Demo: show placeholder icons (meadow + doors) without enabling functions
    - Author camera option: if enabled on entry, record until logout
    - Logout always stops camera + offers download
    - No-crash, idempotent
@@ -2522,7 +2491,7 @@ PASTE HERE:
 
   // ---------- 1) DEMO PLACEHOLDER ICONS ----------
   // You can place ANY element with these attributes; logic just toggles visibility:
-  // data-eptec-demo-placeholder="start"   (start screen)
+  // data-eptec-demo-placeholder="meadow"  (meadow screen)
   // data-eptec-demo-placeholder="doors"   (before doors)
   function applyDemoPlaceholders(st) {
     const demo = !!(st?.modes?.demo);
@@ -2614,7 +2583,7 @@ PASTE HERE:
   function shouldCameraRun(st) {
     const author = !!(st?.modes?.author || st?.modes?.admin);
     const camOpt = !!(st?.camera?.requested || st?.camera?.enabled || st?.camera === true);
-    // We treat "requested/enabled" as the toggle you set on start screen.
+    // We treat "requested/enabled" as the toggle you set on meadow screen.
     return author && camOpt;
   }
 
@@ -2626,7 +2595,7 @@ PASTE HERE:
     if (!want && active) Camera.stop({ offerDownload: false });
   }
 
-  // ---------- 4) Integrate with existing "camera toggle" input on start screen ----------
+  // ---------- 4) Integrate with existing "camera toggle" input on meadow screen ----------
   // If you have: <input id="admin-camera-toggle" type="checkbox">
   function bindCameraToggle() {
     const t = $("admin-camera-toggle");
@@ -2686,15 +2655,16 @@ PASTE HERE:
     bindCameraToggle();
     patchLogout();
     subscribe();
-    console.log("EPTEC APPEND: Demo placeholders + Author camera mode active");
+    console.log("EPTEC APPEND 8 active: Demo placeholders + Author camera mode");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
 })();
+
 /* =========================================================
-   EPTEC APPEND A — CANONICAL ID REGISTRY
+   EPTEC APPEND 9 — CANONICAL ID REGISTRY
    - single source of truth for required IDs / data-logic-id
    - non-blocking: logs missing IDs instead of crashing
    ========================================================= */
@@ -2709,7 +2679,7 @@ PASTE HERE:
       "language-switcher", "lang-toggle", "lang-rail",
       "system-clock"
     ],
-    // Start
+    // Meadow
     ids_start: [
       "btn-login", "btn-demo", "btn-register", "btn-forgot",
       "login-username", "login-password",
@@ -2761,19 +2731,17 @@ PASTE HERE:
     }
 
     safe(() => window.EPTEC_ACTIVITY?.log?.("id.check", missing));
-    // No crash — only log to console for you during dev
-   
   };
 
-  // run once on DOM ready (idempotent)
   if (!REG.__ran) {
     REG.__ran = true;
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => REG.check());
     else REG.check();
   }
 })();
+
 /* =========================================================
-   EPTEC APPEND B — CONSENT GUARD (AGB + OBLIGATION)
+   EPTEC APPEND 10 — CONSENT GUARD (AGB + OBLIGATION)
    - central guard that blocks sensitive actions unless consent is true
    - non-blocking UI: returns reason instead of throwing
    ========================================================= */
@@ -2815,8 +2783,9 @@ PASTE HERE:
   });
 
 })();
+
 /* =========================================================
-   EPTEC APPEND C — CAPABILITIES MATRIX (can(feature))
+   EPTEC APPEND 11 — CAPABILITIES MATRIX (can(feature))
    - prevents accidental unlocks across appends
    ========================================================= */
 (() => {
@@ -2851,21 +2820,16 @@ PASTE HERE:
     const m = mode();
     const t = tariff();
 
-    // Demo: nothing functional
     if (m === "demo") return false;
-
-    // Author: everything
     if (m === "author") return true;
 
-    // Feature rules
-    if (f === "room1.traffic") return (t === "premium");              // Ampel only premium (non-author)
-    if (f === "room1.uploadProposal") return (t === "premium");       // Proposal upload only premium
-    if (f === "room2.upload") return (m === "vip");                   // Room2 uploads: VIP (and author handled above)
-    if (f === "codes.generate") return true;                          // gating by consent/ownership elsewhere
+    if (f === "room1.traffic") return (t === "premium");
+    if (f === "room1.uploadProposal") return (t === "premium");
+    if (f === "room2.upload") return (m === "vip");
+    if (f === "codes.generate") return true;
     if (f === "codes.apply") return true;
     if (f === "logout") return true;
 
-    // default allow
     return true;
   });
 
@@ -2873,7 +2837,7 @@ PASTE HERE:
 })();
 
 /* =========================================================
-   EPTEC APPEND E — AUDIT EXPORT STANDARD
+   EPTEC APPEND 12 — AUDIT EXPORT STANDARD
    - stable export format for backup/protocol and court usage
    ========================================================= */
 (() => {
@@ -2908,7 +2872,6 @@ PASTE HERE:
     return JSON.stringify(payload, null, 2);
   });
 
-  // Convenience: export from your Room2 backup protocol store if present
   Audit.exportRoom2Backup = Audit.exportRoom2Backup || (() => {
     const key = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1";
     const raw = safe(() => localStorage.getItem(key));
@@ -2917,8 +2880,9 @@ PASTE HERE:
   });
 
 })();
+
 /* =========================================================
-   EPTEC APPEND F — SINGLE SCENE AUTHORITY
+   EPTEC APPEND 13 — SINGLE SCENE AUTHORITY
    - ensures only EPTEC_MASTER.Dramaturgy changes scenes
    - if other code sets UI_STATE.scene/view directly, we log it
    - non-destructive: does not block, but makes drift visible immediately
@@ -2945,7 +2909,6 @@ PASTE HERE:
       if (!scene) return;
       if (last === null) { last = scene; return; }
       if (scene !== last) {
-        // If Dramaturgy exists, any scene change should have been via it
         const hasDram = !!window.EPTEC_MASTER?.Dramaturgy;
         safe(() => window.EPTEC_ACTIVITY?.log?.("scene.change", { from: last, to: scene, viaDramaturgy: hasDram }));
         last = scene;
@@ -2960,8 +2923,9 @@ PASTE HERE:
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 })();
+
 /* =========================================================
-   EPTEC APPEND G — PROFILE / ACCOUNT MANAGER
+   EPTEC APPEND 14 — PROFILE / ACCOUNT MANAGER
    Scope:
    - User Profile: email change, payment method change, cancel subscription
    - Cancellation: immediate rights loss (enforced in logic)
@@ -2974,8 +2938,8 @@ PASTE HERE:
   const $ = (id) => document.getElementById(id);
 
   const KEY = Object.freeze({
-    account: "EPTEC_ACCOUNT_STATE_V1",      // localStorage: per device (phase 1)
-    cancel:  "EPTEC_CANCEL_STATE_V1"        // localStorage: cancellation + rights state
+    account: "EPTEC_ACCOUNT_STATE_V1",
+    cancel:  "EPTEC_CANCEL_STATE_V1"
   });
 
   function readJSON(k, fallback) {
@@ -3003,7 +2967,6 @@ PASTE HERE:
     console.log(`[TOAST:${type}]`, msg);
   }
 
-  // i18n text hook (optional)
   function t(key, fallback) {
     const fn = safe(() => window.EPTEC_I18N?.t);
     if (typeof fn === "function") {
@@ -3017,36 +2980,28 @@ PASTE HERE:
     safe(() => window.EPTEC_ACTIVITY?.log?.(action, { room, ...(meta || {}) }));
     const ev = safe(() => window.EPTEC_AUDIT?.event?.(room, action, meta));
     if (ev) safe(() => {
-      const k = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1"; // reuse your protocol channel
+      const k = "EPTEC_ROOM2_BACKUP_PROTOCOL_V1";
       const arr = readJSON(k, []);
       arr.push(ev);
       writeJSON(k, arr);
     });
   }
 
-  // ---------------------------------------------------------
-  // ACCOUNT MODEL (phase 1: localStorage; later replace w backend)
-  // ---------------------------------------------------------
   function loadAccount() {
     const acc = readJSON(KEY.account, {
       email: "",
       payment: { method: "", ibanMasked: "", confirmed: false, updatedAt: null },
       profile: { name: "", company: "", address: "" },
-      // rights & subscription
       subscription: { active: true, rooms: { room1: true, room2: false }, tier: "base" }
     });
     return acc;
   }
-  function saveAccount(next) {
-    writeJSON(KEY.account, next);
-    return next;
-  }
+  function saveAccount(next) { writeJSON(KEY.account, next); return next; }
 
-  // Rights state (enforced at logic level)
   function loadCancel() {
     return readJSON(KEY.cancel, {
       canceledAt: null,
-      rightsLostAt: null,     // immediate rights loss moment
+      rightsLostAt: null,
       reason: "",
       tripleConfirm: 0
     });
@@ -3068,9 +3023,6 @@ PASTE HERE:
     return true;
   }
 
-  // ---------------------------------------------------------
-  // PUBLIC API (for other appends / UI)
-  // ---------------------------------------------------------
   const Profile = (window.EPTEC_PROFILE = window.EPTEC_PROFILE || {});
 
   Profile.get = Profile.get || (() => loadAccount());
@@ -3105,7 +3057,6 @@ PASTE HERE:
   Profile.cancel = Profile.cancel || ((reason) => {
     if (!ensureConsent("profile.cancel")) return { ok: false, reason: "CONSENT_REQUIRED" };
 
-    // triple-confirm gate lives in logic:
     const c = loadCancel();
     c.tripleConfirm = Math.min(3, (c.tripleConfirm || 0) + 1);
     c.reason = String(reason || "");
@@ -3117,7 +3068,6 @@ PASTE HERE:
       return { ok: false, reason: "NEEDS_TRIPLE_CONFIRM", step: c.tripleConfirm };
     }
 
-    // third confirm => CANCEL NOW + RIGHTS LOST NOW
     const nowIso = new Date().toISOString();
     c.canceledAt = nowIso;
     c.rightsLostAt = nowIso;
@@ -3128,7 +3078,6 @@ PASTE HERE:
     acc.subscription.active = false;
     saveAccount(acc);
 
-    // enforce rights in UI_STATE too (so guards can see it)
     const st = getState();
     setState({ rights: { ...(st.rights || {}), canUse: false, lostAt: nowIso } });
 
@@ -3145,9 +3094,6 @@ PASTE HERE:
     return true;
   });
 
-  // ---------------------------------------------------------
-  // OPTIONAL UI BINDINGS (only if IDs exist)
-  // ---------------------------------------------------------
   function bindOnce(btn, fn, key) {
     if (!btn) return;
     const k = `__eptec_bind_${key}`;
@@ -3157,13 +3103,11 @@ PASTE HERE:
   }
 
   function initBindings() {
-    // Email change
     bindOnce($("profile-email-change-submit"), () => {
       const v = $("profile-email")?.value;
       Profile.setEmail(v);
     }, "email");
 
-    // Payment change (simple: method + ibanMasked + confirmed)
     bindOnce($("profile-payment-change-submit"), () => {
       const method = $("profile-payment-method")?.value || "";
       const ibanMasked = $("profile-iban-masked")?.value || "";
@@ -3171,14 +3115,12 @@ PASTE HERE:
       Profile.setPayment({ method, ibanMasked, confirmed });
     }, "payment");
 
-    // Cancel triple confirm button
     bindOnce($("profile-cancel-submit"), () => {
       const reason = $("profile-cancel-reason")?.value || "";
       Profile.cancel(reason);
     }, "cancel");
   }
 
-  // Expose required IDs for harmony checks (non-blocking)
   window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {};
   const prev = window.EPTEC_ID_REGISTRY.required || {};
   window.EPTEC_ID_REGISTRY.required = Object.freeze({
@@ -3193,10 +3135,11 @@ PASTE HERE:
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBindings);
   else initBindings();
 
-  console.log("EPTEC APPEND G active: Profile/Account Manager");
+  console.log("EPTEC APPEND 14 active: Profile/Account Manager");
 })();
+
 /* =========================================================
-   EPTEC APPEND H — ADMIN LANGUAGE EMERGENCY SWITCH
+   EPTEC APPEND 15 — ADMIN LANGUAGE EMERGENCY SWITCH
    Scope:
    - Admin selects language(s) and schedules deactivation after 30 days
    - Requires 3 confirmations (logic-level)
@@ -3231,17 +3174,15 @@ PASTE HERE:
     return !!(st?.modes?.author || st?.modes?.admin);
   }
 
-  // Canonical language codes list (you: PT not PL; CN and JP are custom and valid)
-  const LANG = Object.freeze(["EN","DE","ES","UK","AR","PT","CN","JP","FR","IT","NL","RU"]); // adjust if your 12 differ
-  // Note: UK here means Ukrainian per your use; if you prefer UA later, we can alias it without breaking UI.
+  const LANG = Object.freeze(["EN","DE","ES","UK","AR","PT","CN","JP","FR","IT","NL","RU"]);
 
   const Emergency = (window.EPTEC_LANG_EMERGENCY = window.EPTEC_LANG_EMERGENCY || {});
 
   Emergency.get = Emergency.get || (() => {
     return readJSON(KEY, {
-      disabled: [],                // array of codes currently disabled
-      pending: {},                 // code -> { scheduledAt, effectiveAt }
-      confirm: {},                 // code -> confirmCount (0..3)
+      disabled: [],
+      pending: {},
+      confirm: {},
       lastActionAt: null
     });
   });
@@ -3259,13 +3200,11 @@ PASTE HERE:
     return Array.isArray(st.disabled) && st.disabled.includes(c);
   });
 
-  // Called by i18n/router before switching
   Emergency.canUse = Emergency.canUse || ((code) => {
     const c = String(code || "").toUpperCase();
     if (!c) return true;
     const st = Emergency.get();
 
-    // Apply pending deactivation if effectiveAt passed
     const p = st.pending && st.pending[c];
     if (p && p.effectiveAt && Date.now() >= new Date(p.effectiveAt).getTime()) {
       if (!st.disabled.includes(c)) st.disabled.push(c);
@@ -3277,7 +3216,6 @@ PASTE HERE:
     return !Emergency.isDisabled(c);
   });
 
-  // Schedule deactivation with triple confirm
   Emergency.deactivate = Emergency.deactivate || ((codes) => {
     if (!isAuthorAdmin()) return { ok: false, reason: "NOT_ADMIN" };
 
@@ -3297,12 +3235,10 @@ PASTE HERE:
         continue;
       }
 
-      // third confirm -> schedule after 30 days
       const now = Date.now();
       const effective = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       st.pending[c] = { scheduledAt: new Date(now).toISOString(), effectiveAt: effective };
-      // button becomes "activate" (red) because it's now pending/disabled logic-wise
       toast(`Not-Schalter ${c}: Deaktivierung geplant (wirksam ab ${effective}).`, "error", 5200);
     }
 
@@ -3310,7 +3246,6 @@ PASTE HERE:
     return { ok: true, state: st };
   });
 
-  // Immediate activation: removes disable and cancels pending
   Emergency.activate = Emergency.activate || ((codes) => {
     if (!isAuthorAdmin()) return { ok: false, reason: "NOT_ADMIN" };
 
@@ -3331,7 +3266,6 @@ PASTE HERE:
     return { ok: true, state: st };
   });
 
-  // Helper for UI: what should the button show right now?
   Emergency.uiStatus = Emergency.uiStatus || ((code) => {
     const c = String(code || "").toUpperCase();
     const st = Emergency.get();
@@ -3349,15 +3283,9 @@ PASTE HERE:
     };
   });
 
-  // ---------------------------------------------------------
-  // OPTIONAL UI BINDINGS (IDs must match your UI, otherwise harmless)
-  // - admin-lang-select: multi-select or comma input
-  // - admin-lang-action: the green/red button
-  // ---------------------------------------------------------
   function parseSelection() {
     const el = $("admin-lang-select");
     if (!el) return [];
-    // supports: select multiple OR comma-separated input
     if (el.tagName === "SELECT") {
       const opts = Array.from(el.selectedOptions || []);
       return opts.map(o => String(o.value || o.text || "").toUpperCase().trim());
@@ -3382,7 +3310,6 @@ PASTE HERE:
     const sel = parseSelection();
     const first = sel[0] || "EN";
     const s = Emergency.uiStatus(first);
-    // You style it in CSS; we only expose attributes
     btn.setAttribute("data-state", s.color);
     btn.textContent = (s.label === "ACTIVATE") ? "Aktivieren" : "Deaktivieren";
     const out = $("admin-lang-status");
@@ -3402,7 +3329,6 @@ PASTE HERE:
       const sel = parseSelection();
       if (!sel.length) return toast("Bitte Sprache wählen.", "error", 2200);
 
-      // Decide action from status of first selected language
       const first = sel[0];
       const st = Emergency.uiStatus(first);
       if (st.label === "ACTIVATE") Emergency.activate(sel);
@@ -3415,7 +3341,6 @@ PASTE HERE:
     updateButtonVisual();
   }
 
-  // Expose required IDs (for your harmony check)
   window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {};
   const prev = window.EPTEC_ID_REGISTRY.required || {};
   window.EPTEC_ID_REGISTRY.required = Object.freeze({
@@ -3426,17 +3351,16 @@ PASTE HERE:
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBindings);
   else initBindings();
 
-  console.log("EPTEC APPEND H active: Admin Language Emergency Switch");
+  console.log("EPTEC APPEND 15 active: Admin Language Emergency Switch");
 })();
 
 /* =========================================================
-   EPTEC APPEND — ID REGISTRY SAFE INIT
+   EPTEC APPEND 16 — ID REGISTRY SAFE INIT
    Purpose:
    - Prevents "EPTEC_ID_REGISTRY missing"
    - Guarantees stable view + logic registration
    - NO overrides, NO side effects
    ========================================================= */
-
 (() => {
   "use strict";
 
@@ -3458,471 +3382,4 @@ PASTE HERE:
 
     console.info("[EPTEC] ID_REGISTRY initialized (append)");
   }
-})();
-/* =========================================================
-   EPTEC APPEND — TUNNEL DURATION (LONGER)
-   Place at END of scripts/logic.js
-   ========================================================= */
-(() => {
-  "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  const D = window.EPTEC_MASTER?.Dramaturgy;
-  const T = window.EPTEC_MASTER?.TERMS;
-
-  if (!D || !T?.scenes || D.__eptec_tunnel_patched) return;
-  D.__eptec_tunnel_patched = true;
-
-  // Patch only the timing, keep logic intact
-  const origStartToDoors = D.startToDoors?.bind(D);
-  if (origStartToDoors) {
-    D.startToDoors = function () {
-      // do the same, but with longer tunnel
-      safe(() => this.to(T.scenes.tunnel, { from: "start" }));
-      setTimeout(() => safe(() => this.to(T.scenes.viewdoors, { from: "tunnel" })), 1200); // was ~650
-    };
-  }
-
-  const origDoorsToRoom = D.doorsToRoom?.bind(D);
-  if (origDoorsToRoom) {
-    D.doorsToRoom = function (roomScene) {
-      safe(() => this.to(T.scenes.whiteout, { from: "doors" }));
-      setTimeout(() => safe(() => this.to(roomScene, { from: "whiteout" })), 520); // was ~380
-    };
-  }
-
-  console.log("EPTEC APPEND: Tunnel duration patched.");
-})();
-/* =========================================================
-   EPTEC APPEND — ORB ROOM SWITCH (rooms-only, demo+author)
-   Place at END of scripts/logic.js
-   ========================================================= */
-(() => {
-  "use strict";
-  if (window.__EPTEC_ORB_SWITCH__) return;
-  window.__EPTEC_ORB_SWITCH__ = true;
-
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
-  function getState(){ const s=store(); return safe(()=> (typeof s?.get==="function"?s.get():s?.state))||{}; }
-  function setState(p){ const s=store(); if (typeof s?.set==="function") return safe(()=>s.set(p)); }
-
-  function isDemoOrAuthor(st){ return !!st?.modes?.demo || !!st?.modes?.author; }
-  function norm(st){
-    const raw = String(st?.scene || st?.view || "").toLowerCase().trim();
-    if (raw === "viewdoors" || raw === "doors") return "doors";
-    if (raw === "room1" || raw === "room-1") return "room1";
-    if (raw === "room2" || raw === "room-2") return "room2";
-    return raw || "start";
-  }
-
-  function ensureOrb(){
-    let orb = document.getElementById("author-orb");
-    if (!orb){
-      orb = document.createElement("div");
-      orb.id = "author-orb";
-      orb.textContent = "◯";
-      orb.style.position = "fixed";
-      orb.style.right = "18px";
-      orb.style.top = "50%";
-      orb.style.transform = "translateY(-50%)";
-      orb.style.zIndex = "99999";
-      orb.style.width = "44px";
-      orb.style.height = "44px";
-      orb.style.borderRadius = "999px";
-      orb.style.display = "none";
-      orb.style.alignItems = "center";
-      orb.style.justifyContent = "center";
-      orb.style.cursor = "pointer";
-      orb.style.background = "rgba(255,255,255,0.10)";
-      orb.style.border = "1px solid rgba(255,255,255,0.25)";
-      orb.style.backdropFilter = "blur(6px)";
-      orb.style.color = "#fff";
-      orb.style.userSelect = "none";
-      document.body.appendChild(orb);
-    }
-    return orb;
-  }
-
-  function update(){
-    const st = getState();
-    const s = norm(st);
-    const orb = ensureOrb();
-    const inRoom = (s === "room1" || s === "room2");
-    const show = isDemoOrAuthor(st) && inRoom;
-    orb.style.display = show ? "flex" : "none";
-    orb.style.pointerEvents = show ? "auto" : "none";
-  }
-
-  function boot(){
-    const orb = ensureOrb();
-    if (!orb.__b){
-      orb.__b = true;
-      orb.addEventListener("click", () => {
-        const st = getState();
-        const s = norm(st);
-        if (!isDemoOrAuthor(st)) return;
-        safe(() => window.SoundEngine?.uiConfirm?.());
-        if (s === "room1") setState({ scene:"room2", view:"room2" });
-        if (s === "room2") setState({ scene:"room1", view:"room1" });
-      });
-    }
-    update();
-    safe(()=> (store()?.subscribe?.(update)));
-    setInterval(update, 700);
-    console.log("EPTEC APPEND: Orb switch active.");
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-})();
-/* =========================================================
-   EPTEC APPEND — HOUSE ROUTER SAFE (Rooms as closed units)
-   ---------------------------------------------------------
-   Goal:
-   - "House" behavior: each room begins/ends in BOTH image + audio
-   - Single source of truth: state.view (and scene mirrors view)
-   - NO security bypass: does NOT bind door click handlers
-   - Works with your existing Doors logic (paywall/master/demo)
-   - Provides lifecycle events for audio (optional integration)
-   ---------------------------------------------------------
-   Patches:
-   1) Dramaturgy.startToDoors() -> deterministic tunnel duration
-   2) Dramaturgy.doorsToRoom(roomScene) -> view normalization room1/room2
-   ---------------------------------------------------------
-   Place at END of scripts/logic.js
-   ========================================================= */
-(() => {
-  "use strict";
-
-  const safe = (fn, fb) => { try { return fn(); } catch (e) { console.warn("[EPTEC:HOUSE_SAFE]", e); return fb; } };
-
-  // Prevent double insertion
-  if (window.__EPTEC_HOUSE_SAFE__) return;
-  window.__EPTEC_HOUSE_SAFE__ = true;
-
-  // ----- Canonical room keys -----
-  const ROOM = Object.freeze({
-    MEADOW: "meadow",
-    TUNNEL: "tunnel",
-    DOORS:  "doors",
-    ROOM1:  "room1",
-    ROOM2:  "room2"
-  });
-
-  // ----- Room Profiles (image+audio semantics) -----
-  // image is resolved via CSS by view IDs.
-  // audio is a list of keys you can map to files in your sound engine/router.
-  const PROFILE = Object.freeze({
-    [ROOM.MEADOW]: { view: "meadow", image: "meadow", audio: ["wind"] },
-    [ROOM.TUNNEL]: { view: "tunnel", image: "tunnel", audio: ["tunnelfall"] },
-    [ROOM.DOORS]:  { view: "doors",  image: "doors",  audio: [] },
-    [ROOM.ROOM1]:  { view: "room1",  image: "room1",  audio: [] },
-    [ROOM.ROOM2]:  { view: "room2",  image: "room2",  audio: [] }
-  });
-
-  // ----- UI_STATE helpers -----
-  function store() { return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
-  function getState() {
-    const s = store();
-    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state), {}) || {};
-  }
-  function setState(patch) {
-    const s = store();
-    if (typeof s?.set === "function") return safe(() => s.set(patch));
-    return safe(() => window.EPTEC_UI_STATE?.set?.(patch));
-  }
-
-  // ----- Normalize incoming keys to our canonical ROOM -----
-  function normRoomFromState(st) {
-    const raw = String(st?.view || st?.scene || "").toLowerCase().trim();
-    if (!raw || raw === "start") return ROOM.MEADOW;
-    if (raw === "meadow") return ROOM.MEADOW;
-    if (raw === "tunnel") return ROOM.TUNNEL;
-    if (raw === "viewdoors" || raw === "doors") return ROOM.DOORS;
-    if (raw === "room-1" || raw === "room1") return ROOM.ROOM1;
-    if (raw === "room-2" || raw === "room2") return ROOM.ROOM2;
-    return ROOM.MEADOW;
-  }
-
-  // ----- Lifecycle event hub (room_enter/room_exit) -----
-  const Lifecycle = {
-    current: null,
-    subs: new Set(),
-    on(fn) { if (typeof fn === "function") this.subs.add(fn); return () => this.subs.delete(fn); },
-    emit(evt) { this.subs.forEach(fn => safe(() => fn(evt))); }
-  };
-
-  // Expose globally for your Sound Router / UI
-  window.EPTEC_HOUSE = window.EPTEC_HOUSE || {};
-  window.EPTEC_HOUSE.ROOM = ROOM;
-  window.EPTEC_HOUSE.PROFILE = PROFILE;
-  window.EPTEC_HOUSE.onRoomEvent = (fn) => Lifecycle.on(fn);
-
-  // ----- Core "enter room" (begin/end semantics) -----
-  function enterRoom(next, meta = {}) {
-    const prev = Lifecycle.current;
-    if (prev === next) return;
-
-    // End previous room (audio+image)
-    if (prev) {
-      Lifecycle.emit({ type: "room_exit", room: prev, profile: PROFILE[prev], meta });
-    }
-
-    // Start next room
-    Lifecycle.current = next;
-    Lifecycle.emit({ type: "room_enter", room: next, profile: PROFILE[next], meta });
-
-    // Single truth: view + scene
-    setState({ view: PROFILE[next].view, scene: PROFILE[next].view });
-  }
-
-  // Keep lifecycle aligned with current state (refresh / reload)
-  function syncFromState() {
-    const st = getState();
-    const r = normRoomFromState(st);
-    if (Lifecycle.current !== r) enterRoom(r, { cause: "sync" });
-  }
-
-  // =========================================================
-  // PATCH 1: Dramaturgy.startToDoors() tunnel duration
-  // =========================================================
-  const D = safe(() => window.EPTEC_MASTER?.Dramaturgy, null);
-  const TERMS = safe(() => window.EPTEC_MASTER?.TERMS, null);
-
-  // Set tunnel duration here (you can change freely)
-  const TUNNEL_MS = 28000; // change e.g. to 60000 for 60s
-  const WHITEOUT_MS = 520;
-
-  if (D && !D.__eptec_house_safe_patched) {
-    D.__eptec_house_safe_patched = true;
-
-    const origStartToDoors = safe(() => D.startToDoors?.bind(D), null);
-    D.startToDoors = function () {
-      // Begin tunnel as a closed unit
-      enterRoom(ROOM.TUNNEL, { cause: "startToDoors" });
-
-      // Use original for any logging/sfx side effects, but we control timing
-      safe(() => origStartToDoors?.());
-
-      // After tunnel duration -> doors
-      setTimeout(() => {
-        enterRoom(ROOM.DOORS, { cause: "tunnel_end" });
-        // Optional: also call original "to doors" if it exists in your dramaturgy
-        safe(() => this.to?.(TERMS?.scenes?.viewdoors || "viewdoors", { from: "tunnel" }));
-      }, TUNNEL_MS);
-    };
-
-    // =========================================================
-    // PATCH 2: Dramaturgy.doorsToRoom(roomScene) view normalization
-    // =========================================================
-    const origDoorsToRoom = safe(() => D.doorsToRoom?.bind(D), null);
-    if (origDoorsToRoom) {
-      D.doorsToRoom = function (roomScene) {
-        // Keep your existing whiteout behavior (optional)
-        safe(() => this.to?.(TERMS?.scenes?.whiteout || "whiteout", { from: "doors" }));
-
-        setTimeout(() => {
-          const key = String(roomScene || "").toLowerCase();
-          if (key.includes("room1")) enterRoom(ROOM.ROOM1, { cause: "doorsToRoom" });
-          else if (key.includes("room2")) enterRoom(ROOM.ROOM2, { cause: "doorsToRoom" });
-
-          // Call original to preserve any internal side effects
-          safe(() => origDoorsToRoom(roomScene));
-        }, WHITEOUT_MS);
-      };
-    }
-  }
-
-  // Boot: align lifecycle to state
-  function boot() {
-    syncFromState();
-
-    // Keep in sync on state changes
-    const s = store();
-    if (s?.subscribe) s.subscribe(() => syncFromState());
-    setInterval(syncFromState, 800);
-
-    console.log("EPTEC HOUSE SAFE active (no door bypass).");
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-
-})();
-/* =========================================================
-   EPTEC APPEND — SCENE & AUDIO AUTHORITY (HOUSE MODEL)
-   - Defines HARD start/end of each room
-   - Controls BOTH view + audio
-   - One source of truth
-   ========================================================= */
-
-(() => {
-  "use strict";
-
-  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[SCENE]", e); } };
-
-  const VIEWS = {
-    meadow: "meadow",
-    tunnel: "tunnel",
-    doors: "doors",
-    room1: "room1",
-    room2: "room2"
-  };
-
-  const TUNNEL_DURATION_MS = 28000; // ✅ your requirement
-
-  function setView(view) {
-    // --- VISUAL ---
-    safe(() => window.EPTEC_UI_STATE?.set?.({ view }));
-
-    // hard hide all scenes except active
-    ["meadow-view","tunnel-view","doors-view","room-1-view","room-2-view"]
-      .forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.style.display = id.startsWith(view) ? "flex" : "none";
-      });
-
-    // --- AUDIO ---
-    const SE = window.SoundEngine;
-    if (!SE) return;
-
-    safe(() => SE.stopAll?.());
-
-    if (view === VIEWS.meadow) safe(() => SE.startAmbient?.());
-    if (view === VIEWS.tunnel) safe(() => SE.tunnelFall?.());
-    if (view === VIEWS.doors)  safe(() => SE.startDoorsAmbient?.());
-    if (view === VIEWS.room1)  safe(() => SE.startRoom1Ambient?.());
-    if (view === VIEWS.room2)  safe(() => SE.startRoom2Ambient?.());
-  }
-
-  // --------------------------------------------------
-  // PUBLIC ROUTES (used by Entry / UI)
-  // --------------------------------------------------
-  window.Dramaturgy = {
-
-    toMeadow() {
-      setView(VIEWS.meadow);
-    },
-
-    startToDoors() {
-      setView(VIEWS.tunnel);
-
-      setTimeout(() => {
-        setView(VIEWS.doors);
-      }, TUNNEL_DURATION_MS);
-    },
-
-    enterRoom1() {
-      setView(VIEWS.room1);
-    },
-
-    enterRoom2() {
-      setView(VIEWS.room2);
-    },
-
-    logout() {
-      setView(VIEWS.meadow);
-    }
-  };
-
-  // boot safety
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => setView(VIEWS.meadow));
-  } else {
-    setView(VIEWS.meadow);
-  }
-
-  console.log("EPTEC SCENE AUTHORITY ACTIVE");
-})();
-/* =========================================================
-   EPTEC APPEND — ROOM REGISTRY (Images + Audio Layers)
-   Place at END of scripts/logic.js
-   ========================================================= */
-(() => {
-  "use strict";
-
-  if (window.EPTEC_ROOM_REGISTRY) return;
-
-  // Canonical rooms (match your view keys)
-  const ROOM = Object.freeze({
-    MEADOW: "meadow",
-    TUNNEL: "tunnel",
-    DOORS:  "doors",
-    ROOM1:  "room1",
-    ROOM2:  "room2"
-  });
-
-  // Registry: one room -> images[] + audio[]
-  // images[] = CSS background variants
-  // audio[]  = sound layer keys (you can add more later)
-  const REGISTRY = Object.freeze({
-    [ROOM.MEADOW]: {
-      images: ["meadow"],                 // CSS uses #meadow-view base
-      audio:  ["wind"]                    // assets/sounds/wind.mp3
-    },
-    [ROOM.TUNNEL]: {
-      images: ["tunnel"],
-      audio:  ["tunnelfall"]              // assets/sounds/tunnelfall.mp3
-    },
-    [ROOM.DOORS]: {
-      images: ["view_doors", "view_doors_tree"], // SAME room, multiple looks
-      audio:  []                            // optional later: ["doors"]
-    },
-    [ROOM.ROOM1]: {
-      images: ["view_room1"],              // one or more
-      audio:  []                            // optional later: ["room1_base","room1_birds"]
-    },
-    [ROOM.ROOM2]: {
-      images: ["view_room2"],
-      audio:  []                            // optional later: ["room2_base"]
-    }
-  });
-
-  // Expose globally for UI + Sound Router
-  window.EPTEC_ROOM_REGISTRY = { ROOM, REGISTRY };
-})();
-/* =========================================================
-   EPTEC APPEND — LANGUAGE CASCADE CONTRACT (LOGIC)
-   Authority: KERNEL / I18N
-   Role: Defines mandatory reaction chain on language change
-   NO DOM · NO UI · NO ASSETS
-   ========================================================= */
-
-(() => {
-  "use strict";
-
-  const CONTRACT = Object.freeze({
-    trigger: "LANGUAGE_CHANGE",
-
-    requires: [
-      "UPDATE_UI_STATE_LANG",
-      "LOAD_LOCALE_DICTIONARY",
-      "RERENDER_ALL_UI_TEXTS",
-      "REFRESH_DYNAMIC_FORMATS",
-      "RELOAD_OPEN_LEGAL_DOCS"
-    ],
-
-    sources: {
-      locales: "/locales/{lang}.json",
-      legalDocs: "/assets/legal/{lang}/"
-    },
-
-    guarantees: {
-      placeholders: true,
-      dashboardTexts: true,
-      userProfile: true,
-      masterProfile: true,
-      legalTexts: true,
-      dateTimeFormats: true
-    }
-  });
-
-  // Register contract globally (append-style)
-  window.EPTEC_LOGIC_CONTRACTS = window.EPTEC_LOGIC_CONTRACTS || {};
-  window.EPTEC_LOGIC_CONTRACTS.LANGUAGE_CASCADE = CONTRACT;
-
-  console.log("EPTEC LOGIC APPEND: Language Cascade Contract active.");
 })();
