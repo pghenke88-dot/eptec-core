@@ -1,32 +1,31 @@
 /**
  * scripts/state_manager.js
- * EPTEC Dashboard State Manager — FINAL (FULL FEATURES + Chrome-safe)
  *
- * Single adapter between:
- *   EPTEC_MOCK_BACKEND (truth/rules) <-> EPTEC_UI_STATE (visual)
+ * EPTEC KERNEL MODULE — STATE MANAGER (SINGLE ADAPTER)
+ * ----------------------------------------------------
+ * REFERENZ (Terminologie, 1:1 / no invented words):
+ * - Persisted feed key: "EPTEC_FEED"
+ * - UI store: window.EPTEC_UI_STATE (get/set/subscribe)  -> scripts/ui_state.js
+ * - Mock rules/truth: window.EPTEC_MOCK_BACKEND          -> scripts/mock_backend.js
  *
- * Persisted state: localStorage key "EPTEC_FEED"
+ * AUFTRAG (Kernel):
+ * - Single adapter between:
+ *     EPTEC_MOCK_BACKEND (truth/rules) <-> EPTEC_UI_STATE (visual)
+ * - Persist EPTEC_FEED and derive:
+ *   - Products + Kopplung (Construction <-> Controlling)
+ *   - Door Access (always derived from Products)
+ *   - Codes/Billing preview state (persist + mirror into UI)
+ *   - Flows (cancel/upgrade/add-room) (persist + mirror into UI)
+ *   - Admin emergency states (country locks) (persist + mirror into UI)
+ * - Chrome/Browser safety:
+ *   - NO DOM, NO audio, NO infinite loops
+ *   - Defensive storage parsing
+ *   - UI updates only when changed (prevents state storms)
  *
- * Enthält (STATE-relevant):
- * - Products + Kopplung (Construction <-> Controlling)
- * - Door Access (immer aus Products abgeleitet)
- * - Present (Admin erstellt, User löst ein, 30 Tage, einmal pro User)
- * - Referral (User-Generierung, Neukunde löst ein, dauerhaft gültig)
- * - VIP (Admin erstellt, User löst ein, One-Time, Bypass Paywall)
- * - Billing Preview (nächste Abrechnung + Rabatt)
- * - Kündigung (nur beide kündigen, Confirm-Flow)
- * - Upgrade / Tarifwechsel (Confirm)
- * - Raum hinzufügen (Add Room + Kopplungs-Confirm)
- * - Admin Country Notfall-Switch (3x Confirm + 30 Tage Countdown, jederzeit revert)
- * - Newsletter / Inbox Container (Broadcast + Inbox)
- * - Recording/Kamera Mode Flag (placeholder)
- *
- * Chrome/Browser-Safety:
- * - NO DOM access
- * - NO audio
- * - NO infinite loops
- * - Defensive storage parsing
- * - UI updates only when changed (prevents state storms)
+ * BITTE UM AUSFÜHRUNG (Endabnehmer / Export):
+ * - This file itself is the endabnehmer:
+ *   it MUST export window.EPTEC_STATE_MANAGER with a stable, frozen API
+ *   and MUST auto-hydrate once (idempotent).
  */
 
 (() => {
@@ -238,7 +237,6 @@
     const p = feed.products || {};
 
     if (d === DOORS.CONSTRUCTION) {
-      // coupling: construction off -> controlling off
       setProducts({
         construction: { active: false, tier: null },
         controlling:  { active: false, tier: null }
@@ -731,7 +729,7 @@
   }
 
   // -----------------------------
-  // PUBLIC API
+  // ENDABNEHMER / PUBLIC API (stable + frozen)
   // -----------------------------
   window.EPTEC_STATE_MANAGER = Object.freeze({
     // storage
@@ -800,46 +798,4 @@
   }
 
 })();
-/* =========================================================
-   EPTEC APPEND — STATE MANAGER EXTENSION
-   Role: Handle extended system states
-   Authority: State Management
-   ========================================================= */
-(() => {
-  "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
-  function updateState(newState) {
-    const currentState = window.EPTEC_STATE_MANAGER?.get?.();
-    const mergedState = { ...currentState, ...newState };
-    window.EPTEC_STATE_MANAGER?.set?.(mergedState);
-    console.log("State Updated:", mergedState);
-  }
-
-  function toggleFeature(feature) {
-    const currentState = window.EPTEC_STATE_MANAGER?.get?.();
-  const updatedFeatureState = {
-  ...currentState,
-  [feature]: !Boolean(currentState?.[feature])
-};
-    updateState(updatedFeatureState);
-    console.log(`${feature} toggled: ${updatedFeatureState[feature]}`);
-  }
-
-  function boot() {
-    // Initialize features
-    toggleFeature("systemActive");
-
-    // Example: Automatically update states every 5 seconds
-    setInterval(() => {
-      updateState({ lastUpdated: new Date().toISOString() });
-    }, 5000);
-
-    console.log("EPTEC APPEND: State Manager extension active");
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else boot();
-})();
