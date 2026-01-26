@@ -39,7 +39,20 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       SCRIPTS — CANONICAL ORDER (CSP-safe, boot-correct)
+       SCRIPTS — CANONICAL ORDER (CSP-safe, stable)
+       ---------------------------------------------------------
+       1) UI_STATE (foundation)
+       2) MOCK BACKEND (Phase 1 surface)
+       3) STATE MANAGER (adapter backend<->ui_state)
+       4) KERNEL / LOGIC (EPTEC_MASTER + KAMEL_HEAD + Axioms)
+       5) CLICKMASTER DVO
+       6) EFFECTS (SoundEngine)
+       7) UI_CONTROL (mediator; delegates only)
+       7a) CAPTURE INTENT (writes camera.mode into state)
+       7b) MEDIA EXECUTOR (starts/stops recording based on state)
+       8) Assistants (registration/legal/rooms)
+       9) API / MAIN
+       10) DEMO (after main)
        ========================================================= -->
 
   <!-- 1) FOUNDATION -->
@@ -62,6 +75,12 @@
 
   <!-- 7) UI-CONTROL (DVO-only mediator) -->
   <script src="./scripts/ui_controller.js" defer></script>
+
+  <!-- 7a) CAPTURE MODE INTENT (OFF / WEBCAM / SCREEN) -->
+  <script src="./scripts/ui_capture_intent.js" defer></script>
+
+  <!-- 7b) MEDIA EXECUTOR (records immediately based on state.camera.mode) -->
+  <script src="./scripts/media_executor.js" defer></script>
 
   <!-- 8) ASSISTANTS -->
   <script src="./scripts/registration_engine.js" defer></script>
@@ -115,11 +134,11 @@
 
     <button id="admin-submit" type="button" data-logic-id="admin-submit">Enter</button>
 
-    <!-- =========================================================
+    <!-- =====================================================
          CAPTURE MODE (Admin option, explicit choice)
-         - OFF / WEBCAM / SCREEN (no auto-start)
-         - keeps existing checkbox id removed, so no phantom wiring
-         ========================================================= -->
+         - OFF / WEBCAM / SCREEN (no auto-start here)
+         - execution happens in scripts/media_executor.js
+         ===================================================== -->
     <div class="admin-camera-row" style="display:block; margin-top:10px;"
          data-logic-id="admin.capture.options">
       <strong>Capture Mode (Admin):</strong><br />
@@ -127,7 +146,7 @@
       <label>
         <input type="radio" name="capture-mode" value="off"
                checked data-logic-id="capture.off" />
-        No capture
+        Off
       </label><br />
 
       <label>
@@ -139,7 +158,7 @@
       <label>
         <input type="radio" name="capture-mode" value="screen"
                data-logic-id="capture.screen" />
-        Screen capture
+        Screen
       </label>
     </div>
 
