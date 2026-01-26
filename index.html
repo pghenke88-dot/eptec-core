@@ -13,7 +13,7 @@
 
   <!-- =========================================================
        SECURITY — SINGLE CSP (GitHub Pages safe)
-       NOTE: no inline JS used
+       NOTE: inline <script> is blocked (script-src 'self')
        ========================================================= -->
   <meta http-equiv="Content-Security-Policy"
         content="
@@ -39,24 +39,13 @@
   <link rel="stylesheet" href="./assets/imagine.css" />
 
   <!-- =========================================================
-       SCRIPTS — CANONICAL ORDER (CSP-safe, stable)
-       ---------------------------------------------------------
-       1) UI_STATE (foundation)
-       2) MOCK BACKEND (Phase 1)
-       3) STATE MANAGER (adapter)
-       4) KERNEL / LOGIC (EPTEC_MASTER + KAMEL_HEAD)
-       5) CLICKMASTER DVO
-       6) EFFECTS (Sound)
-       7) UI_CONTROL (mediator)
-       8) ASSISTANTS (registration / legal / rooms)
-       9) API + MAIN
-       10) DEMO (after main)
+       SCRIPTS — CANONICAL ORDER (CSP-safe, boot-correct)
        ========================================================= -->
 
   <!-- 1) FOUNDATION -->
   <script src="./scripts/ui_state.js" defer></script>
 
-  <!-- 2) BACKEND -->
+  <!-- 2) BACKEND (Phase 1) -->
   <script src="./scripts/mock_backend.js" defer></script>
 
   <!-- 3) STATE ADAPTER -->
@@ -71,7 +60,7 @@
   <!-- 6) EFFECTS -->
   <script src="./scripts/sounds.js" defer></script>
 
-  <!-- 7) UI-CONTROL -->
+  <!-- 7) UI-CONTROL (DVO-only mediator) -->
   <script src="./scripts/ui_controller.js" defer></script>
 
   <!-- 8) ASSISTANTS -->
@@ -83,7 +72,7 @@
   <script src="./scripts/api_client.js" defer></script>
   <script src="./scripts/main.js" defer></script>
 
-  <!-- 10) DEMO -->
+  <!-- 10) DEMO (AFTER main) -->
   <script src="./scripts/eptec_demo_allinone.js" defer></script>
 </head>
 
@@ -111,11 +100,11 @@
              data-logic-id="login-password" placeholder="Password" />
     </div>
 
-    <button id="btn-login" data-logic-id="btn-login">Login</button>
+    <button id="btn-login" type="button" data-logic-id="btn-login">Login</button>
     <div id="login-message" class="system-msg" data-logic-id="login-message"></div>
 
-    <button id="btn-register" data-logic-id="btn-register">Register</button>
-    <button id="btn-forgot" data-logic-id="btn-forgot">Forgot password</button>
+    <button id="btn-register" type="button" data-logic-id="btn-register">Register</button>
+    <button id="btn-forgot" type="button" data-logic-id="btn-forgot">Forgot password</button>
 
     <button id="btn-demo" type="button" data-logic-id="btn-demo">Demo</button>
 
@@ -124,32 +113,54 @@
              data-logic-id="admin-code" placeholder="Master password" />
     </div>
 
-    <button id="admin-submit" data-logic-id="admin-submit">Enter</button>
+    <button id="admin-submit" type="button" data-logic-id="admin-submit">Enter</button>
 
-    <label class="admin-camera-row" style="display:block; margin-top:10px;">
-      <input id="admin-camera-toggle" type="checkbox"
-             data-logic-id="admin-camera-toggle" />
-      <span>Screen Capture (Admin option)</span>
-    </label>
+    <!-- =========================================================
+         CAPTURE MODE (Admin option, explicit choice)
+         - OFF / WEBCAM / SCREEN (no auto-start)
+         - keeps existing checkbox id removed, so no phantom wiring
+         ========================================================= -->
+    <div class="admin-camera-row" style="display:block; margin-top:10px;"
+         data-logic-id="admin.capture.options">
+      <strong>Capture Mode (Admin):</strong><br />
+
+      <label>
+        <input type="radio" name="capture-mode" value="off"
+               checked data-logic-id="capture.off" />
+        No capture
+      </label><br />
+
+      <label>
+        <input type="radio" name="capture-mode" value="webcam"
+               data-logic-id="capture.webcam" />
+        Webcam
+      </label><br />
+
+      <label>
+        <input type="radio" name="capture-mode" value="screen"
+               data-logic-id="capture.screen" />
+        Screen capture
+      </label>
+    </div>
 
   </div>
 
   <!-- LANGUAGE SWITCH -->
   <div id="language-switcher" data-logic-id="language-switcher">
-    <button id="lang-toggle" data-logic-id="lang-toggle">🌍</button>
+    <button id="lang-toggle" type="button" data-logic-id="lang-toggle">🌍</button>
     <div id="lang-rail" data-logic-id="lang-rail">
-      <button class="lang-item" data-lang="en">EN</button>
-      <button class="lang-item" data-lang="de">DE</button>
-      <button class="lang-item" data-lang="es">ES</button>
-      <button class="lang-item" data-lang="fr">FR</button>
-      <button class="lang-item" data-lang="it">IT</button>
-      <button class="lang-item" data-lang="pt">PT</button>
-      <button class="lang-item" data-lang="nl">NL</button>
-      <button class="lang-item" data-lang="ru">RU</button>
-      <button class="lang-item" data-lang="uk">UK</button>
-      <button class="lang-item" data-lang="ar">AR</button>
-      <button class="lang-item" data-lang="cn">CN</button>
-      <button class="lang-item" data-lang="jp">JP</button>
+      <button type="button" class="lang-item" data-lang="en">EN</button>
+      <button type="button" class="lang-item" data-lang="de">DE</button>
+      <button type="button" class="lang-item" data-lang="es">ES</button>
+      <button type="button" class="lang-item" data-lang="fr">FR</button>
+      <button type="button" class="lang-item" data-lang="it">IT</button>
+      <button type="button" class="lang-item" data-lang="pt">PT</button>
+      <button type="button" class="lang-item" data-lang="nl">NL</button>
+      <button type="button" class="lang-item" data-lang="ru">RU</button>
+      <button type="button" class="lang-item" data-lang="uk">UK</button>
+      <button type="button" class="lang-item" data-lang="ar">AR</button>
+      <button type="button" class="lang-item" data-lang="cn">CN</button>
+      <button type="button" class="lang-item" data-lang="jp">JP</button>
     </div>
   </div>
 
@@ -162,7 +173,7 @@
   <div class="tunnel-wall"></div>
 
   <div style="position:absolute; bottom:16px; width:100%; text-align:center;">
-    <button id="btn-logout-tunnel" data-logic-id="btn-logout-tunnel">Logout</button>
+    <button id="btn-logout-tunnel" type="button" data-logic-id="btn-logout-tunnel">Logout</button>
   </div>
 </section>
 
@@ -178,38 +189,38 @@
       <h2 data-logic-id="doors.title.door1">Construction</h2>
 
       <input id="door1-present" type="text" placeholder="Action code" />
-      <button id="door1-present-apply">Apply</button>
+      <button id="door1-present-apply" type="button">Apply</button>
 
       <input id="door1-vip" type="text" placeholder="VIP code" />
-      <button id="door1-vip-apply">Apply</button>
+      <button id="door1-vip-apply" type="button">Apply</button>
 
       <div class="pw-wrap">
         <input id="door1-master" type="password" autocomplete="off" placeholder="Master password" />
       </div>
-      <button id="door1-master-apply">Enter</button>
+      <button id="door1-master-apply" type="button">Enter</button>
 
-      <button id="door1-enter" data-logic-id="doors.door1" style="margin-top:10px;">Open Door</button>
+      <button id="door1-enter" type="button" data-logic-id="doors.door1" style="margin-top:10px;">Open Door</button>
     </div>
 
     <div class="door-block" id="door-controlling" data-logic-id="doors.block.door2">
       <h2 data-logic-id="doors.title.door2">Contract Controlling</h2>
 
       <input id="door2-present" type="text" placeholder="Action code" />
-      <button id="door2-present-apply">Apply</button>
+      <button id="door2-present-apply" type="button">Apply</button>
 
       <input id="door2-vip" type="text" placeholder="VIP code" />
-      <button id="door2-vip-apply">Apply</button>
+      <button id="door2-vip-apply" type="button">Apply</button>
 
       <div class="pw-wrap">
         <input id="door2-master" type="password" autocomplete="off" placeholder="Master password" />
       </div>
-      <button id="door2-master-apply">Enter</button>
+      <button id="door2-master-apply" type="button">Enter</button>
 
-      <button id="door2-enter" data-logic-id="doors.door2" style="margin-top:10px;">Open Door</button>
+      <button id="door2-enter" type="button" data-logic-id="doors.door2" style="margin-top:10px;">Open Door</button>
     </div>
 
     <div style="width:100%; margin-top:16px; text-align:center;">
-      <button id="btn-logout-doors" data-logic-id="btn-logout-doors">Logout</button>
+      <button id="btn-logout-doors" type="button" data-logic-id="btn-logout-doors">Logout</button>
     </div>
 
   </div>
@@ -223,12 +234,12 @@
 
     <h2>Room 1</h2>
 
-    <button data-logic-id="r1.savepoint">Savepoint</button>
-    <button data-logic-id="r1.table.download">Download Text</button>
-    <button data-logic-id="r1.mirror.download">Download Snippets</button>
-    <button data-logic-id="r1.traffic.enable">Traffic Light</button>
+    <button type="button" data-logic-id="r1.savepoint">Savepoint</button>
+    <button type="button" data-logic-id="r1.table.download">Download Text</button>
+    <button type="button" data-logic-id="r1.mirror.download">Download Snippets</button>
+    <button type="button" data-logic-id="r1.traffic.enable">Traffic Light</button>
 
-    <button id="btn-logout-room1" data-logic-id="btn-logout-room1">Logout</button>
+    <button id="btn-logout-room1" type="button" data-logic-id="btn-logout-room1">Logout</button>
   </div>
 </section>
 
@@ -240,15 +251,15 @@
 
     <h2>Room 2</h2>
 
-    <button data-logic-id="r2.hotspot.left1">Left 1</button>
-    <button data-logic-id="r2.hotspot.left2">Left 2</button>
-    <button data-logic-id="r2.hotspot.center">Center</button>
-    <button data-logic-id="r2.hotspot.right1">Right 1</button>
-    <button data-logic-id="r2.hotspot.right2">Right 2</button>
+    <button type="button" data-logic-id="r2.hotspot.left1">Left 1</button>
+    <button type="button" data-logic-id="r2.hotspot.left2">Left 2</button>
+    <button type="button" data-logic-id="r2.hotspot.center">Center</button>
+    <button type="button" data-logic-id="r2.hotspot.right1">Right 1</button>
+    <button type="button" data-logic-id="r2.hotspot.right2">Right 2</button>
 
-    <button data-logic-id="r2.plant.backup">Backup</button>
+    <button type="button" data-logic-id="r2.plant.backup">Backup</button>
 
-    <button id="btn-logout-room2" data-logic-id="btn-logout-room2">Logout</button>
+    <button id="btn-logout-room2" type="button" data-logic-id="btn-logout-room2">Logout</button>
   </div>
 </section>
 
@@ -259,7 +270,7 @@
 <section id="forgot-screen" class="modal modal-hidden"></section>
 
 <section id="legal-screen" class="modal modal-hidden">
-  <button id="legal-close">Close</button>
+  <button id="legal-close" type="button">Close</button>
   <h2 id="legal-title"></h2>
   <div id="legal-body"></div>
 </section>
