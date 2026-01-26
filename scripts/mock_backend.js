@@ -1,29 +1,28 @@
 /**
  * scripts/mock_backend.js
- * EPTEC Phase-1 Backend (Mock) — FINAL (FULL FEATURES + HARDENED)
  *
- * - LocalStorage "DB"
- * - Verification + Password Reset Links simulated
- * - Codes:
- *   - Present (global, admin-generated, 30 days, active/inactive, apply once per user)
- *   - Referral (user-generated, unlimited, for new customers)
- *   - VIP (admin-generated, one-time redemption, active/inactive)
- * - Admin lists:
- *   - listPresentCampaigns / disablePresentCampaign
- *   - listVipCodes / disableVipCode
- * - Newsletter/Inbox (placeholder):
- *   - sendBroadcast -> delivered into each user's inbox
- *   - getUserInbox / markInboxRead
- * - Country locks (admin emergency storage):
- *   - setCountryLock / getCountryLocks / clearCountryLock
- * - Username policy:
- *   - isUsernameAllowed (reserved words + forbidden words + characters)
+ * EPTEC APPEND — MOCK BACKEND (PHASE 1) — FINAL (HARDENED, DETERMINISTIC SHAPES)
+ * ---------------------------------------------------------------------------
+ * REFERENZ (Terminologie, 1:1 / no invented words):
+ * - LocalStorage DB key: "EPTEC_MOCK_DB_V2"
+ * - Session key: "EPTEC_SESSION_V1"
+ * - UI adapter reads session via: EPTEC_MOCK_BACKEND.getSession()
+ * - State manager expects stable session shape:
+ *     { username, tariff, tier, sessionId, createdAt }
  *
- * Chrome/Browser safety:
- * - No external requests
- * - No throws (best effort)
- * - Deterministic shapes
- * - No sensitive raw password storage (hash only)
+ * AUFTRAG (APPEND / Backend Mock):
+ * - Provide a local, no-throw backend surface for Phase 1:
+ *   register / verifyByToken / login / requestPasswordReset / resetPasswordByToken
+ *   inbox mailbox helpers
+ * - Enforce username policy
+ * - Deterministic return shapes (Chrome-safe):
+ *   - login(): { ok, userId, tariff }
+ *   - getSession(): always returns object|null; if object, must include username + tariff + tier
+ *
+ * BITTE UM AUSFÜHRUNG (Endabnehmer / Export):
+ * - This file itself is the endabnehmer:
+ *   it MUST export window.EPTEC_MOCK_BACKEND (stable object API).
+ *   It MUST NOT touch DOM/audio/network.
  */
 
 (() => {
@@ -147,13 +146,45 @@
   function buildResetLink(token)  { return `#reset:${token}`; }
 
   /* =========================================================
-     SESSION
+     SESSION (stable shape for State Manager)
      ========================================================= */
+  const SESSION_KEY = "EPTEC_SESSION_V1";
+
+  function _normTariff(x) {
+    const t = String(x || "").trim().toLowerCase();
+    return (t === "premium") ? "premium" : "base";
+  }
+
   function getSession() {
     return Safe.try(() => {
-      const raw = localStorage.getItem("EPTEC_SESSION_V1");
-      return raw ? JSON.parse(raw) : null;
-    }, "getSession");
+      const raw = localStorage.getItem(SESSION_KEY);
+      const s = raw ? JSON.parse(raw) : null;
+      if (!s || typeof s !== "object") return null;
+
+      // Guarantee stable fields (adapter-safe)
+      const username = s.username ? Safe.lower(s.username) : "";
+      const tariff = _normTariff(s.tariff || s.tier || "base");
+      return {
+        ...s,
+        username,
+        tariff,
+        tier: tariff
+      };
+    }, "getSession") || null;
+  }
+
+  function _setSession(next) {
+    Safe.try(() => {
+      const username = next?.username ? Safe.lower(next.username) : "";
+      const tariff = _normTariff(next?.tariff || next?.tier || "base");
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        sessionId: next?.sessionId || ("EP-" + Safe.randToken(8)),
+        username,
+        tariff,
+        tier: tariff,
+        createdAt: next?.createdAt || Safe.nowISO()
+      }));
+    }, "setSession");
   }
 
   function getCurrentUser() {
@@ -230,14 +261,21 @@
   function login(payload) {
     const db = loadDB();
     const u = findByUsername(db, payload?.username);
-    if (!u || !u.verified) return { ok:false };
-    if (u.passHash !== hashPassword(payload?.password)) return { ok:false };
-    localStorage.setItem("EPTEC_SESSION_V1", JSON.stringify({
-      sessionId:"EP-"+Safe.randToken(8),
-      username:u.username,
-      createdAt:Safe.nowISO()
-    }));
-    return { ok:true };
+    if (!u || !u.verified) return { ok:false, code:"DENIED" };
+    if (u.passHash !== hashPassword(payload?.password)) return { ok:false, code:"BAD_PASSWORD" };
+
+    // Stable return shape + session set (tariff defaults base here)
+    const userId = "U-" + Safe.randToken(6).toUpperCase();
+    const tariff = _normTariff(payload?.tariff || "base");
+
+    _setSession({
+      sessionId: "EP-" + Safe.randToken(8),
+      username: u.username,
+      tariff,
+      createdAt: Safe.nowISO()
+    });
+
+    return { ok:true, userId, tariff };
   }
 
   function requestPasswordReset(payload) {
@@ -283,7 +321,7 @@
   }
 
   /* =========================================================
-     PUBLIC API
+     ENDABNEHMER / PUBLIC API (stable object)
      ========================================================= */
   window.EPTEC_MOCK_BACKEND = {
     isUsernameAllowed,
