@@ -1,12 +1,23 @@
 /**
  * scripts/ui_state.js
- * EPTEC UI-STATE — FINAL (i18n.lang canonical, lang alias accepted)
  *
- * Goals:
- * - Pure state only (no DOM, no backend, no audio)
- * - Canonical: i18n.lang + i18n.dir
- * - Accepts legacy input: lang / locale (alias), but normalizes into i18n.*
- * - Keeps a synchronized mirror "lang" for legacy readers
+ * EPTEC UI-STATE — KERNEL SECTION (PURE STATE, CANONICAL TERMS)
+ * ------------------------------------------------------------
+ * REFERENZ (Terminologie, 1:1):
+ * - Canonical scenes/views: meadow | tunnel | doors | whiteout | room1 | room2
+ * - DVO-scene language: EPTEC_KAMEL_HEAD.DVO.scenes (UI-Control references)
+ *
+ * AUFTRAG (Kernel):
+ * - Pure state only (NO DOM, NO backend, NO audio)
+ * - Provide stable store API:
+ *   window.EPTEC_UI_STATE.get() / set() / subscribe() / onChange()
+ * - Canonical i18n:
+ *   i18n.lang + i18n.dir are authoritative; legacy alias "lang" accepted
+ *
+ * BITTE UM AUSFÜHRUNG (Endabnehmer / Export):
+ * - This file itself is the endabnehmer:
+ *   it MUST export window.EPTEC_UI_STATE with the stable API above,
+ *   so UI-Control + Kernel + APPENDS can rely on it deterministically.
  */
 
 (() => {
@@ -47,39 +58,56 @@
     try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
   }
 
+  // ---------------------------------------------------------
+  // CANONICAL VIEW NORMALIZER (strict output)
+  // ---------------------------------------------------------
   function normView(raw) {
     const x = String(raw || "meadow").trim().toLowerCase();
 
+    // canonical
     if (x === "meadow") return "meadow";
     if (x === "tunnel") return "tunnel";
     if (x === "doors") return "doors";
+    if (x === "whiteout") return "doors"; // whiteout is a transition; view stays doors-default
     if (x === "room1") return "room1";
     if (x === "room2") return "room2";
 
+    // legacy aliases -> canonical
     if (x === "wiese" || x === "start" || x === "entry") return "meadow";
-    if (x === "viewdos" || x === "zwischenraum" || x === "doors-view") return "doors";
-    if (x === "r1") return "room1";
-    if (x === "r2") return "room2";
-
-    if (x === "viewdoors") return "doors";
-    if (x === "whiteout") return "doors";
+    if (x === "viewdoors" || x === "zwischenraum" || x === "doors-view" || x === "viewdos") return "doors";
+    if (x === "r1" || x === "room-1") return "room1";
+    if (x === "r2" || x === "room-2") return "room2";
 
     return "meadow";
   }
 
+  // ---------------------------------------------------------
+  // CANONICAL SCENE NORMALIZER (strict output)
+  // NOTE: scene is canonical too (no start/viewdoors output anymore)
+  // ---------------------------------------------------------
   function normScene(raw) {
     const x = String(raw || "").trim().toLowerCase();
     if (!x) return "";
-    if (x === "start") return "start";
+
+    // canonical
+    if (x === "meadow") return "meadow";
     if (x === "tunnel") return "tunnel";
-    if (x === "viewdoors") return "viewdoors";
+    if (x === "doors") return "doors";
     if (x === "whiteout") return "whiteout";
-    if (x === "room1") return "room1";
-    if (x === "room2") return "room2";
-    return x;
+    if (x === "room1" || x === "room-1") return "room1";
+    if (x === "room2" || x === "room-2") return "room2";
+
+    // legacy aliases -> canonical
+    if (x === "start" || x === "entry" || x === "wiese") return "meadow";
+    if (x === "viewdoors" || x === "doors-view" || x === "zwischenraum") return "doors";
+    if (x === "r1") return "room1";
+    if (x === "r2") return "room2";
+
+    return x; // no-crash: allow unknown strings, but caller should not rely on them
   }
 
   const DEFAULTS = {
+    // canonical
     view: "meadow",
     scene: "",
 
@@ -109,16 +137,13 @@
     if (n.legalKey == null && n.legalKind != null) n.legalKey = n.legalKind;
     if ("legalKind" in n) delete n.legalKind;
 
-    // scene/view normalization
+    // scene/view normalization (canonical output)
     n.scene = normScene(n.scene);
+
     if (n.scene) {
-      if (n.scene === "start") n.view = "meadow";
-      else if (n.scene === "viewdoors") n.view = "doors";
-      else if (n.scene === "room1") n.view = "room1";
-      else if (n.scene === "room2") n.view = "room2";
-      else if (n.scene === "tunnel") n.view = "tunnel";
-      else if (n.scene === "whiteout") n.view = normView(n.view || "doors");
-      else n.view = normView(n.view || "meadow");
+      // whiteout is a transition: keep view canonical (default doors)
+      if (n.scene === "whiteout") n.view = normView(n.view || "doors");
+      else n.view = normView(n.scene); // scene drives view deterministically
     } else {
       n.view = normView(n.view);
     }
@@ -187,6 +212,9 @@
   state = normalize(state);
   lastJson = JSON.stringify(state);
 
+  // ---------------------------------------------------------
+  // ENDABNEHMER / EXPORT (MUST EXIST)
+  // ---------------------------------------------------------
   window.EPTEC_UI_STATE = {
     get,
     set,
@@ -196,3 +224,4 @@
     snapshot
   };
 })();
+
