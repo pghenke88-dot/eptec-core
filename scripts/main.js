@@ -793,4 +793,120 @@ function leaveTunnel(cb) {
   });
 
 })();
+/* =========================================================
+   PATCH – Main.js: Sicherstellen, dass jeder Klick eine Wirkung hat
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // Hilfsfunktionen für die Klicks
+  const functions = {
+    // Beispiel: Klick auf "Start-Button" startet den Prozess
+    startProcess: function() {
+      try {
+        console.log("Prozess wird gestartet...");
+        this.updateUIForStart();  // UI-Kontrolle für Start
+        // Weitere Logik hier, z.B. Initialisierung von Variablen oder API-Aufrufen
+      } catch (e) {
+        console.error("Fehler beim Starten des Prozesses:", e);
+      }
+    },
+
+    // UI-Kontrolle für den Start des Prozesses
+    updateUIForStart: function() {
+      try {
+        console.log("UI wird auf Start aktualisiert...");
+        const startButton = document.getElementById("startButton");
+        if (startButton) {
+          startButton.disabled = true;  // Deaktiviert den Start-Button, nachdem er geklickt wurde
+          console.log("Start-Button deaktiviert.");
+        } else {
+          console.error("Start-Button nicht gefunden.");
+        }
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Start:", e);
+      }
+    },
+
+    // Beispiel: Klick auf eine Entscheidung (Ja/Nein) zeigt die entsprechende UI
+    handleDecision: function(decision) {
+      try {
+        console.log(`Entscheidung getroffen: ${decision}`);
+        this.updateDecisionUI(decision);  // UI-Kontrolle für Entscheidung
+      } catch (e) {
+        console.error("Fehler bei der Entscheidung:", e);
+      }
+    },
+
+    // UI-Kontrolle für Entscheidungen
+    updateDecisionUI: function(decision) {
+      try {
+        const decisionUI = document.getElementById("decisionUI");
+        if (decision === "yes") {
+          decisionUI.style.display = "block"; // Beispiel: Zeige UI-Element für 'Ja'
+          console.log("UI für 'Ja' sichtbar.");
+        } else {
+          decisionUI.style.display = "none"; // Beispiel: Verstecke UI-Element für 'Nein'
+          console.log("UI für 'Nein' verborgen.");
+        }
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Entscheidung:", e);
+      }
+    },
+
+    // Beispiel: Klick auf "Beenden-Button" schließt den Prozess
+    endProcess: function() {
+      try {
+        console.log("Prozess wird beendet...");
+        this.updateUIForEnd();  // UI-Kontrolle für Ende
+      } catch (e) {
+        console.error("Fehler beim Beenden des Prozesses:", e);
+      }
+    },
+
+    // UI-Kontrolle für das Ende des Prozesses
+    updateUIForEnd: function() {
+      try {
+        const endMessage = document.getElementById("endMessage");
+        if (endMessage) {
+          endMessage.style.display = "block";
+          console.log("Endnachricht angezeigt.");
+        } else {
+          console.error("Endnachricht nicht gefunden.");
+        }
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Ende:", e);
+      }
+    }
+  };
+
+  // Füge EventListener für alle Klicks hinzu
+  window.addEventListener("DOMContentLoaded", function() {
+    // EventListener für den Start-Button
+    const startButton = document.getElementById("startButton");
+    if (startButton) {
+      startButton.addEventListener("click", function() {
+        functions.startProcess();  // Ausführen der Logik beim Klick auf Start-Button
+      });
+    }
+
+    // EventListener für Ja/Nein Entscheidung (kann angepasst werden)
+    const decisionButtons = document.querySelectorAll(".decisionButton");
+    decisionButtons.forEach(button => {
+      button.addEventListener("click", function() {
+        const decision = this.getAttribute("data-decision");  // 'data-decision' enthält 'yes' oder 'no'
+        functions.handleDecision(decision);  // Ausführen der Logik beim Klick auf eine Entscheidung
+      });
+    });
+
+    // EventListener für den End-Button
+    const endButton = document.getElementById("endButton");
+    if (endButton) {
+      endButton.addEventListener("click", function() {
+        functions.endProcess();  // Ausführen der Logik beim Klick auf End-Button
+      });
+    }
+  });
+})();
 
