@@ -1,4 +1,4 @@
-// EPTEC Audit-Trail (Gerichtsfeste Dokumentation der Nutzerspuren)
+try {// EPTEC Audit-Trail (Gerichtsfeste Dokumentation der Nutzerspuren)
 const AuditTrail = {
     generateStamp: (action, userId) => {
         const timestamp = new Date().toISOString();
@@ -10,3 +10,5 @@ const AuditTrail = {
         return entry;
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
