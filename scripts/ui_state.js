@@ -40,9 +40,9 @@
   function normLang(raw) {
     const s = String(raw || "en").toLowerCase().trim();
     if (s === "ua") return "uk";
-    if (s === "zh") return "cn";
-    if (s === "ja") return "jp";
-    if (["en","de","es","fr","it","pt","nl","ru","uk","ar","cn","jp"].includes(s)) return s;
+    if (s === "zh") return "zh";
+    if (s === "ja") return "ja";
+    if (["en","de","es","fr","it","pt","nl","ru","uk","ar","zh","ja"].includes(s)) return s;
     return "en";
   }
 
@@ -224,4 +224,3 @@
     snapshot
   };
 })();
-
