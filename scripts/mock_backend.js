@@ -28,6 +28,21 @@
 (() => {
   "use strict";
 
+  // External-only mode: disable mock backend completely.
+  const __EXT_ONLY__ = !!(typeof window !== "undefined" && window.EPTEC_EXTERNAL_ONLY);
+  const __HAS_API__ = !!(typeof window !== "undefined" && String(window.EPTEC_API_BASE||"").trim());
+  if (__EXT_ONLY__ || __HAS_API__) {
+    // Provide a stub so calls fail loudly and do NOT store anything locally.
+    window.EPTEC_MOCK_BACKEND = Object.freeze({
+      login: () => ({ ok: false, message: "Mock backend disabled (external-only mode)." }),
+      register: () => ({ ok: false, message: "Mock backend disabled (external-only mode)." }),
+      forgot: () => ({ ok: false, message: "Mock backend disabled (external-only mode)." }),
+      reset: () => ({ ok: false, message: "Mock backend disabled (external-only mode)." })
+    });
+    return;
+  }
+
+
   /* =========================================================
      SAFE CORE
      ========================================================= */
@@ -339,4 +354,3 @@
     markInboxRead
   };
 })();
-
