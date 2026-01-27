@@ -22,3 +22,4 @@ function saveUserState(id, color) {
     // Hier wird gespeichert, damit der Download-Manager weiß, 
     // welche Gesetze er später in das PDF packen muss.
 }
+
