@@ -451,3 +451,4 @@ Rollen & Zugriff (finale Fassung)
 - Gemäß Paywall/Tarif
 - Konkrete Ausführung:
   - Normaler User hat Zugang basierend auf dem gewählten Tarif und der Paywall.
+
