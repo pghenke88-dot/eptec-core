@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "language": "en",
+    "name": "Room 2 Escalation & Traffic Light",
+    "lang": "de"
+  },
+  "traffic": {
+    "green": {
+      "label": "Grün",
+      "meaning": "Alles im Plan — keine Eskalation erforderlich.",
+      "actions": [
+        "Continue monitoring deadlines and deliverables.",
+        "Keep evidence files updated (uploads).",
+        "Use the log to document milestones."
+      ],
+      "legal": [
+        "UNIDROIT Principles Art. 1.7 (Treu und Glauben / good faith) als internationaler Anker",
+        "Auditierbarkeit/Protokollierung gemäß Framework (Teil VIII)"
+      ]
+    },
+    "yellow": {
+      "label": "Gelb",
+      "meaning": "Attention — escalation stages can be triggered manually.",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Stufe 1 — Erinnerung",
+          "actions": [
+            "Send a written reminder referencing the agreed deadline/obligation.",
+            "Request confirmation and an updated delivery date.",
+            "Attach or reference relevant evidence (emails, invoices, reports)."
+          ],
+          "legal": [
+            "Abmahnung/Nachfrist & dokumentierte Abhilfe nach allgemeinen Vertragsgrundsätzen",
+            "Mediation/Eskalation gemäß Framework (Teil VIII; Anhang J)"
+          ]
+        },
+        {
+          "stage": 2,
+          "title": "Stage 2 — Formal Notice",
+          "actions": [
+            "Issue a formal notice (deadline + consequences) aligned with the contract.",
+            "Request immediate corrective action and confirmation in writing.",
+            "Document all communications in the log."
+          ],
+          "legal": [
+            "Abmahnung/Nachfrist & dokumentierte Abhilfe nach allgemeinen Vertragsgrundsätzen",
+            "Mediation/Eskalation gemäß Framework (Teil VIII; Anhang J)"
+          ]
+        },
+        {
+          "stage": 3,
+          "title": "Stage 3 — Escalation Package",
+          "actions": [
+            "Prepare an escalation package: contract + supporting evidence + timeline.",
+            "Define internal next steps (negotiation, mediation, counsel review).",
+            "Freeze a snapshot of the current evidence set (download + archive externally)."
+          ],
+          "legal": [
+            "Abmahnung/Nachfrist & dokumentierte Abhilfe nach allgemeinen Vertragsgrundsätzen",
+            "Mediation/Eskalation gemäß Framework (Teil VIII; Anhang J)"
+          ]
+        }
+      ],
+      "legal": [
+        "Abmahnung/Nachfrist & dokumentierte Abhilfe nach allgemeinen Vertragsgrundsätzen",
+        "Mediation/Eskalation gemäß Framework (Teil VIII; Anhang J)"
+      ]
+    },
+    "red": {
+      "label": "Rot",
+      "meaning": "Critical — immediate action required.",
+      "actions": [
+        "Compile the contract + evidence timeline.",
+        "Decide next steps per contract: suspension, termination, claim, mediation, counsel review.",
+        "Export and archive the evidence set externally."
+      ],
+      "legal": [
+        "Wesentliche Pflichtverletzung, Kündigung und Rechtsbehelfe nach Vertragsrecht",
+        "Reversion/Durchsetzung gemäß Framework (Teil IX; New-York-Übereinkommen 1958 sofern anwendbar)"
+      ]
+    }
+  },
+  "consent": {
+    "update_notice": "You must agree to the updated Privacy Policy and Terms. Otherwise, extraordinary termination may occur within 30 days.",
+    "server_managed": true,
+    "requires_terms": true,
+    "requires_privacy": true,
+    "deadline_days": 30
+  },
+  "privacy": {
+    "version": "v2026-01",
+    "text": [
+      "This privacy policy explains the scope and purpose of personal data processing.",
+      "Only technically necessary data is processed.",
+      "No data is shared with third parties without a legal basis or consent.",
+      "Optional AI services are used only if enabled.",
+      "Users have statutory rights to access and deletion."
+    ]
+  },
+  "annex": {
+    "title": "Anhang J–M (Raum 2) — Eskalations‑Übersicht",
+    "note": "Operative Hinweise aus deinen Framework‑Anhängen J–M (Mapping‑Tabelle ausgenommen).",
+    "sections": [
+      {
+        "id": "ANNEX_J",
+        "title": "Anhang J — Mediationsregeln",
+        "bullets": [
+          "Mediationsverfahren und Fristen; Ergebnisbericht wird Teil der Vertragsakte.",
+          "Gut‑Glaubens‑Teilnahme wird im Register dokumentiert und stützt Eskalationsentscheidungen."
+        ]
+      },
+      {
+        "id": "ANNEX_K",
+        "title": "Anhang K — Transparenzprotokoll",
+        "bullets": [
+          "Durchgängige Nachvollziehbarkeit: Kommunikation, Aktionen und Zahlungen werden geloggt und zeitgestempelt.",
+          "Zwei synchronisierte Register (Verlagsbetrieb / Autorenaufsicht) mit Rollenrechten und Löschverbot."
+        ]
+      },
+      {
+        "id": "ANNEX_L",
+        "title": "Anhang L — Operative Compliance‑Checkliste",
+        "bullets": [
+          "Definiert die Mindest‑Setup‑Anforderungen für das Register (sichere Umgebung) und Workflow‑Beweise.",
+          "Exporte (CSV/PDF) gelten als offizielle Audit‑Dokumente; Versionierung ist Pflicht."
+        ]
+      },
+      {
+        "id": "ANNEX_M",
+        "title": "Anhang M — Framework→Vertrags‑Mapping (Übersicht)",
+        "bullets": [
+          "Als Prüfcheckliste nutzbar; Abweichungen müssen im Register erfasst und referenziert werden.",
+          "Nach Freigabe stützt das Mapping Beweiswert und Abschlusszertifizierung."
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "compare_btn": "Vergleich starten (Pflanze)",
+    "compare_hint": "Gespeicherte Room‑1‑Anker vs Vertrags‑PDF‑Text. Ohne KI.",
+    "mirror_title": "Spiegel — Abweichungen (nur Framework‑Zeilen)",
+    "mirror_sub": "Nur nicht gefundene Elemente, darunter die Gesetzes-/Hinweise.",
+    "need_contract": "Bitte zuerst einen Vertrag im Center‑Slot hochladen.",
+    "need_framework": "Bitte zuerst in Raum 1 ein Framework speichern."
+  }
