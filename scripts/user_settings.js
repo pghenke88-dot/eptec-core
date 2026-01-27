@@ -1,4 +1,4 @@
-// EPTEC User Profile Manager
+try {// EPTEC User Profile Manager
 // Zweck: Nur Dokumenten-/Vorlagen-Daten (Name, Adresse, Firmendaten).
 // WICHTIG: Keine Bankdaten / keine Zahlungsdaten.
 // Payments laufen extern über Stripe (Hosted).
@@ -15,3 +15,5 @@ const UserProfile = {
     return JSON.parse(localStorage.getItem("eptec_user_settings"));
   }
 };
+
+} catch (e) { console.error("Fehler:", e); }
