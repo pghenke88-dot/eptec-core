@@ -1,4 +1,4 @@
-// EPTEC History Vault (Versionsverwaltung für Verträge)
+try {// EPTEC History Vault (Versionsverwaltung für Verträge)
 const HistoryVault = {
     archiveCurrentState: (contractId, data) => {
         const timestamp = new Date().toISOString();
@@ -11,3 +11,5 @@ const HistoryVault = {
         return JSON.parse(localStorage.getItem(`history_${contractId}`));
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
