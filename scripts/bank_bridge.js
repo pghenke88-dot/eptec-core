@@ -1,4 +1,4 @@
-// Infrastruktur zur Anbindung von Bankkonten (PSD2 Standard)
+try {// Infrastruktur zur Anbindung von Bankkonten (PSD2 Standard)
 const BankBridge = {
     // Öffnet den sicheren Dialog zur Bank-Anmeldung (z.B. via Klarna/Tink)
     connectAccount: () => {
@@ -12,3 +12,5 @@ const BankBridge = {
         // Filtert nach Namen der Verlage oder Beträgen
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
