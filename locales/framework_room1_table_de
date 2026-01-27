@@ -1,0 +1,122 @@
+{
+  "room": "R1",
+  "type": "framework_room_table",
+  "version": "1.0.0",
+  "lang": "de",
+  "columns_left": [
+    "module_label",
+    "standard_unit"
+  ],
+  "items": [
+    {
+      "module": "PREAMBLE",
+      "module_label": "Präambel — Zweck- und Klarstellungsbestimmung",
+      "standard_unit": "Zweck / Geltungsbereich / Auslegung"
+    },
+    {
+      "module": "PART_0",
+      "module_label": "Part 0 – Präambel zu Verhandlung, Flexibilität und Schutz des Autors",
+      "standard_unit": "Autorenrechte / Verhandlungsparameter / Anpassungsverfahren"
+    },
+    {
+      "module": "PART_0_A",
+      "module_label": "Part 0A — Globale rechtliche Einbeziehung und Klausel der gegenseitigen Framework-Anerkennung",
+      "standard_unit": "Einbeziehung durch Verweis / grenzübergreifende Bindung"
+    },
+    {
+      "module": "PART_0_B",
+      "module_label": "Part 0B — Bindungswirkung der Frameworks und Klausel zur rechtlichen Integration",
+      "standard_unit": "Hierarchie / gegenseitige Anerkennung / Nicht-Abdingbarkeit"
+    },
+    {
+      "module": "PART_I",
+      "module_label": "Part I — Kern-Framework zu Vertretung & Rechten",
+      "standard_unit": "Rechteübertragung / Vertretungsklauseln"
+    },
+    {
+      "module": "PART_I_A",
+      "module_label": "Part I-A — Zusätzliche Schutzmechanismen & technologische Integrität",
+      "standard_unit": "Höhere Gewalt / Urheberpersönlichkeitsrechte / Metadaten & Tech-Klauseln"
+    },
+    {
+      "module": "PART_I_B",
+      "module_label": "Part I-B — Koordination, Redaktionstreffen & Entscheidungsprotokolle",
+      "standard_unit": "Governance / Treffen / Workflow"
+    },
+    {
+      "module": "PART_I_C",
+      "module_label": "Part I-C — Transparenz, Exklusivität und Inter-Framework-Koordination",
+      "standard_unit": "Exklusivität / Mehrvertrags-Koordination / Transparenz"
+    },
+    {
+      "module": "PART_I_D",
+      "module_label": "Part I-D — Globale Publikations- und Koordinationsklauseln",
+      "standard_unit": "Publikationszeitplan / Lieferpflichten (global)"
+    },
+    {
+      "module": "PART_I_E",
+      "module_label": "Part I-E — Globale Marketing- und Promotionspflichten",
+      "standard_unit": "Marketingplan / Promotionspflichten"
+    },
+    {
+      "module": "PART_I_F",
+      "module_label": "Part I-F — Kontinuität, Gesundheit und Serien-Integrität",
+      "standard_unit": "Kontinuität / Gesundheit / Nicht-Substitution / Serien-Schutz"
+    },
+    {
+      "module": "PART_I_G",
+      "module_label": "Part I-G — Umfang der Rechte, Veröffentlichungspriorität & kreative Definitionen",
+      "standard_unit": "Rechteumfang / Erstverhandlung / Franchise-Rechte"
+    },
+    {
+      "module": "PART_I_H",
+      "module_label": "Part I-H — Recht des Autors zur Ernennung von Assistenz-, Beratungs- und Kontrollpersonen",
+      "standard_unit": "Beratungsklauseln / Vertretungsstruktur"
+    },
+    {
+      "module": "ANNEX_A",
+      "module_label": "Annex A — Anforderungen an Verlagsverträge",
+      "standard_unit": "Verlagsvertrag-Standards / Mindestanforderungen"
+    },
+    {
+      "module": "ANNEX_B",
+      "module_label": "Annex B — Marketing-Schwellenwert & Vergleichstitel-Set",
+      "standard_unit": "Marketing-Schwelle / Vergleichstitel"
+    },
+    {
+      "module": "ANNEX_C",
+      "module_label": "Annex C — Veröffentlichungsplan & Rechte-Aktivierungsmatrix",
+      "standard_unit": "Zeitplan / Aktivierung / Reversionsregeln"
+    },
+    {
+      "module": "ANNEX_D",
+      "module_label": "Annex D — Vergleichbarkeits- & Gleichbehandlungsklausel",
+      "standard_unit": "Parität / Gleichbehandlung / Vergleichbarkeit"
+    },
+    {
+      "module": "ANNEX_E",
+      "module_label": "Annex E — Ethische Veröffentlichung & kulturelle Sensibilität",
+      "standard_unit": "Ethik / Sensibilität / Nicht-Unterdrückung"
+    },
+    {
+      "module": "ANNEX_F",
+      "module_label": "Annex F — Aufsicht & Compliance-Sicherung",
+      "standard_unit": "Aufsichtsmechanismus / unabhängige Verifikation / Zugriffsrechte"
+    },
+    {
+      "module": "ANNEX_G",
+      "module_label": "Anhang G — Musik-, Soundtrack- & Audio-Rechte",
+      "standard_unit": "Audio/Musik-Lizenzierung / kreative Zustimmung / Erlösbeteiligung"
+    },
+    {
+      "module": "ANNEX_H",
+      "module_label": "Annex H — Nachlass & Implementierung durch Rechtsnachfolger",
+      "standard_unit": "Nachfolge / Nachlasskontinuität / posthume Autorität"
+    },
+    {
+      "module": "ANNEX_I",
+      "module_label": "Annex I — Kreative Zusammenarbeit & lokale Vertretung",
+      "standard_unit": "Benannte Kollaboratoren / lokale Vertretung / Good-Faith-Prüfung"
+    }
+  ]
+}
