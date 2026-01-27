@@ -256,3 +256,4 @@
   window.EPTEC_CONSENT_GATES.refreshRoom2TopNotice = window.EPTEC_CONSENT_GATES.refreshRoom2TopNotice || setRoom2TopNotice;
 
 })();
+
