@@ -1,4 +1,4 @@
-// EPTEC Text-Wächter
+try {// EPTEC Text-Wächter
 const eptecFrameworkNorms = {
     "abrechnung": "quartalsweise", // Beispielwert
     "honorar": "Netto-Verkaufserlös" // Beispielwert
@@ -18,3 +18,5 @@ function analyzeContract(uploadedText) {
     }
     return { status: "GREEN", message: "Konform mit EPTEC-Standard" };
 }
+
+} catch (e) { console.error("Fehler:", e); }
