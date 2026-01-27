@@ -839,4 +839,3 @@ Rollen & Zugriff (finale Fassung)
 - Konkrete Ausführung:
   - Normaler User hat Zugang basierend auf dem gewählten Tarif und der Paywall.
 
-
