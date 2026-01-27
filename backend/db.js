@@ -68,4 +68,3 @@ export function closeDb() {
     db.close((err) => (err ? reject(err) : resolve(true)));
   });
 }
-
