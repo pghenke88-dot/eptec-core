@@ -909,4 +909,135 @@ function leaveTunnel(cb) {
     }
   });
 })();
+/* =========================================================
+   UNIVERSAL SUPERPATCH – Sicherstellung der Reihenfolge und Logik in Index + Main
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // Diese Funktion wird verwendet, um alle Schritte in der richtigen Reihenfolge zu steuern
+  const sequenceController = {
+    // Status des Prozesses
+    currentStep: 0,
+    steps: [
+      "startLogic",         // Schritt 1: Startlogik
+      "updateUIForStart",   // Schritt 2: UI für Start aktualisieren
+      "handleDecision",     // Schritt 3: Entscheidung verarbeiten (z.B. Ja/Nein)
+      "updateDecisionUI",   // Schritt 4: Entscheidung in UI anzeigen
+      "completeProcess",    // Schritt 5: Prozess abschließen
+      "updateUIForCompletion" // Schritt 6: UI für Abschluss aktualisieren
+    ],
+
+    // Funktion, die Schritt-für-Schritt den Prozess ausführt
+    executeStep: function() {
+      if (this.currentStep < this.steps.length) {
+        const currentFunction = this[this.steps[this.currentStep]];
+        console.log(`Schritt ${this.currentStep + 1}: ${this.steps[this.currentStep]} wird ausgeführt...`);
+        try {
+          currentFunction.call(this);
+        } catch (e) {
+          console.error(`Fehler in ${this.steps[this.currentStep]}:`, e);
+        }
+      } else {
+        console.log("Alle Schritte abgeschlossen.");
+      }
+    },
+
+    // Startlogik
+    startLogic: function() {
+      try {
+        console.log("Startlogik wird ausgeführt...");
+        // Logik hier einfügen
+        this.currentStep++;  // Weiter zu Schritt 2
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler bei Startlogik:", e);
+      }
+    },
+
+    // UI für den Start aktualisieren
+    updateUIForStart: function() {
+      try {
+        console.log("UI für Start wird aktualisiert...");
+        const startButton = document.getElementById("startButton");
+        if (startButton) {
+          startButton.disabled = true;
+          console.log("Start-Button deaktiviert.");
+        } else {
+          console.error("Start-Button nicht gefunden.");
+        }
+        this.currentStep++;
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler bei der Aktualisierung der UI für Start:", e);
+      }
+    },
+
+    // Entscheidungsprozess (Ja/Nein) behandeln
+    handleDecision: function() {
+      try {
+        console.log("Entscheidung wird verarbeitet...");
+        // Entscheidung hier einfügen (z.B. durch Benutzeraktion)
+        const decision = document.querySelector("input[name='decision']:checked").value;
+        this.updateDecisionUI(decision); // Weiter zur UI-Änderung basierend auf der Entscheidung
+        this.currentStep++;
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler bei der Entscheidung:", e);
+      }
+    },
+
+    // UI für die Entscheidung aktualisieren
+    updateDecisionUI: function(decision) {
+      try {
+        console.log("UI für Entscheidung wird angezeigt...");
+        const decisionUI = document.getElementById("decisionUI");
+        if (decision === "yes") {
+          decisionUI.style.display = "block";
+        } else {
+          decisionUI.style.display = "none";
+        }
+        this.currentStep++;
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler beim UI-Update nach Entscheidung:", e);
+      }
+    },
+
+    // Abschluss des Prozesses
+    completeProcess: function() {
+      try {
+        console.log("Prozess wird abgeschlossen...");
+        // Abschlusslogik hier
+        this.updateUIForCompletion();  // UI für den Abschluss aktualisieren
+        this.currentStep++;
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler beim Abschluss des Prozesses:", e);
+      }
+    },
+
+    // UI für den Abschluss des Prozesses aktualisieren
+    updateUIForCompletion: function() {
+      try {
+        console.log("UI für Abschluss wird angezeigt...");
+        const completionMessage = document.getElementById("completionMessage");
+        if (completionMessage) {
+          completionMessage.style.display = "block";
+          console.log("Abschlussnachricht angezeigt.");
+        }
+        this.currentStep++;
+        this.executeStep();
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Abschluss:", e);
+      }
+    }
+  };
+
+  // Starte die Ausführung, wenn die Seite geladen ist
+  window.addEventListener("DOMContentLoaded", function() {
+    sequenceController.executeStep();  // Initialer Schritt zum Starten der Reihenfolge
+  });
+})();
 
