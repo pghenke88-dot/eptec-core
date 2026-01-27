@@ -1,4 +1,4 @@
-// EPTEC Benachrichtigungs-Dienst
+try {// EPTEC Benachrichtigungs-Dienst
 const NotificationService = {
     triggerAlert: (type, message) => {
         const timestamp = new Date().toLocaleString();
@@ -12,3 +12,5 @@ const NotificationService = {
         console.log(`Erinnerung wurde für in ${days} Tagen geplant.`);
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
