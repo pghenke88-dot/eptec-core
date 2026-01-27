@@ -1,4 +1,4 @@
-// EPTEC PaymentProcessor
+try {// EPTEC PaymentProcessor
 // Zweck: Ausführung des Zahlungsprozesses
 // GitHub Pages kompatibel (Stripe Hosted)
 
@@ -28,3 +28,5 @@ const PaymentProcessor = {
   }
 
 };
+
+} catch (e) { console.error("Fehler:", e); }
