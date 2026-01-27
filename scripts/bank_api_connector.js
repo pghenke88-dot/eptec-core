@@ -1,4 +1,4 @@
-// Anbindung an PSD2-Schnittstellen (z.B. über FinAPI oder Salt Edge)
+try {// Anbindung an PSD2-Schnittstellen (z.B. über FinAPI oder Salt Edge)
 const bankMonitor = {
     async connectAccount(userId) {
         // Leitet den User zur sicheren Bank-Anmeldeseite weiter (kein Passwort-Speichern bei uns!)
@@ -12,3 +12,5 @@ const bankMonitor = {
         // Wenn nicht gefunden -> Ampel GELB/ROT Vorschlag
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
