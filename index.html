@@ -27,7 +27,7 @@
           media-src 'self' data:;
           style-src 'self' 'unsafe-inline';
           script-src 'self';
-          connect-src 'self';
+          connect-src 'self' https:;
         ">
 
   <!-- =========================================================
@@ -56,6 +56,8 @@
        ========================================================= -->
 
   <!-- 1) FOUNDATION -->
+  <script src="./scripts/config.js" defer></script>
+
   <script src="./scripts/ui_state.js" defer></script>
 
   <!-- 2) BACKEND (Phase 1) -->
@@ -74,6 +76,7 @@
   <script src="./scripts/sounds.js" defer></script>
 
   <!-- 7) UI-CONTROL (DVO-only mediator) -->
+  <script src="./scripts/legal_disclaimer.js" defer></script>
   <script src="./scripts/ui_controller.js" defer></script>
 
   <!-- 7a) CAPTURE MODE INTENT (OFF / WEBCAM / SCREEN) -->
@@ -86,9 +89,18 @@
   <script src="./scripts/registration_engine.js" defer></script>
   <script src="./scripts/transparency_ui.js" defer></script>
   <script src="./scripts/room1_framework_assistant.js" defer></script>
+  <script src="./scripts/consent_gates.js" defer></script>
+  <script src="./scripts/evidence_qc.js" defer></script>
+  <script src="./scripts/room1_framework_builder.js" defer></script>
+  <script src="./scripts/room1_ambience.js" defer></script>
 
   <!-- 9) API / MAIN -->
   <script src="./scripts/api_client.js" defer></script>
+  <script src="./scripts/billing_client.js" defer></script>
+  <script src="./scripts/room2_controlling.js" defer></script>
+  <script src="./scripts/ai_services.js" defer></script>
+  <script src="./scripts/ai_admin_panel.js" defer></script>
+  <script src="./scripts/ai_widgets.js" defer></script>
   <script src="./scripts/main.js" defer></script>
 
   <!-- 10) DEMO (AFTER main) -->
@@ -178,8 +190,8 @@
       <button type="button" class="lang-item" data-lang="ru">RU</button>
       <button type="button" class="lang-item" data-lang="uk">UK</button>
       <button type="button" class="lang-item" data-lang="ar">AR</button>
-      <button type="button" class="lang-item" data-lang="cn">CN</button>
-      <button type="button" class="lang-item" data-lang="jp">JP</button>
+      <button type="button" class="lang-item" data-lang="zh">CN</button>
+      <button type="button" class="lang-item" data-lang="ja">JP</button>
     </div>
   </div>
 
@@ -250,8 +262,23 @@
      ========================================================= -->
 <section id="room-1-view" class="scene modal-hidden" data-logic-id="scene.room1">
   <div class="room room1">
+      <div class="r1-decor">
+        <div class="r1-shelf" aria-hidden="true"></div>
+        <div class="r1-desk" aria-hidden="true"></div>
+        <div class="r1-mirror" aria-hidden="true"></div>
+      </div>
+
 
     <h2>Room 1</h2>
+
+    <div class="r1-toolbar" data-logic-id="r1.toolbar">
+      <button id="r1-btn-framework" type="button">Framework</button>
+      <button id="r1-btn-workbench" type="button">Workbench</button>
+      <button id="r1-btn-compare" type="button">Compare (Premium)</button>
+      <button id="r1-btn-archive" type="button">Archive (Shelf)</button>
+      <button id="r1-audio-toggle" type="button" style="margin-left:auto;">Ambience: ON</button>
+    </div>
+    
 
     <button type="button" data-logic-id="r1.savepoint">Savepoint</button>
     <button type="button" data-logic-id="r1.table.download">Download Text</button>
@@ -267,8 +294,21 @@
      ========================================================= -->
 <section id="room-2-view" class="scene modal-hidden" data-logic-id="scene.room2">
   <div class="room room2">
+      <div class="r2-decor">
+        <div class="r2-plant" aria-hidden="true"></div>
+        <div class="r2-cart" aria-hidden="true"></div>
+        <div class="r2-traffic-icon" aria-hidden="true"></div>
+      </div>
 
-    <h2>Room 2</h2>
+
+    
+<h2>Room 2</h2>
+<div id="r2-top-notice" class="r2-top-notice" aria-live="polite"></div>
+<div class="r2-toolbar">
+  <button id="r2-code-generate" type="button">Generate Room-2 Code</button>
+  <button id="r2-code-join" type="button">Enter Room-2 Code</button>
+</div>
+
 
     <button type="button" data-logic-id="r2.hotspot.left1">Left 1</button>
     <button type="button" data-logic-id="r2.hotspot.left2">Left 2</button>
@@ -285,8 +325,49 @@
 <!-- =========================================================
      MODALS
      ========================================================= -->
-<section id="register-screen" class="modal modal-hidden"></section>
-<section id="forgot-screen" class="modal modal-hidden"></section>
+<section id="register-screen" class="modal modal-hidden">
+<div class="login-box register-box" data-logic-id="register-box">
+    <h2 class="modal-title" data-logic-id="register-title">Registration</h2>
+
+    <!-- Picture-in-picture / rules preview -->
+    <div class="pip-frame" data-logic-id="register-pip">
+      <div id="reg-rules-username" class="system-msg pip-msg" aria-live="polite"></div>
+      <div id="reg-rules-password" class="system-msg pip-msg" aria-live="polite"></div>
+    </div>
+
+    <input id="reg-first-name" type="text" autocomplete="given-name" data-logic-id="reg-first-name" />
+    <input id="reg-last-name" type="text" autocomplete="family-name" data-logic-id="reg-last-name" />
+    <input id="reg-birthdate" type="text" inputmode="numeric" autocomplete="bday" data-logic-id="reg-birthdate" />
+
+    <input id="reg-email" type="email" autocomplete="email" data-logic-id="reg-email" />
+    <input id="reg-username" type="text" autocomplete="username" data-logic-id="reg-username" />
+
+    <div class="pw-wrap">
+      <input id="reg-password" type="password" autocomplete="new-password" data-logic-id="reg-password" />
+    </div>
+
+    <div id="register-message" class="system-msg" aria-live="polite"></div>
+
+    <div class="modal-actions">
+      <button id="reg-submit" type="button" data-logic-id="reg-submit">Register</button>
+      <button id="reg-close" type="button" data-logic-id="reg-close">Close</button>
+    </div>
+  </div>
+</section>
+<section id="forgot-screen" class="modal modal-hidden">
+<div class="login-box forgot-box" data-logic-id="forgot-box">
+    <h2 class="modal-title" data-logic-id="forgot-title">Password reset</h2>
+
+    <input id="forgot-identity" type="text" autocomplete="username email" data-logic-id="forgot-identity" />
+
+    <div id="forgot-message" class="system-msg" aria-live="polite"></div>
+
+    <div class="modal-actions">
+      <button id="forgot-submit" type="button" data-logic-id="forgot-submit">Send</button>
+      <button id="forgot-close" type="button" data-logic-id="forgot-close">Close</button>
+    </div>
+  </div>
+</section>
 
 <section id="legal-screen" class="modal modal-hidden">
   <button id="legal-close" type="button">Close</button>
@@ -299,8 +380,228 @@
   <a id="link-terms" href="#">Terms</a>
   <a id="link-support" href="#">Support</a>
   <a id="link-privacy-footer" href="#">Privacy</a>
+
+
+  <div class="footer-product">
+    <div id="footer-product-desc" class="footer-product-desc"></div>
+    <div id="footer-product-warn" class="footer-product-warn"></div>
+  </div>
 </footer>
+
+
+<!-- =========================================================
+     ROOM 1 MODALS (Framework / Workbench / Compare / Mirror / Archive)
+     ========================================================= -->
+<section id="r1-framework-modal" class="modal modal-hidden">
+  <div class="login-box r1-modal-box">
+    <h2 class="modal-title">Framework</h2>
+    <div id="r1-status" class="system-msg"></div>
+    <!-- R1 Framework Builder Layout:
+         Left = Picture-in-picture selector (modules -> sentences)
+         Right = Table (2 fixed left columns) + selected sentences (5 Basic / 8 Premium)
+         NOTE: compare flow lives in r1-compare-modal (Premium).
+    -->
+    <div class="r1-fw-grid">
+      <div class="r1-fw-pip">
+        <div class="r1-fw-pip-title">Modules</div>
+        <div id="r1-framework-list" class="r1-framework-list"></div>
+      </div>
+
+      <div class="r1-fw-table">
+        <div class="system-msg">Selected elements: <span id="r1-workbench-count-inline">0</span></div>
+        <div class="r1-table-wrap">
+          <table class="r1-table">
+            <thead>
+              <tr>
+                <th>Framework Part / Annex</th>
+                <th>Standard Contract Unit</th>
+                <th>Selected Sentence</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="r1-workbench-body-inline"></tbody>
+          </table>
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start; gap:8px; flex-wrap:wrap;">
+          <button id="r1-workbench-download-inline" type="button">Download Framework</button>
+          <button id="r1-workbench-clear-inline" type="button">Clear</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="r1-framework-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r1-workbench-modal" class="modal modal-hidden">
+  <div class="login-box r1-modal-box">
+    <h2 class="modal-title">Workbench</h2>
+    <div class="system-msg">Selected elements: <span id="r1-workbench-count">0</span></div>
+    <div class="r1-table-wrap">
+      <table class="r1-table">
+        <thead>
+          <tr>
+            <th>Framework Category</th>
+            <th>Standard Contract Area</th>
+            <th>Selected Element</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="r1-workbench-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button id="r1-workbench-download" type="button">Download Framework</button>
+      <button id="r1-workbench-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r1-archive-modal" class="modal modal-hidden">
+  <div class="login-box r1-modal-box">
+    <h2 class="modal-title">Archive (Shelf)</h2>
+    <div id="r1-archive-box" class="system-msg"></div>
+    <div class="modal-actions">
+      <button id="r1-archive-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r1-compare-modal" class="modal modal-hidden">
+  <div class="login-box r1-modal-box">
+    <h2 class="modal-title">Contract Comparison (Premium)</h2>
+    <div class="r1-compare-grid">
+      <label>Upload Framework (generated)</label>
+      <input id="r1-compare-fw" type="file" accept=".txt,.md,.doc,.docx,.pdf" />
+      <label>Upload Contract (to compare)</label>
+      <input id="r1-compare-ct" type="file" accept=".txt,.md,.doc,.docx,.pdf" />
+    </div>
+    <div class="r1-compare-row">
+      <div class="r1-light" id="r1-compare-light">—</div>
+      <div class="r1-pct">Deviation: <span id="r1-compare-pct">—</span></div>
+    </div>
+    <div class="modal-actions">
+      <button id="r1-compare-run" type="button">Compare</button>
+      <button id="r1-compare-close" type="button">Close</button>
+    </div>
+    <div class="system-msg">Thresholds: ≤45% GREEN · 46–50% YELLOW (ATTENTION) · >50% RED</div>
+  </div>
+</section>
+
+<section id="r1-mirror-modal" class="modal modal-hidden">
+  <div class="login-box r1-modal-box">
+    <h2 class="modal-title">Mirror — Affected Elements</h2>
+    <div id="r1-mirror-list" class="r1-mirror-list"></div>
+    <div class="modal-actions">
+      <button id="r1-mirror-download" type="button">Download</button>
+      <button id="r1-mirror-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- =========================================================
+     ROOM 2 MODALS (Contract / Evidence / Plant Log / Traffic / Preview)
+     ========================================================= -->
+<section id="r2-slot-modal" class="modal modal-hidden">
+  <div class="login-box r2-modal-box">
+    <h2 class="modal-title" id="r2-slot-title">Slot</h2>
+    <input id="r2-slot-current" type="hidden" value="contract" />
+    <div class="system-msg" id="r2-slot-meta"></div>
+
+    <div class="r2-upload-row">
+      <input id="r2-slot-upload" type="file" />
+      <button id="r2-slot-upload-btn" type="button">Upload</button>
+    </div>
+
+    <div class="r2-ampel-row">
+      <label for="r2-slot-traffic" class="r2-ampel-label">Ampel</label>
+      <select id="r2-slot-traffic"></select>
+      <input id="r2-slot-reason" type="text" placeholder="Reason / Motivo (optional)" />
+    </div>
+
+    <div class="r2-actions">
+      <button id="r2-slot-view" type="button">View</button>
+      <button id="r2-slot-download" type="button">Download</button>
+      <button id="r2-slot-clear" type="button">Clear</button>
+    </div>
+
+    <div class="modal-actions">
+      <button id="r2-slot-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r2-evidence-modal" class="modal modal-hidden">
+  <div class="login-box r2-modal-box">
+    <h2 class="modal-title">Evidence Slots</h2>
+    <div id="r2-evidence-grid" class="r2-evidence-grid">
+      <button type="button" data-r2-slot="left1">Left 1</button>
+      <button type="button" data-r2-slot="left2">Left 2</button>
+      <button type="button" data-r2-slot="right1">Right 1</button>
+      <button type="button" data-r2-slot="right2">Right 2</button>
+    </div>
+    <div class="system-msg">Tip: the center contract can be opened via “Contract”.</div>
+    <div class="modal-actions">
+      <button id="r2-evidence-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r2-plant-modal" class="modal modal-hidden">
+  <div class="login-box r2-modal-box">
+    <h2 class="modal-title">Plant (Read-only Log & Files)</h2>
+
+    <h3 class="r2-subhead">Files</h3>
+    <div id="r2-plant-list" class="r2-plant-list"></div>
+
+    <h3 class="r2-subhead">Activity Log</h3>
+    <div id="r2-log-list" class="r2-log-list"></div>
+
+    <div class="modal-actions">
+      <button id="r2-plant-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r2-traffic-modal" class="modal modal-hidden">
+  <div class="login-box r2-modal-box">
+    <h2 class="modal-title">Traffic Light</h2>
+
+    <div class="r2-traffic-row">
+      <button id="r2-traffic-green" type="button" class="r2-traffic-btn green">Green</button>
+      <button id="r2-traffic-yellow" type="button" class="r2-traffic-btn yellow">Yellow (cycle)</button>
+      <button id="r2-traffic-red" type="button" class="r2-traffic-btn red">Red</button>
+      <div id="r2-traffic-badge" class="r2-traffic-badge green">GREEN</div>
+    </div>
+
+    <div class="r2-traffic-actions" style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+      <button id="r2-traffic-compare" type="button">Compare</button>
+      <div id="r2-traffic-compare-hint" class="r2-small" style="opacity:.85;"></div>
+    </div>
+    <div id="r2-traffic-annex" class="r2-annex" style="margin-top:12px;"></div>
+    <div id="r2-traffic-mirror" class="r2-mirror" style="margin-top:12px;"></div>
+
+    <div id="r2-traffic-box" class="r2-traffic-box"></div>
+
+    <div class="modal-actions">
+      <button id="r2-traffic-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
+
+<section id="r2-preview-modal" class="modal modal-hidden">
+  <div class="login-box r2-modal-box">
+    <h2 class="modal-title" id="r2-preview-title">Preview</h2>
+    <iframe id="r2-preview-frame" class="r2-preview-frame" title="Preview"></iframe>
+    <div class="modal-actions">
+      <button id="r2-preview-close" type="button">Close</button>
+    </div>
+  </div>
+</section>
 
 </body>
 </html>
+
 
