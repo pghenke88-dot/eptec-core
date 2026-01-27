@@ -1,4 +1,4 @@
-// EPTEC Traffic Light Logic
+try {// EPTEC Traffic Light Logic
 const trafficLightStatus = {
     GREEN: { id: 1, action: "None", nextStep: null },
     YELLOW: { id: 2, action: "Observation", nextStep: "NF1_Preparation" },
@@ -22,3 +22,5 @@ function saveUserState(id, color) {
     // Hier wird gespeichert, damit der Download-Manager weiß, 
     // welche Gesetze er später in das PDF packen muss.
 }
+
+} catch (e) { console.error("Fehler:", e); }
