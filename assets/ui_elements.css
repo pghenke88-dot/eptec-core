@@ -1,88 +1,225 @@
 /* ============================================================
-   assets/imagine.css
-   EPTEC IMAGINE: Szenen, Raum, Dramaturgie
+   assets/ui_elements.css
+   EPTEC UI ELEMENTS — COMPONENT LAYER (Final)
+   ------------------------------------------------------------
+   Purpose:
+   - Styles for reusable UI components (forms, buttons, boxes,
+     grids, notices, badges, toolbars, small helpers).
+   - NO scene/illustration styling (that lives in imagine.css).
+   - Works with variables defined in assets/style.css (:root).
    ============================================================ */
 
-/* =======================
-   SCENE: MEADOW
-   ======================= */
+/* ---------- helpers ---------- */
+.whiteout-hidden { display:none !important; }
+.pw-wrap { display:flex; gap:10px; align-items:center; }
+.pw-wrap input { flex:1; }
 
-.grassy-meadow {
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    #87ceeb 0%,
-    #cfefff 40%,
-    #6fbf73 100%
-  );
-  overflow: hidden;
+.admin-camera-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
 }
 
-.sun {
-  position: absolute;
-  top: 6%;
-  right: 12%;
-  width: 140px;
-  height: 140px;
-  background: radial-gradient(circle, #fff7b2, #ffd54f);
-  border-radius: 50%;
-  filter: blur(1px);
-  opacity: 0.95;
+/* ---------- boxes / panels ---------- */
+.login-box,
+.register-box,
+.forgot-box{
+  background: var(--bg-glass);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
 }
 
-.stream {
-  position: absolute;
-  bottom: 12%;
-  left: 12%;
-  width: 46%;
-  height: 7%;
-  background: linear-gradient(to right, #81d4fa, #4fc3f7);
-  border-radius: 60%;
+.login-box h2,
+.register-box h2,
+.forgot-box h2{
+  margin: 0 0 10px 0;
+  letter-spacing: 0.3px;
+}
+
+.room1,
+.room2{
+  background: var(--bg-glass);
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 16px;
+}
+
+/* ---------- inputs ---------- */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+textarea,
+select{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: rgba(0,0,0,0.25);
+  color: var(--txt);
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder{
+  color: rgba(255,255,255,0.55);
+}
+
+input:focus,
+textarea:focus,
+select:focus{
+  border-color: rgba(255,255,255,0.35);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+}
+
+/* ---------- buttons ---------- */
+button,
+.eptec-btn{
+  appearance:none;
+  border: 1px solid var(--line-soft);
+  background: rgba(255,255,255,0.08);
+  color: var(--txt);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .08s ease, background .12s ease, border-color .12s ease;
+}
+
+button:hover,
+.eptec-btn:hover{
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.28);
+}
+
+button:active,
+.eptec-btn:active{
+  transform: translateY(1px);
+}
+
+button:disabled,
+.eptec-btn:disabled{
   opacity: 0.55;
-  filter: blur(1px);
+  cursor: not-allowed;
 }
 
-/* =======================
-   SCENE: TUNNEL FALL
-   ======================= */
-
-#eptec-tunnel {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at center, #2b1d0f 0%, #000 70%);
-  overflow: hidden;
-  z-index: 999998;
-  opacity: 0;
+/* small / inline button */
+.eptec-btn--sm{
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 0.92rem;
 }
 
-.tunnel-hidden { display: none; }
-
-.tunnel-active {
-  display: block;
-  animation: tunnelFadeIn 120ms linear forwards;
+/* primary intent */
+.eptec-btn--primary{
+  background: rgba(130, 220, 255, 0.16);
+  border-color: rgba(130, 220, 255, 0.22);
 }
 
-@keyframes tunnelFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* danger intent */
+.eptec-btn--danger{
+  background: rgba(255, 90, 90, 0.14);
+  border-color: rgba(255, 90, 90, 0.20);
 }
 
-.tunnel-wall {
-  position: absolute;
-  inset: -50%;
-  background:
-    repeating-radial-gradient(
-      circle at center,
-      rgba(255,255,255,0.06) 0px,
-      rgba(255,255,255,0.02) 40px,
-      rgba(0,0,0,0.92) 80px
-    );
-  transform-origin: center;
-  animation: tunnelFall 1350ms linear forwards;
+/* ---------- grids / toolbars ---------- */
+.r1-compare-grid,
+.r2-evidence-grid{
+  display:grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
-@keyframes tunnelFall {
-  0%   { transform: scale(0.2) rotate(0deg); }
-  100% { transform: scale(2.6) rotate(10deg); }
+.r2-toolbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin: 8px 0 12px 0;
+}
+
+/* ---------- notices / badges ---------- */
+.r2-top-notice{
+  border: 1px dashed var(--line-soft);
+  background: rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.r2-traffic-box{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  border: 1px solid var(--line-soft);
+  background: rgba(0,0,0,0.18);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.r2-traffic-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255,255,255,0.06);
+  font-weight: 600;
+}
+
+.r2-ampel-label{
+  display:inline-block;
+  font-size: 0.92rem;
+  opacity: 0.9;
+}
+
+.r1-pct{
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---------- lists ---------- */
+.r2-log-list,
+.r2-plant-list{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.r2-log-list li,
+.r2-plant-list li{
+  border: 1px solid var(--line-soft);
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+
+/* ---------- modal refinement (works with base modal in style.css) ---------- */
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+.modal-title{
+  margin:0 0 10px 0;
+}
+
+/* ---------- footer link emphasis ---------- */
+.footer-product a,
+.footer-product-desc a{
+  color: rgba(190, 235, 255, 0.95);
+  text-decoration: none;
+}
+.footer-product a:hover,
+.footer-product-desc a:hover{
+  text-decoration: underline;
 }
