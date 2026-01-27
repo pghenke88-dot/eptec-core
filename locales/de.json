@@ -1,135 +1,71 @@
 {
-  "brand": "EPTEC",
-  "system": "Business-Guard",
-  "language": "Deutsch",
-  "lang": "Deutsch",
-  "last_update": "2024-05-22",
-  "agb_btn": "AGB & Rechtliches",
-  "status_msg": "System-Status: Aktiv",
-  "config": {
-    "currency": "EUR",
-    "region": "Europa"
-  },
-  "plans": {
-    "f1": {
-      "name": "Business-Guard F1",
-      "tagline": "Der ideale Einstieg für kleine Unternehmen",
-      "price_basis": "19.90",
-      "price_premium": "34.90",
-      "features": [
-        "Basis Sicherheits-Überwachung",
-        "Echtzeit-Benachrichtigungen",
-        "Support via E-Mail",
-        "1 Benutzerzugang"
-      ]
+    "footer": {
+        "faq_title": "Häufige Fragen",
+        "agb_title": "Allgemeine Geschäftsbedingungen",
+        "support_title": "Support",
+        "product_title": "Produktbeschreibung"
     },
-    "f2": {
-      "name": "Business-Guard F2",
-      "tagline": "Volle Kontrolle für wachsende Betriebe",
-      "price_basis": "24.90",
-      "price_premium": "49.90",
-      "features": [
-        "Erweiterte KI-Analyse",
-        "Priorisierter 24/7 Support",
-        "Unbegrenzte Benutzerzugänge",
-        "Cloud-Backup inklusive",
-        "Schnittstellen-Anbindung (API)"
-      ]
-    }
-  },
-  "translations": {
-    "select_language": "Sprache wählen",
-    "contact_support": "Support kontaktieren",
-    "buy_now": "Jetzt starten"
-  },
-  "app_routing": {
-    "verlag_app": {
-      "steps": ["Modul-Auswahl", "Wortlaut-Prüfung", "Rechts-Check", "Download"],
-      "allowed_folders": ["verlage", "rechtsprechung/DE"]
-    }
-  },
-  "frameworks": {
-    "verlag": {
-      "modules": {
-        "MOD_I": {
-          "id": "I",
-          "title": "Vertragsgrundlagen & Rechteübertragung",
-          "doc_path": "docs/verlage/modul_I_"
+    "faq": [
+        {
+            "q": "Was ist EPTEC?",
+            "a": "EPTEC ist eine Plattform zur strukturierten Arbeit mit Frameworks, Vergleichen und methodischer Verbindlichkeit."
+        },
+        {
+            "q": "Kann ich EPTEC ohne KI nutzen?",
+            "a": "Ja. Alle KI-Funktionen sind optional und können vom Admin deaktiviert werden."
+        },
+        {
+            "q": "Was passiert mit meinen Daten?",
+            "a": "Es werden nur notwendige technische Daten verarbeitet. Inhalte werden nicht automatisch an Dritte weitergegeben."
+        },
+        {
+            "q": "Was ist Raum 1?",
+            "a": "Raum 1 dient der Analyse, Strukturierung und Framework-Arbeit."
+        },
+        {
+            "q": "Was ist Raum 2?",
+            "a": "Raum 2 ist der methodenverbindliche Anwendungs- und Nachweisraum."
         }
-      }
-    }
-  },
-  "module_logic": {
-    "M1_V_01": {
-      "topic": "Abrechnungsfrist",
-      "framework_text": "Abrechnung erfolgt binnen 14 Tagen.",
-      "argumentation": {
-        "law": "§ 286 BGB (Verzug)",
-        "reasoning": "Eine unangemessene Benachteiligung ist unwirksam."
-      }
-    }
-  },
-  "export_templates": {
-    "argumentation_pdf": {
-      "title": "Rechtliche Legitimierung & Änderungsbedarf",
-      "structure": ["checkpoint_id", "conflict_description", "law_reference"]
-    }
-  },
-
-  "app_name": "",
-  "login_username": "",
-  "login_password": "",
-  "login_btn": "",
-  "register_btn": "",
-  "forgot_btn": "",
-
-  "admin_code": "",
-  "admin_submit": "",
-  "admin_hint": "",
-
-  "register_title": "",
-  "register_first_name": "",
-  "register_last_name": "",
-  "register_birthdate": "",
-  "register_email": "",
-  "register_username_rules": "",
-  "register_password_rules": "",
-  "register_submit": "",
-  "register_submit_locked": "",
-  "register_ready": "",
-  "register_not_ready": "",
-  "register_username_taken": "",
-  "register_username_available": "",
-  "register_suggestion_title": "",
-  "register_suggestion_1": "",
-  "register_suggestion_2": "",
-  "register_verification_sent": "",
-  "register_verification_mail_subject": "",
-  "register_verification_mail_body": "",
-  "register_verified": "",
-
-  "forgot_title": "",
-  "forgot_hint": "",
-  "forgot_submit": "",
-  "forgot_mail_sent": "",
-  "forgot_new_password": "",
-  "forgot_confirm": "",
-  "forgot_done": "",
-
-  "legal_imprint": "",
-  "legal_terms": "",
-
-  "lang_choose": "",
-  "lang_active": "",
-
-  "system_ok": "",
-  "system_cancel": "",
-  "system_close": "",
-  "system_loading": "",
-  "system_error": "",
-  "login_error_invalid": "",
-
-  "register_privacy_prefix": "Mit der Registrierung akzeptierst du unsere",
-  "register_privacy_link": "Datenschutzbestimmungen",
-  "footer_privacy": "Datenschutz"
+    ],
+    "agb": [
+        "Die Nutzung der Plattform unterliegt den jeweils gültigen Nutzungsbedingungen.",
+        "Inhalte dürfen nicht unbefugt weitergegeben oder vervielfältigt werden.",
+        "Verstöße können zur Sperrung oder Kündigung führen.",
+        "Die Plattform stellt Werkzeuge bereit, keine Rechtsberatung."
+    ],
+    "product": [
+        "Framework-Arbeit in Raum 1",
+        "Methodenverbindliche Anwendung in Raum 2",
+        "Vergleichs- und Nachweisfunktionen",
+        "Optionale KI-Unterstützung"
+    ],
+    "consent": {
+        "update_notice": "Sie müssen den aktualisierten Datenschutzbestimmungen und AGB zustimmen. Andernfalls kann innerhalb von 30 Tagen eine außerordentliche Kündigung erfolgen.",
+        "server_managed": true,
+        "requires_terms": true,
+        "requires_privacy": true,
+        "deadline_days": 30
+    },
+    "privacy": {
+        "version": "v2026-01",
+        "text": [
+            "Diese Datenschutzerklärung beschreibt Art, Umfang und Zweck der Verarbeitung personenbezogener Daten.",
+            "Es werden nur technisch notwendige Daten verarbeitet.",
+            "Eine Weitergabe an Dritte erfolgt nicht ohne Rechtsgrundlage oder Einwilligung.",
+            "Optionale KI-Dienste werden nur bei Aktivierung genutzt.",
+            "Betroffene haben die gesetzlichen Auskunfts- und Löschrechte."
+        ]
+    },
+    "start": "Starten",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "languageSelect": "Sprache auswählen",
+    "submit": "Absenden",
+    "cancel": "Abbrechen",
+    "settings": "Einstellungen",
+    "dashboard": "Dashboard",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "warning": "Warnung"
+}
 }
