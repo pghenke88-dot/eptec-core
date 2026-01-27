@@ -419,7 +419,7 @@ html.demo-dark #room-2-view{
 
 /* Doors */
 #doors-view{
-  background-image: url("./images/view_doors.jpg");
+  background-image: url("./img/view_doors.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -427,7 +427,7 @@ html.demo-dark #room-2-view{
 
 /* Room 1 */
 #room-1-view{
-  background-image: url("./images/view_room1.jpg");
+  background-image: url("./img/view_room1.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -435,25 +435,98 @@ html.demo-dark #room-2-view{
 
 /* Room 2 */
 #room-2-view{
-  background-image: url("./images/view_room2.jpg");
+  background-image: url("./img/view_room2.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 /* DOORS variants */
 html.room-doors--view_doors #doors-view{
-  background-image: url("./images/view_doors.jpg");
+  background-image: url("./img/view_doors.png");
 }
 html.room-doors--view_doors_tree #doors-view{
-  background-image: url("./images/view_doors_tree.jpg");
+  background-image: url("./img/view_doors.png");
 }
 
 /* ROOM1 variants (optional) */
 html.room-room1--view_room1 #room-1-view{
-  background-image: url("./images/view_room1.jpg");
+  background-image: url("./img/view_room1.png");
 }
 
 /* ROOM2 variants */
 html.room-room2--view_room2 #room-2-view{
-  background-image: url("./images/view_room2.jpg");
+  background-image: url("./img/view_room2.png");
 }
+
+
+/* =========================================================
+   EPTEC PATCH — FILL EMPTY UI (Register/Forgot) + ROOM VISUALS
+   - Adds resilient defaults if JS does not set html scene classes
+   - Keeps existing selectors intact
+   ========================================================= */
+
+#doors-view{
+  background-image: url("./img/view_doors.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#room-1-view{
+  background-image: url("./img/view_room1.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#room-2-view{
+  background-image: url("./img/view_room2.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Modal helpers (Register / Forgot) */
+.modal .login-box{
+  max-width: 560px;
+}
+
+.modal-title{
+  margin: 0 0 10px 0;
+  font-size: 22px;
+  letter-spacing: 0.2px;
+}
+
+.pip-frame{
+  width: 100%;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin: 8px 0 12px 0;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.18);
+}
+
+.pip-msg{
+  margin: 0;
+  padding: 4px 0;
+}
+
+.modal-actions{
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.modal-actions button{
+  flex: 1;
+}
+
+
+/* --- EPTEC Footer Product Description + Warnings (Room 2) --- */
+.footer-product{padding:10px 16px;border-top:1px solid rgba(255,255,255,0.10);font-size:12px;line-height:1.35}
+.footer-product-desc{opacity:0.9;margin-bottom:6px}
+.footer-product-warn{opacity:0.85}
+.r2-top-notice{margin:8px 0 10px 0;padding:10px 12px;border:1px solid rgba(255,255,255,0.18);border-radius:10px;background:rgba(0,0,0,0.25);font-size:12px;line-height:1.35}
+.r2-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+
