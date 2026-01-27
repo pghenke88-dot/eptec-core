@@ -1,0 +1,122 @@
+{
+  "room": "R1",
+  "type": "framework_room_table",
+  "version": "1.0.0",
+  "lang": "en",
+  "columns_left": [
+    "module_label",
+    "standard_unit"
+  ],
+  "items": [
+    {
+      "module": "PREAMBLE",
+      "module_label": "Preamble — Clarification of Intent and Purpose",
+      "standard_unit": "Purpose / Scope / Interpretation"
+    },
+    {
+      "module": "PART_0",
+      "module_label": "Part 0 – Preamble on Negotiation, Flexibility, and Author’s Protection",
+      "standard_unit": "Author Rights / Negotiation Parameters / Adjustment Procedures"
+    },
+    {
+      "module": "PART_0_A",
+      "module_label": "Part 0A — Global Legal Incorporation and Mutual Framework Recognition Clause",
+      "standard_unit": "Incorporation by Reference / Cross-Jurisdictional Binding"
+    },
+    {
+      "module": "PART_0_B",
+      "module_label": "Part 0B — Binding Force of Frameworks and Legal Integration Clause",
+      "standard_unit": "Hierarchy / Reciprocal Recognition / Non-Derogation"
+    },
+    {
+      "module": "PART_I",
+      "module_label": "Part I — Core Representation & Rights Framework",
+      "standard_unit": "Grant of Rights / Representation Clauses"
+    },
+    {
+      "module": "PART_I_A",
+      "module_label": "Part I-A — Supplemental Safeguards and Technological Integrity",
+      "standard_unit": "Force Majeure / Moral Rights / Metadata & Tech Clauses"
+    },
+    {
+      "module": "PART_I_B",
+      "module_label": "Part I B — Coordination, Editorial Meetings & Decision Records",
+      "standard_unit": "Governance / Meetings / Workflow"
+    },
+    {
+      "module": "PART_I_C",
+      "module_label": "Part I C — Transparency, Exclusivity, and Inter-Framework Coordination Clause",
+      "standard_unit": "Exclusivity / Multi-Contract Coordination / Transparency"
+    },
+    {
+      "module": "PART_I_D",
+      "module_label": "Part I-D — Global Publication & Coordination Clauses",
+      "standard_unit": "Publication Timeline / Delivery Obligations (Global)"
+    },
+    {
+      "module": "PART_I_E",
+      "module_label": "Part I-E — Global Marketing & Promotional Obligations",
+      "standard_unit": "Marketing Schedule / Promotional Duties"
+    },
+    {
+      "module": "PART_I_F",
+      "module_label": "Part I-F — Continuity, Health, and Series Integrity Clauses",
+      "standard_unit": "Continuity / Health / Non-Substitution / Series Protection"
+    },
+    {
+      "module": "PART_I_G",
+      "module_label": "Part I G – Scope of Rights, Publication Priority & Creative Definitions",
+      "standard_unit": "Grant of Rights / First Negotiation / Franchise Rights"
+    },
+    {
+      "module": "PART_I_H",
+      "module_label": "Part I H — Author’s Right to Appoint Assistants, Advisors, and Oversight Personnel",
+      "standard_unit": "Advisory Clauses / Representation Structure"
+    },
+    {
+      "module": "ANNEX_A",
+      "module_label": "Annex A — Publisher Deal Requirements Rider",
+      "standard_unit": "Mandatory Publisher Deal Standards / Rights Protection"
+    },
+    {
+      "module": "ANNEX_B",
+      "module_label": "Annex B — Marketing Threshold Comparator Set",
+      "standard_unit": "Marketing Performance, Threshold & Visibility Standards"
+    },
+    {
+      "module": "ANNEX_C",
+      "module_label": "Annex C — Publication Schedule & Rights Activation Matrix",
+      "standard_unit": "Publication Timing, Activation Deadlines, Reversion Rules"
+    },
+    {
+      "module": "ANNEX_D",
+      "module_label": "Annex D — Comparative Rights & Equity Clause",
+      "standard_unit": "Financial & Operational Parity, Royalty Equality, Author Equity"
+    },
+    {
+      "module": "ANNEX_E",
+      "module_label": "Annex E — Ethical Publication, Cultural Sensitivity & Integrity Standards",
+      "standard_unit": "Ethical Publication, Cultural Standards, Non-Suppression Rules"
+    },
+    {
+      "module": "ANNEX_F",
+      "module_label": "Annex F — Oversight & Compliance Assurance",
+      "standard_unit": "Oversight Mechanism, Independent Verification, Access Rights"
+    },
+    {
+      "module": "ANNEX_G",
+      "module_label": "Annex G — Music, Soundtrack & Audio Rights",
+      "standard_unit": "Audio/Music Licensing, Creative Approval, Revenue-Sharing"
+    },
+    {
+      "module": "ANNEX_H",
+      "module_label": "Annex H — Heritage & Successor Implementation",
+      "standard_unit": "Succession Rights, Estate Continuity, Posthumous Authority"
+    },
+    {
+      "module": "ANNEX_I",
+      "module_label": "Annex I — Preferred Creative Collaboration & Local Representation (Final 2025 Edition)",
+      "standard_unit": "Nominated Collaborators, Local Representation, Good-Faith Evaluation"
+    }
+  ]
+}
