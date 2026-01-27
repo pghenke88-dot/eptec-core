@@ -1,4 +1,4 @@
-// EPTEC PaymentGate
+try {// EPTEC PaymentGate
 // Zweck: Reine Konfiguration / Futter für Zahlungsarten
 // KEINE Logik, KEINE Statusbehauptungen
 
@@ -34,3 +34,4 @@ const PaymentGate = {
 
 };
 
+} catch (e) { console.error("Fehler:", e); }
