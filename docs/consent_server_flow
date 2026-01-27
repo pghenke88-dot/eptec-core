@@ -1,0 +1,19 @@
+Server-Managed Consent Flow (AGB & Privacy)
+This project assumes a server-first consent architecture.
+Principles
+Consent is enforced by the external User/Auth server.
+EPTEC frontend is read-only regarding consent decisions.
+Access is granted or revoked based on server flags.
+Required Capabilities of the User Server
+Versioned Terms & Privacy documents
+Mandatory re-consent campaigns
+Personalized confirmation links
+Deadline handling (e.g. 30 days)
+Automatic suspension or termination
+Audit log (user id, timestamp, version)
+Frontend Contract
+EPTEC only consumes:
+consent_required (bool)
+consent_version_terms
+consent_version_privacy
+access_status (active / suspended / terminated)
