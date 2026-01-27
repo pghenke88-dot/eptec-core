@@ -1,6 +1,6 @@
 const TranslationEngine = {
     currentLang: 'de',
-    supportedLangs: ['de', 'en', 'es', 'fr', 'it', 'pt', 'tr', 'ru', 'zh', 'ar', 'jp', 'pl'],
+    supportedLangs: ['de', 'en', 'es', 'fr', 'it', 'pt', 'tr', 'ru', 'zh', 'ar', 'ja', 'pl'],
     translations: {}, // Cache für die Übersetzungen
 
     // Sprache setzen
