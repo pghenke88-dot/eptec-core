@@ -1,4 +1,4 @@
-// EPTEC PDF Generator & Download
+try {// EPTEC PDF Generator & Download
 function generateEscalationDocument(userId, issueId) {
     // 1. Hole Nutzerdaten
     // 2. Hole passende Vorlage aus /templates
@@ -12,3 +12,5 @@ function generateEscalationDocument(userId, issueId) {
     link.download = `EPTEC_Eskalation_${issueId}.pdf`;
     link.click();
 }
+
+} catch (e) { console.error("Fehler:", e); }
