@@ -1,4 +1,4 @@
-// EPTEC Fristen-Radar
+try {// EPTEC Fristen-Radar
 const DeadlineTracker = {
     checkDeadlines: () => {
         const activeEscalations = JSON.parse(localStorage.getItem('eptec_app_states')) || {};
@@ -15,3 +15,5 @@ const DeadlineTracker = {
         }
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
