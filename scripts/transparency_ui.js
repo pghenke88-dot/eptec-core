@@ -382,3 +382,44 @@
 })();
 
 
+
+// Adding Roles & Access Content Below
+
+Rollen & Zugriff (finale Fassung)
+
+1. Admin (du)
+- Alle Dienste
+- Premium immer aktiv
+- Demo global an/aus
+- VIP-Codes generieren & deaktivieren
+- Einzige Kamera-/Aufzeichnungsberechtigung
+- Konkrete Ausführung:
+  - Admin generiert und speichert VIP-Passwort.
+  - Admin schaltet Demo an/aus.
+  - Admin kann VIP-Codes aktivieren oder deaktivieren.
+
+2. VIP
+- Vollzugang (beide Räume, Orb, Premium)
+- Keine Paywall
+- Jederzeit widerrufbar
+- Keine Kamera
+- Konkrete Ausführung:
+  - VIP hat Zugang zu allen Räumen, Orb, Premium-Inhalten.
+  - VIP kann jederzeit widerrufen werden.
+
+3. Demo
+- Alles sehen
+- Keine Funktionen
+- Keine Frameworks öffnen/erstellen
+- Keine Vergleiche, keine Evidence
+- Orb/Raumwechsel nur als Navigation
+- Konkrete Ausführung:
+  - Demo-Nutzer kann alle Inhalte sehen, jedoch keine Funktionen ausführen.
+  - Demo-Nutzer kann keine Frameworks oder Vergleichsfunktionen verwenden.
+
+4. Normaler User
+- Gemäß Paywall/Tarif
+- Konkrete Ausführung:
+  - Normaler User hat Zugang basierend auf dem gewählten Tarif und der Paywall.
+
+
