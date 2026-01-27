@@ -46,4 +46,3 @@ export async function sendMail({ to, subject, text, html }) {
 
   return { ok: true, messageId: info.messageId };
 }
-
