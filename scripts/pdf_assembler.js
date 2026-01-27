@@ -1,4 +1,4 @@
-/**
+try {/**
  * scripts/pdf_assembler.js
  * EPTEC PDF ASSEMBLER – FINAL (Legal-Guard integriert)
  *
@@ -80,3 +80,5 @@
     generateEscalationPDF
   };
 })();
+
+} catch (e) { console.error("Fehler:", e); }
