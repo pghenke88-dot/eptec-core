@@ -1,4 +1,4 @@
-// EPTEC Deadline Calculator (Berechnung von Abrechnungsfristen)
+try {// EPTEC Deadline Calculator (Berechnung von Abrechnungsfristen)
 const DeadlineCalculator = {
     calculateDueDate: (reportingPeriodEnd, gracePeriodMonths) => {
         let dueDate = new Date(reportingPeriodEnd);
@@ -13,3 +13,5 @@ const DeadlineCalculator = {
         return today > dueDate; // Gibt 'true' zurück, wenn die Frist abgelaufen ist
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
