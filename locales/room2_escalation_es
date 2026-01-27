@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "language": "es",
+    "name": "Room 2 Escalation & Traffic Light (ES)"
+  },
+  "traffic": {
+    "green": {
+      "label": "Verde",
+      "meaning": "En curso — no se requiere escalación.",
+      "actions": [
+        "Seguir supervisando plazos y entregables.",
+        "Mantener actualizados los archivos de evidencia (subidas).",
+        "Usar el registro para documentar hitos."
+      ],
+      "legal": [
+        "Principios UNIDROIT Art. 1.7 (buena fe y lealtad contractual)",
+        "Registro y auditabilidad conforme al Framework (Parte VIII)"
+      ]
+    },
+    "yellow": {
+      "label": "Amarillo",
+      "meaning": "Atención — las etapas de escalación pueden activarse manualmente.",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Etapa 1 — Recordatorio",
+          "actions": [
+            "Enviar un recordatorio por escrito citando el plazo/obligación acordados.",
+            "Solicitar confirmación y una fecha de entrega actualizada.",
+            "Adjuntar o referenciar evidencia relevante (correos, facturas, informes)."
+          ],
+          "legal": [
+            "Aviso y plazo de subsanación conforme a principios de derecho contractual (remediación documentada)",
+            "Escalación a mediación según el Framework (Parte VIII; Anexo J)"
+          ]
+        },
+        {
+          "stage": 2,
+          "title": "Etapa 2 — Notificación formal",
+          "actions": [
+            "Emitir una notificación formal (plazo + consecuencias) alineada con el contrato.",
+            "Exigir acción correctiva inmediata y confirmación por escrito.",
+            "Documentar todas las comunicaciones en el registro."
+          ],
+          "legal": [
+            "Aviso y plazo de subsanación conforme a principios de derecho contractual (remediación documentada)",
+            "Escalación a mediación según el Framework (Parte VIII; Anexo J)"
+          ]
+        },
+        {
+          "stage": 3,
+          "title": "Etapa 3 — Paquete de escalación",
+          "actions": [
+            "Preparar un paquete: contrato + evidencia de respaldo + cronología.",
+            "Definir los siguientes pasos internos (negociación, mediación, revisión legal).",
+            "Congelar una instantánea del conjunto de evidencias (descargar + archivar externamente)."
+          ],
+          "legal": [
+            "Aviso y plazo de subsanación conforme a principios de derecho contractual (remediación documentada)",
+            "Escalación a mediación según el Framework (Parte VIII; Anexo J)"
+          ]
+        }
+      ],
+      "legal": [
+        "Aviso y plazo de subsanación conforme a principios de derecho contractual (remediación documentada)",
+        "Escalación a mediación según el Framework (Parte VIII; Anexo J)"
+      ]
+    },
+    "red": {
+      "label": "Rojo",
+      "meaning": "Crítico — se requiere acción inmediata.",
+      "actions": [
+        "Compilar el contrato + la cronología de evidencias.",
+        "Decidir siguientes pasos según el contrato: suspensión, terminación, reclamación, mediación, revisión legal.",
+        "Exportar y archivar externamente el conjunto de evidencias."
+      ],
+      "legal": [
+        "Incumplimiento material, terminación y recursos conforme a derecho contractual",
+        "Reversión y ejecución según el Framework (Parte IX; Convención de Nueva York 1958 cuando aplique)"
+      ]
+    }
+  },
+  "consent": {
+    "update_notice": "You must agree to the updated Privacy Policy and Terms. Otherwise, extraordinary termination may occur within 30 days.",
+    "server_managed": true,
+    "requires_terms": true,
+    "requires_privacy": true,
+    "deadline_days": 30
+  },
+  "privacy": {
+    "version": "v2026-01",
+    "text": [
+      "This privacy policy explains the scope and purpose of personal data processing.",
+      "Only technically necessary data is processed.",
+      "No data is shared with third parties without a legal basis or consent.",
+      "Optional AI services are used only if enabled.",
+      "Users have statutory rights to access and deletion."
+    ]
+  },
+  "annex": {
+    "title": "Anexo J–M (Sala 2) — Resumen de escalación",
+    "note": "Guía operativa extraída de tus Anexos J–M (tabla de mapeo excluida).",
+    "sections": [
+      {
+        "id": "ANNEX_J",
+        "title": "Anexo J — Reglas de mediación",
+        "bullets": [
+          "Procedimiento y plazos de mediación; el informe final pasa al expediente contractual.",
+          "La participación de buena fe se registra y respalda decisiones de escalación."
+        ]
+      },
+      {
+        "id": "ANNEX_K",
+        "title": "Anexo K — Protocolo de transparencia",
+        "bullets": [
+          "Trazabilidad continua: comunicaciones, acciones y transacciones se registran con sello temporal.",
+          "Dos registros sincronizados (Editor / Supervisión del Autor) con acceso por roles y sin borrado."
+        ]
+      },
+      {
+        "id": "ANNEX_L",
+        "title": "Anexo L — Lista operativa de cumplimiento",
+        "bullets": [
+          "Requisitos mínimos del Registro seguro y pruebas del flujo de trabajo.",
+          "Exportaciones (CSV/PDF) cuentan como documentos oficiales; versionado obligatorio."
+        ]
+      },
+      {
+        "id": "ANNEX_M",
+        "title": "Anexo M — Mapeo Framework→Contrato (resumen)",
+        "bullets": [
+          "Lista de verificación; desviaciones deben registrarse y referenciarse en el Registro.",
+          "Tras aprobación, el mapeo respalda el valor probatorio y el cierre."
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "compare_btn": "Comparar (Planta)",
+    "compare_hint": "Anclas guardadas de Sala 1 vs texto del PDF del contrato. Sin IA.",
+    "mirror_title": "Espejo — Desviaciones (solo líneas del Framework)",
+    "mirror_sub": "Solo elementos no encontrados; debajo, sus referencias legales.",
+    "need_contract": "Sube primero un contrato en el slot central.",
+    "need_framework": "Crea y guarda primero el Framework en Sala 1."
+  }
