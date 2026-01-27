@@ -23,13 +23,24 @@
   function isAppHTTPS() { return (typeof location !== "undefined" && location.protocol === "https:"); }
 
   // ----------------------------
-  // Token policy (Phase 1)
+  // Auth policy
   // ----------------------------
+  function authMode() {
+    const m = (typeof window !== "undefined" && typeof window.EPTEC_AUTH_MODE === "string")
+      ? window.EPTEC_AUTH_MODE.trim().toLowerCase()
+      : "";
+    return (m === "cookie") ? "cookie" : "token";
+  }
+
+  // Token store is ONLY used when authMode() === "token".
+  // In cookie mode, the server must set an HttpOnly Secure cookie; nothing sensitive is stored in localStorage.
   const token = {
     get() {
+      if (authMode() === "cookie") return "";
       return safe(() => localStorage.getItem(TOKEN_KEY) || "", "");
     },
     set(t) {
+      if (authMode() === "cookie") return;
       safe(() => {
         const v = String(t || "").trim();
         if (v) localStorage.setItem(TOKEN_KEY, v);
@@ -70,6 +81,25 @@
     }
   };
 
+
+  // ----------------------------
+  // Billing base policy (defaults to API base)
+  // ----------------------------
+  const billingBase = {
+    get() {
+      const fromWindow =
+        (typeof window !== "undefined" && typeof window.EPTEC_BILLING_BASE === "string")
+          ? window.EPTEC_BILLING_BASE.trim()
+          : "";
+
+      const out = trimSlash(fromWindow || base.get() || "");
+
+      // Browser security: HTTPS page must NOT call HTTP backend
+      if (out && isAppHTTPS() && !isHTTPS(out)) return "";
+      return out;
+    }
+  };
+
   // ----------------------------
   // Error model (stable)
   // ----------------------------
@@ -98,17 +128,20 @@
   // ----------------------------
   // Core request
   // ----------------------------
-  async function req(path, { method = "GET", body = null, auth = false, timeoutMs = 9000 } = {}) {
+  async function req(path, { method = "GET", body = null, auth = false, timeoutMs = 9000, absolute = false } = {}) {
     const b = base.get();
-    if (!b) {
-      throw makeErr("API_BASE_MISSING", 0, "API base URL is not configured (or not HTTPS).", null);
+    if (!absolute) {
+      if (!b) {
+        throw makeErr("API_BASE_MISSING", 0, "API base URL is not configured (or not HTTPS).", null);
+      }
     }
 
-    const url = b + String(path || "");
+    const url = absolute ? String(path || "") : (b + String(path || ""));
     const headers = { "Accept": "application/json" };
     if (body !== null) headers["Content-Type"] = "application/json";
 
-    if (auth) {
+    const useCookieAuth = !!auth && (authMode() === "cookie");
+    if (auth && !useCookieAuth) {
       const t = token.get();
       if (t) headers.Authorization = "Bearer " + t;
     }
@@ -155,6 +188,7 @@
   // ----------------------------
   window.EPTEC_API = Object.freeze({
     base,
+    billingBase,
     token,
 
     req,
@@ -177,8 +211,20 @@
     forgot: (p) =>
       req("/api/forgot", { method: "POST", body: p }),
 
+    // Billing (server creates Stripe sessions; frontend just redirects)
+    createCheckoutSession: (p) => {
+      const bb = billingBase.get();
+      const url = (bb ? (bb + "/api/billing/checkout") : "/api/billing/checkout");
+      return req(url, { method: "POST", body: p, auth: true, absolute: !!bb });
+    },
+
+    createPortalSession: (p) => {
+      const bb = billingBase.get();
+      const url = (bb ? (bb + "/api/billing/portal") : "/api/billing/portal");
+      return req(url, { method: "POST", body: p, auth: true, absolute: !!bb });
+    },
+
     logout: () => token.clear()
   });
 
 })();
-
