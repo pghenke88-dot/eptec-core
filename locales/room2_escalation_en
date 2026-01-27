@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "language": "en",
+    "name": "Room 2 Escalation & Traffic Light"
+  },
+  "traffic": {
+    "green": {
+      "label": "Green",
+      "meaning": "On track — no escalation required.",
+      "actions": [
+        "Continue monitoring deadlines and deliverables.",
+        "Keep evidence files updated (uploads).",
+        "Use the log to document milestones."
+      ],
+      "legal": [
+        "UNIDROIT Principles Art. 1.7 (good faith & fair dealing)",
+        "Framework compliance logging / auditability (Part VIII)"
+      ]
+    },
+    "yellow": {
+      "label": "Yellow",
+      "meaning": "Attention — escalation stages can be triggered manually.",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Stage 1 — Reminder",
+          "actions": [
+            "Send a written reminder referencing the agreed deadline/obligation.",
+            "Request confirmation and an updated delivery date.",
+            "Attach or reference relevant evidence (emails, invoices, reports)."
+          ],
+          "legal": [
+            "Notice & cure periods under contract-law principles (documented remediation)",
+            "Mediation escalation per the Framework (Part VIII; Annex J)"
+          ]
+        },
+        {
+          "stage": 2,
+          "title": "Stage 2 — Formal Notice",
+          "actions": [
+            "Issue a formal notice (deadline + consequences) aligned with the contract.",
+            "Request immediate corrective action and confirmation in writing.",
+            "Document all communications in the log."
+          ],
+          "legal": [
+            "Notice & cure periods under contract-law principles (documented remediation)",
+            "Mediation escalation per the Framework (Part VIII; Annex J)"
+          ]
+        },
+        {
+          "stage": 3,
+          "title": "Stage 3 — Escalation Package",
+          "actions": [
+            "Prepare an escalation package: contract + supporting evidence + timeline.",
+            "Define internal next steps (negotiation, mediation, counsel review).",
+            "Freeze a snapshot of the current evidence set (download + archive externally)."
+          ],
+          "legal": [
+            "Notice & cure periods under contract-law principles (documented remediation)",
+            "Mediation escalation per the Framework (Part VIII; Annex J)"
+          ]
+        }
+      ],
+      "legal": [
+        "Notice & cure periods under contract-law principles (documented remediation)",
+        "Mediation escalation per the Framework (Part VIII; Annex J)"
+      ]
+    },
+    "red": {
+      "label": "Red",
+      "meaning": "Critical — immediate action required.",
+      "actions": [
+        "Compile the contract + evidence timeline.",
+        "Decide next steps per contract: suspension, termination, claim, mediation, counsel review.",
+        "Export and archive the evidence set externally."
+      ],
+      "legal": [
+        "Material breach, termination & remedies under contract law",
+        "Reversion/enforcement mechanisms per the Framework (Part IX; New York Convention 1958 where applicable)"
+      ]
+    }
+  },
+  "consent": {
+    "update_notice": "You must agree to the updated Privacy Policy and Terms. Otherwise, extraordinary termination may occur within 30 days.",
+    "server_managed": true,
+    "requires_terms": true,
+    "requires_privacy": true,
+    "deadline_days": 30
+  },
+  "privacy": {
+    "version": "v2026-01",
+    "text": [
+      "This privacy policy explains the scope and purpose of personal data processing.",
+      "Only technically necessary data is processed.",
+      "No data is shared with third parties without a legal basis or consent.",
+      "Optional AI services are used only if enabled.",
+      "Users have statutory rights to access and deletion."
+    ]
+  },
+  "annex": {
+    "title": "Annex J–M (Room 2) — Escalation Overview",
+    "note": "Operational guidance extracted from your Framework Annexes J–M (mapping table excluded).",
+    "sections": [
+      {
+        "id": "ANNEX_J",
+        "title": "Annex J — Mediation Rules",
+        "bullets": [
+          "Mediation procedure and timelines; documented outcome report becomes part of the contract file.",
+          "Good‑faith participation is recorded in the Register and supports escalation decisions."
+        ]
+      },
+      {
+        "id": "ANNEX_K",
+        "title": "Annex K — Transparency Protocol",
+        "bullets": [
+          "Continuous traceability: communications, actions, and financial transactions are logged and time‑stamped.",
+          "Two synced registers (Publisher operations / Author oversight) with role-based access and non-deletion."
+        ]
+      },
+      {
+        "id": "ANNEX_L",
+        "title": "Annex L — Operational Compliance Checklist",
+        "bullets": [
+          "Defines the minimum operational setup for the Register (secure environment) and workflow proof.",
+          "Exports (CSV/PDF) count as official audit documents; versioning required."
+        ]
+      },
+      {
+        "id": "ANNEX_M",
+        "title": "Annex M — Framework→Contract Mapping Overview",
+        "bullets": [
+          "Used as a verification checklist; deviations must be recorded and referenced in the Register.",
+          "After approval, mapping supports evidentiary value and closing certification."
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "compare_btn": "Compare (Plant Trigger)",
+    "compare_hint": "Uses saved Room‑1 framework anchors vs uploaded Contract PDF text. No AI.",
+    "mirror_title": "Mirror — Deviations (Framework lines only)",
+    "mirror_sub": "Only elements not found in the proposal are listed, followed by their legal hints.",
+    "need_contract": "Please upload a Contract in the Center slot first.",
+    "need_framework": "Please build & save a Room‑1 Framework selection first."
+  }
