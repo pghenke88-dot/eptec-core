@@ -45,4 +45,4 @@
   window.EPTEC_ACTIVITY = {
     logAction
   };
-})(); 
+})();
