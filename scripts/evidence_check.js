@@ -1,4 +1,4 @@
-// EPTEC Evidence Check (Validierung der Beweismittel-Konsistenz)
+try {// EPTEC Evidence Check (Validierung der Beweismittel-Konsistenz)
 const EvidenceCheck = {
     validateTimestamp: (fileDate, claimDate) => {
         // Prüft, ob das Beweisdokument zeitlich nach dem Vorfall liegt
@@ -11,3 +11,5 @@ const EvidenceCheck = {
         }
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
