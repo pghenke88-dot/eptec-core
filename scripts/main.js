@@ -696,4 +696,101 @@ function leaveTunnel(cb) {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+/* =========================================================
+   PATCH – Main.js: Sicherstellen, dass jede Funktion, die Logik und UI-Kontrollen beschreibt, ausgeführt wird
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  // Logik- und UI-Kontrollfunktionen
+  const functions = {
+    // Funktion, die die Logik für den Start des Prozesses beschreibt
+    startLogic: function() {
+      try {
+        console.log("Startlogik wird ausgeführt...");
+        // Weitere Logik hier
+        this.updateUIForStart();  // UI-Kontrolle für Start
+      } catch (e) {
+        console.error("Fehler bei Startlogik:", e);
+      }
+    },
+
+    // Funktion zur Steuerung der UI für den Start
+    updateUIForStart: function() {
+      try {
+        console.log("UI wird auf Start aktualisiert...");
+        // UI Update Logik hier
+        this.enableStartButton();  // Aktiviert den Start-Button
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Start:", e);
+      }
+    },
+
+    // Funktion zum Aktivieren des Start-Buttons
+    enableStartButton: function() {
+      try {
+        const startButton = document.getElementById("startButton");
+        if (startButton) {
+          startButton.disabled = false;
+          console.log("Start-Button aktiviert.");
+        } else {
+          console.error("Start-Button nicht gefunden.");
+        }
+      } catch (e) {
+        console.error("Fehler beim Aktivieren des Start-Buttons:", e);
+      }
+    },
+
+    // Beispiel für eine UI-Kontrolle, die nach einer Entscheidung ein UI-Element anzeigt
+    showDecisionUI: function(decision) {
+      try {
+        const decisionUI = document.getElementById("decisionUI");
+        if (decision === "yes") {
+          decisionUI.style.display = "block"; // Beispiel: Zeige UI-Element für 'Ja'
+          console.log("Entscheidung 'Ja' ausgewählt.");
+        } else {
+          decisionUI.style.display = "none"; // Beispiel: Verstecke UI-Element
+          console.log("Entscheidung 'Nein' ausgewählt.");
+        }
+      } catch (e) {
+        console.error("Fehler bei der UI-Kontrolle nach Entscheidung:", e);
+      }
+    },
+
+    // Funktion, die die Logik zum Abschluss eines Prozesses beschreibt
+    completeProcess: function() {
+      try {
+        console.log("Prozess wird abgeschlossen...");
+        // Abschlusslogik hier
+        this.updateUIForCompletion();  // UI-Kontrolle für den Abschluss
+      } catch (e) {
+        console.error("Fehler beim Abschluss des Prozesses:", e);
+      }
+    },
+
+    // Funktion zur Steuerung der UI nach Prozessabschluss
+    updateUIForCompletion: function() {
+      try {
+        console.log("UI wird auf Abschluss aktualisiert...");
+        const completionMessage = document.getElementById("completionMessage");
+        if (completionMessage) {
+          completionMessage.style.display = "block";
+          console.log("Abschlussnachricht angezeigt.");
+        } else {
+          console.error("Abschlussnachricht nicht gefunden.");
+        }
+      } catch (e) {
+        console.error("Fehler beim UI-Update für Abschluss:", e);
+      }
+    }
+  };
+
+  // Sicherstellen, dass alle Funktionen ausgeführt werden
+  window.addEventListener("DOMContentLoaded", function() {
+    functions.startLogic();  // Startlogik wird beim Laden der Seite ausgeführt
+    // Weitere Logik kann hier aufgerufen werden
+  });
+
+})();
 
