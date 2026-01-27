@@ -1,3 +1,19 @@
+
+// ===== EPTEC TUNNEL TIMING (FINAL FREEZE) =====
+const MIN_TUNNEL_MS = 2200; // fixed professional transition
+let __tunnelEnteredAt = 0;
+
+function enterTunnel() {
+  __tunnelEnteredAt = Date.now();
+}
+
+function leaveTunnel(cb) {
+  const elapsed = Date.now() - __tunnelEnteredAt;
+  const wait = Math.max(0, MIN_TUNNEL_MS - elapsed);
+  setTimeout(() => { try { cb && cb(); } catch(e){} }, wait);
+}
+// =============================================
+
 /**
  * scripts/main.js
  *
@@ -450,8 +466,8 @@
     if (raw.startsWith("ru")) return "ru";
     if (raw.startsWith("uk")) return "uk";
     if (raw.startsWith("ar")) return "ar";
-    if (raw.startsWith("zh") || raw === "cn") return "zh";
-    if (raw.startsWith("ja") || raw === "jp") return "ja";
+    if (raw.startsWith("zh") || raw === "zh") return "zh";
+    if (raw.startsWith("ja") || raw === "ja") return "ja";
     return "en";
   }
 
