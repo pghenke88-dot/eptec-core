@@ -734,7 +734,7 @@ function leaveTunnel(cb) {
     startLogic: function() {
       try {
         console.log("Startlogik wird ausgeführt...");
-        // Startlogik hier einfügen
+        // Startbotton
         this.currentStep++; // Weiter zu Schritt 2
         this.executeStep();
       } catch (e) {
