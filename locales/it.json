@@ -1,75 +1,59 @@
 {
-  "brand": "EPTEC",
-  "system": "Business-Guard",
-  "language": "Italiano",
-  "lang": "Italiano",
-  "agb_btn": "Termini e Condizioni",
-  "status_msg": "Verifica stato",
-  "plans": {
-    "f1": {
-      "price_basis": "19.90",
-      "price_premium": "34.90"
-    },
-    "f2": {
-      "price_basis": "24.90",
-      "price_premium": "49.90"
-    }
+  "footer": {
+    "faq_title": "FAQ",
+    "agb_title": "AGB / Conditions",
+    "support_title": "Support",
+    "product_title": "Produkt"
   },
-
-  "app_name": "",
-  "login_username": "",
-  "login_password": "",
-  "login_btn": "",
-  "register_btn": "",
-  "forgot_btn": "",
-
-  "admin_code": "",
-  "admin_submit": "",
-  "admin_hint": "",
-
-  "register_title": "",
-  "register_first_name": "",
-  "register_last_name": "",
-  "register_birthdate": "",
-  "register_email": "",
-  "register_username_rules": "",
-  "register_password_rules": "",
-  "register_submit": "",
-  "register_submit_locked": "",
-  "register_ready": "",
-  "register_not_ready": "",
-  "register_username_taken": "",
-  "register_username_available": "",
-  "register_suggestion_title": "",
-  "register_suggestion_1": "",
-  "register_suggestion_2": "",
-  "register_verification_sent": "",
-  "register_verification_mail_subject": "",
-  "register_verification_mail_body": "",
-  "register_verified": "",
-
-  "forgot_title": "",
-  "forgot_hint": "",
-  "forgot_submit": "",
-  "forgot_mail_sent": "",
-  "forgot_new_password": "",
-  "forgot_confirm": "",
-  "forgot_done": "",
-
-  "legal_imprint": "",
-  "legal_terms": "",
-
-  "lang_choose": "",
-  "lang_active": "",
-
-  "system_ok": "",
-  "system_cancel": "",
-  "system_close": "",
-  "system_loading": "",
-  "system_error": "",
-  "login_error_invalid": "",
-
-  "register_privacy_prefix": "Registrandoti accetti la nostra",
-  "register_privacy_link": "Informativa sulla privacy",
-  "footer_privacy": "Privacy"
-}
+  "faq": [
+    {
+      "q": "What is EPTEC?",
+      "a": "EPTEC is a platform for structured framework work, comparison, and methodological commitment."
+    },
+    {
+      "q": "Can I use EPTEC without AI?",
+      "a": "Yes. All AI features are optional and can be disabled by the admin."
+    },
+    {
+      "q": "What happens to my data?",
+      "a": "Only necessary technical data is processed. Content is not automatically shared."
+    },
+    {
+      "q": "What is Room 1?",
+      "a": "Room 1 is for analysis, structuring, and framework work."
+    },
+    {
+      "q": "What is Room 2?",
+      "a": "Room 2 is the binding application and evidence space."
+    }
+  ],
+  "agb": [
+    "Use of the platform is subject to the applicable terms.",
+    "Content may not be shared or copied without permission.",
+    "Violations may lead to suspension or termination.",
+    "The platform provides tools, not legal advice."
+  ],
+  "product": [
+    "Framework work in Room 1",
+    "Binding application in Room 2",
+    "Comparison and evidence features",
+    "Optional AI assistance"
+  ],
+  "_note": "Translated for Italiano",
+  "consent": {
+    "update_notice": "È necessario accettare l'informativa sulla privacy e i termini aggiornati. In caso contrario, può avvenire una risoluzione straordinaria entro 30 giorni.",
+    "server_managed": true,
+    "requires_terms": true,
+    "requires_privacy": true,
+    "deadline_days": 30
+  },
+  "privacy": {
+    "version": "v2026-01",
+    "text": [
+      "This privacy policy explains the scope and purpose of personal data processing.",
+      "Only technically necessary data is processed.",
+      "No data is shared with third parties without a legal basis or consent.",
+      "Optional AI services are used only if enabled.",
+      "Users have statutory rights to access and deletion."
+    ]
+  }
