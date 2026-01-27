@@ -1,4 +1,4 @@
-// EPTEC File Upload Handler
+try {// EPTEC File Upload Handler
 async function handleFileUpload(file) {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
@@ -13,3 +13,5 @@ async function handleFileUpload(file) {
     // Hier würde die Verschlüsselung stattfinden (Security)
     return "Upload erfolgreich. Dokument bereit für Ampel-Check.";
 }
+
+} catch (e) { console.error("Fehler:", e); }
