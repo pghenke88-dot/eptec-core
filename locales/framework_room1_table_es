@@ -1,0 +1,120 @@
+{
+  "room": "R1",
+  "type": "framework_room_table",
+  "version": "1.0.0",
+  "lang": "es",
+  "columns_left": [
+    "module_label",
+    "standard_unit"
+  ],
+  "items": [
+    {
+      "module": "PREAMBLE",
+      "module_label": "Preámbulo — Declaración de Intención y Finalidad",
+      "standard_unit": "Objeto, finalidad e interpretación"
+    },
+    {
+      "module": "PART_0",
+      "module_label": "Parte 0 – Preámbulo sobre negociación, flexibilidad y protección del Autor",
+      "standard_unit": "Derechos del autor / parámetros de negociación / ajustes contractuales"
+    },
+    {
+      "module": "PART_0_A",
+      "module_label": "Parte 0A — Incorporación jurídica global y cláusula de reconocimiento mutuo de Marcos",
+      "standard_unit": "Incorporación por referencia / vinculación multinivel"
+    },
+    {
+      "module": "PART_0_B",
+      "module_label": "Parte 0B — Fuerza vinculante de los Marcos y cláusula de integración jurídica",
+      "standard_unit": "Jerarquía contractual / cláusulas de integración"
+    },
+    {
+      "module": "PART_I",
+      "module_label": "Parte I — Marco fundamental de Representación y Derechos",
+      "standard_unit": "Cesión de derechos / representación"
+    },
+    {
+      "module": "PART_I_A",
+      "module_label": "Parte I-A Salvaguardas suplementarias & integridad tecnológica",
+      "standard_unit": "Cláusulas tecnológicas / moral rights / force majeure"
+    },
+    {
+      "module": "PART_I_B",
+      "module_label": "Parte I-B Coordinación, Reuniones Editoriales y Registros de Decisiones",
+      "standard_unit": "Gobernanza editorial / reuniones / minutas"
+    },
+    {
+      "module": "PART_I_C",
+      "module_label": "Parte I-C Transparencia, Exclusividad y Coordinación Inter-Marco",
+      "standard_unit": "Exclusividad / coordinación de múltiples acuerdos"
+    },
+    {
+      "module": "PART_I_D",
+      "module_label": "Parte I-D Cláusulas de Publicación Global y Coordinación",
+      "standard_unit": "Calendario de publicación / obligaciones de entrega"
+    },
+    {
+      "module": "PART_I_E",
+      "module_label": "Parte I-E Obligaciones Globales de Marketing y Promoción",
+      "standard_unit": "Marketing / visibilidad / campañas"
+    },
+    {
+      "module": "PART_I_F",
+      "module_label": "Parte I-F Cláusulas de Continuidad, Salud e Integridad de la Serie",
+      "standard_unit": "Continuidad de serie / salud laboral / protección del proyecto"
+    },
+    {
+      "module": "PART_I_G",
+      "module_label": "Parte I-G Alcance de Derechos, Prioridad de Publicación y Definiciones Creativas",
+      "standard_unit": "Cesión de derechos / franquicias / derechos prioritarios"
+    },
+    {
+      "module": "PART_I_H",
+      "module_label": "Parte I-H Derecho del Autor a Designar Asistentes, Asesores y Personal de Supervisión",
+      "standard_unit": "Asesores / estructura de representación"
+    },
+    {
+      "module": "ANNEX_A",
+      "module_label": "Anexo A — Requisitos Contractuales para Acuerdos Editoriales",
+      "standard_unit": "Estándares obligatorios del editor"
+    },
+    {
+      "module": "ANNEX_B",
+      "module_label": "Anexo B — Conjunto de Referencia y Umbrales de Marketing",
+      "standard_unit": "Marketing / visibilidad / comparadores"
+    },
+    {
+      "module": "ANNEX_C",
+      "module_label": "Annexo C — Calendario de Publicación y Matriz de Activación de Derechos",
+      "standard_unit": "Plazos / activación / reversión"
+    },
+    {
+      "module": "ANNEX_D",
+      "module_label": "Annexo D — Cláusula de Comparabilidad y Equidad",
+      "standard_unit": "Igualdad contractual / paridad financiera"
+    },
+    {
+      "module": "ANNEX_E",
+      "module_label": "Anexo E — Normas de Publicación Ética, Sensibilidad Cultural e Integridad",
+      "standard_unit": "Ética / sensibilidad / no censura"
+    },
+    {
+      "module": "ANNEX_F",
+      "module_label": "Anexo F — Supervisión y Garantía de Cumplimiento",
+      "standard_unit": "Supervisión independiente"
+    },
+    {
+      "module": "ANNEX_G",
+      "module_label": "Anexo G — Derechos de Música, Banda Sonora y Audio",
+      "standard_unit": "Música / audio / licencias / regalías"
+    },
+    {
+      "module": "ANNEX_H",
+      "module_label": "Anexo H — Patrimonio & Implementación por Sucesores",
+      "standard_unit": "Sucesión / continuidad del IP"
+    },
+    {
+      "module": "ANNEX_I",
+      "module_label": "Anexo I — Colaboración Creativa Preferente y Representación Local",
+      "standard_unit": "Colaboradores nominados"
+    }
