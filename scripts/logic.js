@@ -712,7 +712,22 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
       const p = Safe.str(password).trim();
       if (!u || !p) return { ok: false, message: "Missing credentials." };
 
-      // if EPTEC_MOCK_BACKEND exists, use it
+      const extOnly = !!(typeof window !== "undefined" && window.EPTEC_EXTERNAL_ONLY);
+      const apiBase = Safe.str(Safe.try(() => window.EPTEC_API?.base?.get?.(), "Auth.api.base") || "").trim();
+      const hasApi = !!apiBase;
+
+      // Prefer real API when configured
+      if (hasApi && window.EPTEC_API?.login) {
+        const res = Safe.try(() => window.EPTEC_API.login({ username: u, password: p }), "Auth.api.login");
+        return res;
+      }
+
+      // External-only: never accept local fallbacks
+      if (extOnly || hasApi) {
+        return { ok: false, message: "Login backend not available (external-only mode)." };
+      }
+
+      // Phase 1: if EPTEC_MOCK_BACKEND exists, use it
       const res = Safe.try(() => window.EPTEC_MOCK_BACKEND?.login?.({ username: u, password: p }), "Auth.mockBackend.login");
       if (res && typeof res.ok === "boolean") return res;
 
@@ -2171,7 +2186,7 @@ PASTE HERE:
    EPTEC APPEND 7 — LANGUAGE GOVERNANCE CORE (UNBLOCKABLE · GLOBAL · DETERMINISTIC)
    Purpose:
    - Canonical 12 language codes (UI): EN DE ES FR IT PT NL RU UK AR CN JP
-   - Internal keys: en de es fr it pt nl ru uk ar cn jp
+   - Internal keys: en de es fr it pt nl ru uk ar zh ja
    - Locale/dir mapping, date/time formatting, global clock updates
    - Unblockable language rail: capture-phase click handler
    - Docs/Locals readiness: provides EPTEC_I18N.t(key) loading locales/<lang>.json
@@ -2201,13 +2216,13 @@ PASTE HERE:
     RU: { key: "ru", locale: "ru-RU", dir: "ltr" },
     UK: { key: "uk", locale: "uk-UA", dir: "ltr" }, // UI label UK = Ukrainian
     AR: { key: "ar", locale: "ar-SA", dir: "rtl" },
-    CN: { key: "cn", locale: "zh-CN", dir: "ltr" }, // UI label CN
-    JP: { key: "jp", locale: "ja-JP", dir: "ltr" }  // UI label JP
+    CN: { key: "zh", locale: "zh-CN", dir: "ltr" }, // UI label CN
+    JP: { key: "ja", locale: "ja-JP", dir: "ltr" }  // UI label JP
   });
 
   const KEY_TO_UI = Object.freeze({
     en: "EN", de: "DE", es: "ES", fr: "FR", it: "IT", pt: "PT", nl: "NL",
-    ru: "RU", uk: "UK", ar: "AR", cn: "CN", jp: "JP"
+    ru: "RU", uk: "UK", ar: "AR", zh: "CN", ja: "JP"
   });
 
   function normToUI(x) {
@@ -2373,7 +2388,7 @@ PASTE HERE:
 
   /* -----------------------------
      8) LOCALES LOADER + t(key)
-     - Loads ./locales/<key>.json (en,de,...,cn,jp)
+     - Loads ./locales/<key>.json (en,de,...,zh,ja)
      - Falls back to EN if missing
      ----------------------------- */
   const cache = new Map(); // langKey -> object
@@ -3383,3 +3398,43 @@ PASTE HERE:
     console.info("[EPTEC] ID_REGISTRY initialized (append)");
   }
 })();
+
+// Adding Roles & Access Content Below
+
+Rollen & Zugriff (finale Fassung)
+
+1. Admin (du)
+- Alle Dienste
+- Premium immer aktiv
+- Demo global an/aus
+- VIP-Codes generieren & deaktivieren
+- Einzige Kamera-/Aufzeichnungsberechtigung
+- Konkrete Ausführung:
+  - Admin generiert und speichert VIP-Passwort.
+  - Admin schaltet Demo an/aus.
+  - Admin kann VIP-Codes aktivieren oder deaktivieren.
+
+2. VIP
+- Vollzugang (beide Räume, Orb, Premium)
+- Keine Paywall
+- Jederzeit widerrufbar
+- Keine Kamera
+- Konkrete Ausführung:
+  - VIP hat Zugang zu allen Räumen, Orb, Premium-Inhalten.
+  - VIP kann jederzeit widerrufen werden.
+
+3. Demo
+- Alles sehen
+- Keine Funktionen
+- Keine Frameworks öffnen/erstellen
+- Keine Vergleiche, keine Evidence
+- Orb/Raumwechsel nur als Navigation
+- Konkrete Ausführung:
+  - Demo-Nutzer kann alle Inhalte sehen, jedoch keine Funktionen ausführen.
+  - Demo-Nutzer kann keine Frameworks oder Vergleichsfunktionen verwenden.
+
+4. Normaler User
+- Gemäß Paywall/Tarif
+- Konkrete Ausführung:
+  - Normaler User hat Zugang basierend auf dem gewählten Tarif und der Paywall.
+
