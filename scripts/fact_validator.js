@@ -1,4 +1,4 @@
-// EPTEC Fakten-Validator (Sicherung der Nutzer-Autonomie)
+try {// EPTEC Fakten-Validator (Sicherung der Nutzer-Autonomie)
 const FactValidator = {
     confirmDiscrepancy: (pointId) => {
         const checkText = "Ich bestätige hiermit, dass ich die vom System gemeldete " +
@@ -15,3 +15,5 @@ const FactValidator = {
         }
     }
 };
+
+} catch (e) { console.error("Fehler:", e); }
