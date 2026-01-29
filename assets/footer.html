@@ -23,7 +23,10 @@ EPTEC FOOTER — HARMONY FINAL
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const safe = (fn) => { try { return fn(); } catch {} };
+  const safe = (fn) => {
+    try { return fn(); }
+    catch (e) { console.warn("[FOOTER] safe fallback", e); }
+  };
 
   // -----------------------------
   // Static year
