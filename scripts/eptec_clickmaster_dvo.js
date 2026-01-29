@@ -943,7 +943,7 @@
       if (!r) return;
 
       const handled = Clickmaster.run(r.id, r.ctx);
-      if (handled) {
+      if (handled && r.id !== "lang-toggle") {
         e.preventDefault?.();
         e.stopPropagation?.();
         e.stopImmediatePropagation?.();
