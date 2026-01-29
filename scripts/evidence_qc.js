@@ -111,3 +111,4 @@
   window.EPTEC_EVIDENCE.event = window.EPTEC_EVIDENCE.event || event;
   window.EPTEC_EVIDENCE.alert = window.EPTEC_EVIDENCE.alert || alert;
   window.EPTEC_EVIDENCE.openCaseFromAlert = window.EPTEC_EVIDENCE.openCaseFromAlert || openCaseFromAlert;
+})();
