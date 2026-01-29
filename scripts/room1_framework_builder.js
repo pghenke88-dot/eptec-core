@@ -594,7 +594,17 @@ function sourceHintFor(code, moduleTitle) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 800);
   }
-
+function ensureTempDownloadFallback() {
+    if (window.urlTempDownload) return;
+    window.urlTempDownload = (filename, text) => {
+      if (typeof downloadText === "function") {
+        downloadText(filename || "download.txt", text || "");
+        return;
+      }
+      console.warn("[EPTEC R1] urlTempDownload fallback unavailable: downloadText missing.");
+    };
+    console.warn("[EPTEC R1] urlTempDownload missing; fallback installed.");
+  }
   function wireWorkbench() {
     const doDownload = () => {
       if (hasAnyRed()) return;
@@ -824,7 +834,8 @@ Affected subpoints (deviations only):
   async function init() {
     // Only run when room1 exists
     if (!$("room-1-view")) return;
-
+    
+    ensureTempDownloadFallback();
     ensureRoom1Buttons();
     wireRoom1Nav();
     wireWorkbench();
