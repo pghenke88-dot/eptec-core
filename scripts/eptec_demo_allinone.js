@@ -56,6 +56,10 @@
   function setDemoOpen(open) {
     localStorage.setItem(LS_KEY, open ? "1" : "0");
     updateUI();
+     if (!open) {
+      const st = getState();
+      if (st?.modes?.demo) setState({ modes: { ...(st.modes || {}), demo: false } });
+    }
   }
 
   // default OFF if not set
