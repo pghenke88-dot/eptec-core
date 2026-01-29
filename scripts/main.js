@@ -737,69 +737,88 @@ function leaveTunnel(cb) {
         // Startbotton
         this.currentStep++; // Weiter zu Schritt 2
         this.executeStep();
-      } catch (e) {
-        console.error("Fehler bei Startlogik:", e);
-      }
-    },
-
-    // UI für den Start aktualisieren
-    updateUIForStart: function() {
-      try {
-        console.log("UI für Start wird aktualisiert...");
-        const startButton = document.getElementById("startButton");
-        if (startButton) {
-          startButton.disabled = true; // Deaktiviert den Start-Button, nachdem er geklickt wurde
-          console.log("Start-Button deaktiviert.");
+     diff --git a/scripts/main.js b/scripts/main.js
+index b9bd0f5cdfcdd92eea6d1e59a1a50bc39536f8dd..d555398a539b9b55ca77cb8703ec2c2c664156de 100644
+--- a/scripts/main.js
++++ b/scripts/main.js
+@@ -740,64 +740,78 @@ function leaveTunnel(cb) {
+       } catch (e) {
+         console.error("Fehler bei Startlogik:", e);
+       }
+     },
+ 
+     // UI für den Start aktualisieren
+     updateUIForStart: function() {
+       try {
+         console.log("UI für Start wird aktualisiert...");
+         const startButton = document.getElementById("startButton");
+         if (startButton) {
+           startButton.disabled = true; // Deaktiviert den Start-Button, nachdem er geklickt wurde
+           console.log("Start-Button deaktiviert.");
+         }
+         this.currentStep++; // Weiter zu Schritt 3
+         this.executeStep();
+       } catch (e) {
+         console.error("Fehler beim UI-Update für Start:", e);
+       }
+     },
+ 
+     // Entscheidungsprozess (Ja/Nein) verarbeiten
+     handleDecision: function() {
+       try {
+         console.log("Entscheidung wird verarbeitet...");
+        const decisionInput = document.querySelector("input[name='decision']:checked");
+       if (!decisionInput) {
+         console.warn("Keine Entscheidung gefunden, Standard auf 'no'.");
+          this.updateDecisionUI("no"); // stabile Fallback-Entscheidung
+         this.currentStep++;
+          this.executeStep();
+          return;
         }
-        this.currentStep++; // Weiter zu Schritt 3
-        this.executeStep();
-      } catch (e) {
-        console.error("Fehler beim UI-Update für Start:", e);
-      }
-    },
-
-    // Entscheidungsprozess (Ja/Nein) verarbeiten
-    handleDecision: function() {
-      try {
-        console.log("Entscheidung wird verarbeitet...");
-        const decision = document.querySelector("input[name='decision']:checked").value;
-        this.updateDecisionUI(decision); // UI-Update für Entscheidung
-        this.currentStep++; // Weiter zu Schritt 4
-        this.executeStep();
-      } catch (e) {
-        console.error("Fehler bei der Entscheidung:", e);
-      }
-    },
-
-    // UI für die Entscheidung aktualisieren
-    updateDecisionUI: function(decision) {
-      try {
-        console.log("UI für Entscheidung wird angezeigt...");
-        const decisionUI = document.getElementById("decisionUI");
-        if (decision === "yes") {
-          decisionUI.style.display = "block";  // Zeigt UI für 'Ja' an
-        } else {
-          decisionUI.style.display = "none";  // Versteckt UI für 'Nein'
+        const decision = decisionInput.value;
+         this.updateDecisionUI(decision); // UI-Update für Entscheidung
+         this.currentStep++; // Weiter zu Schritt 4
+         this.executeStep();
+       } catch (e) {
+         console.error("Fehler bei der Entscheidung:", e);
+       }
+     },
+ 
+     // UI für die Entscheidung aktualisieren
+     updateDecisionUI: function(decision) {
+       try {
+         console.log("UI für Entscheidung wird angezeigt...");
+         const decisionUI = document.getElementById("decisionUI");
+       if (!decisionUI) {
+         console.warn("decisionUI nicht gefunden.");
+       this.currentStep++;
+         this.executeStep();
+      return;
         }
-        this.currentStep++; // Weiter zu Schritt 5
-        this.executeStep();
-      } catch (e) {
-        console.error("Fehler beim UI-Update nach Entscheidung:", e);
-      }
-    },
-
-    // Abschluss des Prozesses
-    completeProcess: function() {
-      try {
-        console.log("Prozess wird abgeschlossen...");
-        // Abschlusslogik hier
-        this.updateUIForCompletion();  // UI für den Abschluss aktualisieren
-        this.currentStep++; // Weiter zu Schritt 6
-        this.executeStep();
-      } catch (e) {
-        console.error("Fehler beim Abschluss des Prozesses:", e);
-      }
-    },
+         if (decision === "yes") {
+           decisionUI.style.display = "block";  // Zeigt UI für 'Ja' an
+         } else {
+           decisionUI.style.display = "none";  // Versteckt UI für 'Nein'
+         }
+         this.currentStep++; // Weiter zu Schritt 5
+         this.executeStep();
+       } catch (e) {
+         console.error("Fehler beim UI-Update nach Entscheidung:", e);
+       }
+     },
+ 
+     // Abschluss des Prozesses
+     completeProcess: function() {
+       try {
+         console.log("Prozess wird abgeschlossen...");
+         // Abschlusslogik hier
+         this.updateUIForCompletion();  // UI für den Abschluss aktualisieren
+         this.currentStep++; // Weiter zu Schritt 6
+         this.executeStep();
+       } catch (e) {
+         console.error("Fehler beim Abschluss des Prozesses:", e);
+       }
+     },
 
     // UI für den Abschluss des Prozesses aktualisieren
     updateUIForCompletion: function() {
