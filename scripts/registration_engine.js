@@ -381,6 +381,29 @@
     refresh();
   }
 
+  function bindCloseButtons() {
+    const regClose = $(IDS.regClose);
+    const forgotClose = $(IDS.forgotClose);
+
+    if (regClose && !regClose.__eptec_close_bound) {
+      regClose.__eptec_close_bound = true;
+      regClose.addEventListener("click", () => {
+        safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
+        const scr = $(IDS.registerScreen);
+        if (scr) { scr.classList.add("modal-hidden"); scr.style.display = "none"; }
+      });
+    }
+
+    if (forgotClose && !forgotClose.__eptec_close_bound) {
+      forgotClose.__eptec_close_bound = true;
+      forgotClose.addEventListener("click", () => {
+        safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null }));
+        const scr = $(IDS.forgotScreen);
+        if (scr) { scr.classList.add("modal-hidden"); scr.style.display = "none"; }
+      });
+    }
+  }
+
   function applyNonPasswordHints() {
     const dob = $(IDS.regDob);
     if (dob && (!dob.getAttribute("placeholder") || dob.getAttribute("placeholder") === "DD.MM.YYYY" || dob.getAttribute("placeholder") === "MM/DD/YYYY")) {
@@ -406,6 +429,7 @@
     stripPasswordPlaceholders(document);
     bindRegister();
     bindForgot();
+    bindCloseButtons();
     bindLangReactivity();
 
     window.RegistrationEngine = window.RegistrationEngine || {};
