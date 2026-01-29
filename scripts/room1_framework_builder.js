@@ -814,6 +814,10 @@ Affected subpoints (deviations only):
     $("r1-btn-compare")?.addEventListener("click", () => (window.EPTEC_CONSENT_GATES?.room1MethodGate ? window.EPTEC_CONSENT_GATES.room1MethodGate(() => setModal("r1-compare-modal", true)) : setModal("r1-compare-modal", true)));
     $("r1-compare-close")?.addEventListener("click", () => setModal("r1-compare-modal", false));
 
+    $("r1-btn-mirror")?.addEventListener("click", () => {
+    renderMirror(LAST_AFFECTED || [], null);
+    setModal("r1-mirror-modal", true);
+    });
     $("r1-mirror-close")?.addEventListener("click", () => setModal("r1-mirror-modal", false));
   }
 
