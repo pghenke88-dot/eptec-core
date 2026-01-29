@@ -56,6 +56,7 @@
 
   <!-- 5) CLICKMASTER DVO -->
   <script src="./scripts/eptec_clickmaster_dvo.js" defer></script>
+  <script src="./scripts/debug_logger.js" defer></script>
 
   <!-- 6) EFFECTS -->
   <script src="./scripts/sounds.js" defer></script>
@@ -94,41 +95,392 @@
 
 <body>
 
-<!-- =========================================================
-     START / MEADOW
-     ========================================================= -->
-<section id="meadow-view" class="scene grassy-meadow" data-logic-id="scene.meadow">
-  <div class="sun"></div>
-  <div class="stream"></div>
-
-  <h1 id="eptec-title">Contract Office</h1>
-  <h2 id="eptec-subtitle">by Johannes Büngener</h2>
-
-  <div id="system-clock" data-logic-id="system-clock"></div>
-
-  <div class="login-box">
-    <input id="login-username" type="text" data-logic-id="login-username" placeholder="Username" />
-    <div class="pw-wrap">
-      <input id="login-password" type="password" autocomplete="off"
-             data-logic-id="login-password" placeholder="Password" />
+  <div id="language-switcher" class="language-switcher">
+    <button id="lang-toggle" type="button">Language</button>
+    <div id="lang-rail" class="lang-rail">
+      <button class="lang-item" data-lang="EN" type="button">EN</button>
+      <button class="lang-item" data-lang="DE" type="button">DE</button>
     </div>
-    <button id="btn-login" type="button" data-logic-id="btn-login">Login</button>
-    <div id="login-message" class="system-msg" data-logic-id="login-message"></div>
-
-    <button id="btn-register" type="button" data-logic-id="btn-register">Register</button>
-    <button id="btn-forgot" type="button" data-logic-id="btn-forgot">Forgot password</button>
-    <button id="btn-demo" type="button" data-logic-id="btn-demo">Demo</button>
-
-    <div class="pw-wrap">
-      <input id="admin-code" type="password" autocomplete="off"
-             data-logic-id="admin-code" placeholder="Master password" />
-    </div>
-    <button id="admin-submit" type="button" data-logic-id="admin-submit">Enter</button>
   </div>
-</section>
 
-<!-- Der restliche Body (Tunnel, Doors, Rooms, Modals, Footer)
-     bleibt exakt wie in deiner geposteten Version -->
+  <!-- =========================================================
+       START / MEADOW
+       ========================================================= -->
+  <section id="meadow-view" class="scene grassy-meadow" data-logic-id="scene.meadow">
+    <div class="sun"></div>
+    <div class="stream"></div>
+
+    <h1 id="eptec-title">Contract Office</h1>
+    <h2 id="eptec-subtitle">by Johannes Büngener</h2>
+
+    <div id="system-clock" data-logic-id="system-clock"></div>
+
+    <div class="login-box">
+      <input id="login-username" type="text" data-logic-id="login-username" placeholder="Username" />
+
+      <div class="pw-wrap">
+        <input id="login-password" type="password" autocomplete="off" data-logic-id="login-password" />
+      </div>
+
+      <button id="btn-login" type="button" data-logic-id="btn-login">Login</button>
+      <div id="login-message" class="system-msg" data-logic-id="login-message"></div>
+
+      <button id="btn-register" type="button" data-logic-id="btn-register">Register</button>
+      <button id="btn-forgot" type="button" data-logic-id="btn-forgot">Forgot password</button>
+      <button id="btn-demo" type="button" data-logic-id="btn-demo">Demo</button>
+
+      <div class="pw-wrap">
+        <input id="admin-code" type="password" autocomplete="off" data-logic-id="admin-code" />
+      </div>
+
+      <button id="admin-submit" type="button" data-logic-id="admin-submit">Enter</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       TUNNEL
+       ========================================================= -->
+  <section id="tunnel-view" class="scene tunnel" style="display:none;">
+    <div class="tunnel-shell">
+      <h2>Tunnel</h2>
+      <p>Transition in progress…</p>
+      <button id="btn-logout-tunnel" type="button">Logout</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       DOORS
+       ========================================================= -->
+  <section id="doors-view" class="scene doors" style="display:none;">
+    <div class="doors-shell">
+      <h2>Doors</h2>
+
+      <div class="doors-grid">
+        <div class="door-card">
+          <button class="door-button" data-logic-id="doors.door1" type="button">Door 1</button>
+
+          <div class="door-inputs">
+            <input id="door1-present" type="text" placeholder="Action Code" />
+            <button id="door1-present-apply" type="button">Apply</button>
+
+            <input id="door1-vip" type="text" placeholder="VIP Code" />
+            <button id="door1-vip-apply" type="button">Apply</button>
+
+            <div class="pw-wrap">
+              <input id="door1-master" type="password" autocomplete="off" />
+            </div>
+            <button id="door1-master-apply" type="button">Apply</button>
+          </div>
+        </div>
+
+        <div class="door-card">
+          <button class="door-button" data-logic-id="doors.door2" type="button">Door 2</button>
+
+          <div class="door-inputs">
+            <input id="door2-present" type="text" placeholder="Action Code" />
+            <button id="door2-present-apply" type="button">Apply</button>
+
+            <input id="door2-vip" type="text" placeholder="VIP Code" />
+            <button id="door2-vip-apply" type="button">Apply</button>
+
+            <div class="pw-wrap">
+              <input id="door2-master" type="password" autocomplete="off" />
+            </div>
+            <button id="door2-master-apply" type="button">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-logout-doors" type="button">Logout</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ROOM 1
+       ========================================================= -->
+  <section id="room-1-view" class="scene room room1" style="display:none;">
+    <div class="room">
+      <h2>Room 1</h2>
+
+      <div class="room-actions">
+        <button id="r1-btn-framework" type="button">Framework</button>
+        <button id="r1-btn-workbench" type="button">Workbench</button>
+        <button id="r1-btn-compare" type="button">Compare</button>
+        <button id="r1-btn-archive" type="button">Archive</button>
+        <button id="r1-btn-mirror" type="button">Mirror</button>
+        <button id="btn-logout-room1" type="button">Logout</button>
+      </div>
+
+      <div class="room-hotspots">
+        <button type="button" data-logic-id="r1.savepoint">Savepoint</button>
+        <button type="button" data-logic-id="r1.table.download">Table Download</button>
+        <button type="button" data-logic-id="r1.mirror.download">Mirror Download</button>
+        <button type="button" data-logic-id="r1.traffic.enable">Counter</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ROOM 2
+       ========================================================= -->
+  <section id="room-2-view" class="scene room room2" style="display:none;">
+    <div class="room">
+      <h2>Room 2</h2>
+
+      <div class="room-hotspots">
+        <button type="button" data-logic-id="r2.hotspot.center">Slot Center</button>
+        <button type="button" data-logic-id="r2.hotspot.left1">Slot Left 1</button>
+        <button type="button" data-logic-id="r2.hotspot.left2">Slot Left 2</button>
+        <button type="button" data-logic-id="r2.hotspot.right1">Slot Right 1</button>
+        <button type="button" data-logic-id="r2.hotspot.right2">Slot Right 2</button>
+        <button type="button" data-logic-id="r2.plant.backup">Export/Backup</button>
+      </div>
+
+      <button id="btn-logout-room2" type="button">Logout</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       REGISTER / FORGOT MODALS
+       ========================================================= -->
+  <section id="register-screen" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Register</h2>
+
+      <div class="form-grid">
+        <input id="reg-first-name" type="text" placeholder="First name" />
+        <input id="reg-last-name" type="text" placeholder="Last name" />
+        <input id="reg-birthdate" type="text" placeholder="DD.MM.YYYY" />
+        <input id="reg-email" type="email" placeholder="Email" />
+        <input id="reg-username" type="text" placeholder="Username" />
+        <input id="reg-password" type="password" autocomplete="off" />
+      </div>
+
+      <div id="reg-rules-username" class="system-msg"></div>
+      <div id="reg-rules-password" class="system-msg"></div>
+      <div id="register-message" class="system-msg"></div>
+
+      <div class="modal-actions">
+        <button id="reg-submit" type="button">Submit</button>
+        <button id="reg-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="forgot-screen" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Forgot Password</h2>
+
+      <input id="forgot-identity" type="text" placeholder="Username or email" />
+      <div id="forgot-message" class="system-msg"></div>
+
+      <div class="modal-actions">
+        <button id="forgot-submit" type="button">Send Reset</button>
+        <button id="forgot-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       LEGAL MODAL
+       ========================================================= -->
+  <section id="legal-screen" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2 id="legal-title">LEGAL</h2>
+      <div id="legal-body">Placeholder – legal content wiring pending.</div>
+
+      <div class="modal-actions">
+        <button id="legal-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ROOM 1 MODALS
+       ========================================================= -->
+  <section id="r1-framework-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Framework</h2>
+      <div id="r1-framework-list"></div>
+
+      <div class="modal-actions">
+        <button id="r1-framework-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r1-workbench-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Workbench</h2>
+      <div id="r1-status" class="system-msg"></div>
+
+      <div class="workbench-meta">
+        <span>Count: <strong id="r1-workbench-count">0</strong></span>
+      </div>
+
+      <table class="r1-table">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Standard Unit</th>
+            <th>Clause</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="r1-workbench-body"></tbody>
+      </table>
+
+      <div class="modal-actions">
+        <button id="r1-workbench-download" type="button">Download</button>
+        <button id="r1-workbench-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r1-archive-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Archive</h2>
+      <div id="r1-archive-box"></div>
+
+      <div class="modal-actions">
+        <button id="r1-archive-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r1-compare-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Compare</h2>
+
+      <div class="compare-grid">
+        <label>Framework File <input id="r1-compare-fw" type="file" /></label>
+        <label>Contract File <input id="r1-compare-ct" type="file" /></label>
+      </div>
+
+      <div class="compare-status">
+        <span>Deviation: <strong id="r1-compare-pct">0%</strong></span>
+        <span id="r1-compare-light" class="traffic-pill">GREEN</span>
+      </div>
+
+      <button id="r1-compare-run" type="button">Run Compare</button>
+
+      <div class="modal-actions">
+        <button id="r1-compare-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r1-mirror-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Mirror</h2>
+      <div id="r1-mirror-list"></div>
+
+      <div class="modal-actions">
+        <button id="r1-mirror-download" type="button">Download Mirror</button>
+        <button id="r1-mirror-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ROOM 2 MODALS
+       ========================================================= -->
+  <section id="r2-slot-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2 id="r2-slot-title">Slot</h2>
+
+      <input id="r2-slot-current" type="hidden" />
+      <div id="r2-slot-meta" class="system-msg"></div>
+      <input id="r2-slot-upload" type="file" />
+
+      <div class="modal-actions">
+        <button id="r2-slot-upload-btn" type="button">Upload</button>
+        <button id="r2-slot-view" type="button">View</button>
+        <button id="r2-slot-download" type="button">Download</button>
+        <button id="r2-slot-clear" type="button">Delete</button>
+        <button id="r2-slot-close" type="button">Close</button>
+      </div>
+
+      <div class="slot-controls">
+        <select id="r2-slot-traffic">
+          <option value="none">None</option>
+          <option value="green">Green</option>
+          <option value="yellow1">Yellow 1</option>
+          <option value="yellow2">Yellow 2</option>
+          <option value="red">Red</option>
+        </select>
+        <input id="r2-slot-reason" type="text" placeholder="Reason" />
+      </div>
+    </div>
+  </section>
+
+  <section id="r2-evidence-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Evidence</h2>
+
+      <div id="r2-evidence-grid" class="r2-grid">
+        <button type="button" data-r2-slot="contract">Contract</button>
+        <button type="button" data-r2-slot="left1">Left 1</button>
+        <button type="button" data-r2-slot="left2">Left 2</button>
+        <button type="button" data-r2-slot="right1">Right 1</button>
+        <button type="button" data-r2-slot="right2">Right 2</button>
+      </div>
+
+      <div class="modal-actions">
+        <button id="r2-evidence-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r2-plant-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Plant Log</h2>
+      <div id="r2-plant-list"></div>
+
+      <h3>Protocol</h3>
+      <div id="r2-log-list"></div>
+
+      <div class="modal-actions">
+        <button id="r2-plant-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r2-traffic-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2>Traffic Light</h2>
+
+      <div id="r2-traffic-box"></div>
+      <div id="r2-traffic-badge" class="traffic-pill">GREEN</div>
+      <div id="r2-traffic-annex"></div>
+      <div id="r2-traffic-compare-hint" class="system-msg"></div>
+
+      <div class="modal-actions">
+        <button id="r2-traffic-green" type="button">Green</button>
+        <button id="r2-traffic-yellow" type="button">Yellow</button>
+        <button id="r2-traffic-red" type="button">Red</button>
+        <button id="r2-traffic-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="r2-preview-modal" class="modal modal-hidden" style="display:none;">
+    <div class="modal-card">
+      <h2 id="r2-preview-title">Preview</h2>
+      <iframe id="r2-preview-frame" title="Preview"></iframe>
+
+      <div class="modal-actions">
+        <button id="r2-preview-close" type="button">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <a id="link-imprint" href="#">Imprint</a>
+    <a id="link-terms" href="#">Terms</a>
+    <a id="link-support" href="#">Support</a>
+    <a id="link-privacy-footer" href="#">Privacy</a>
+  </footer>
+
 </body>
 </html>
-
