@@ -510,11 +510,14 @@
           const el = Safe.byId("register-screen");
           if (!el) return;
           el.classList.remove("modal-hidden");
-          el.innerHTML = `
-            <div style="padding:16px">
-              <h3>Register</h3>
-              <p>Placeholder — use registration_engine.js to render real fields with placeholders & live validation.</p>
-            </div>`;
+          el.style.display = "flex";
+          if (!el.querySelector?.(".modal-card")) {
+            el.innerHTML = `
+              <div class="modal-card">
+                <h3>Register</h3>
+                <p>Placeholder — use registration_engine.js to render real fields with placeholders & live validation.</p>
+              </div>`;
+          }
           Safe.try(() => UI()?.set?.({ modal: "register" }), "UI_STATE.modal.register");
         }
       ]
@@ -531,11 +534,14 @@
           const el = Safe.byId("forgot-screen");
           if (!el) return;
           el.classList.remove("modal-hidden");
-          el.innerHTML = `
-            <div style="padding:16px">
-              <h3>Forgot password</h3>
-              <p>Placeholder — email + security answer → reset link → new password.</p>
-            </div>`;
+          el.style.display = "flex";
+          if (!el.querySelector?.(".modal-card")) {
+            el.innerHTML = `
+              <div class="modal-card">
+                <h3>Forgot password</h3>
+                <p>Placeholder — email + security answer → reset link → new password.</p>
+              </div>`;
+          }
           Safe.try(() => UI()?.set?.({ modal: "forgot" }), "UI_STATE.modal.forgot");
         }
       ]
@@ -636,6 +642,7 @@
         () => {
           const rail = Safe.byId("lang-rail");
           if (!rail) return;
+          rail.setAttribute("data-eptec-lang-toggle-ts", String(Date.now()));
           rail.classList.toggle("open");
         }
       ]
