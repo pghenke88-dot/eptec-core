@@ -619,6 +619,84 @@ function leaveTunnel(cb) {
   else boot();
 })();
 
+/* =========================================================
+   EPTEC MAIN APPEND 03 — TUNNEL VISIBILITY + LANG TOGGLE + ADMIN FIELD
+   Role: Minimal guards for tunnel view, language rail, and master field visibility
+   ========================================================= */
+(() => {
+  "use strict";
+
+  if (window.__EPTEC_MAIN_APPEND_03_TUNNEL_LANG__) return;
+  window.__EPTEC_MAIN_APPEND_03_TUNNEL_LANG__ = true;
+
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC:A03]", e); return undefined; } };
+  const $ = (id) => document.getElementById(id);
+
+  function store() {
+    return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE || null;
+  }
+
+  function getState() {
+    const s = store();
+    return safe(() => (typeof s?.get === "function" ? s.get() : s?.state)) || {};
+  }
+
+  function isTunnelState(st) {
+    const scene = String(st?.scene || "").toLowerCase();
+    const view = String(st?.view || "").toLowerCase();
+    if (scene === "tunnel" || view === "tunnel") return true;
+    if (st?.transition?.tunnelActive) return true;
+    return false;
+  }
+
+  function forceTunnelVisible() {
+    const tunnel = $("tunnel-view");
+    if (!tunnel) return;
+    const scenes = document.querySelectorAll("section.scene");
+    scenes.forEach((el) => { el.style.display = el.id === "tunnel-view" ? "block" : "none"; });
+    tunnel.style.display = "block";
+  }
+
+  function bindLangToggle() {
+    const btn = $("lang-toggle");
+    const rail = $("lang-rail");
+    if (!btn || !rail || btn.__eptec_lang_bound) return;
+    btn.__eptec_lang_bound = true;
+    btn.addEventListener("click", () => {
+      const last = Number(rail.getAttribute("data-eptec-lang-toggle-ts") || 0);
+      if (last && (Date.now() - last) < 120) return;
+      rail.classList.toggle("open");
+    });
+  }
+
+  function ensureAdminFieldVisible() {
+    const admin = $("admin-code");
+    const submit = $("admin-submit");
+    if (admin && getComputedStyle(admin).display === "none") admin.style.display = "block";
+    if (submit && getComputedStyle(submit).display === "none") submit.style.display = "inline-block";
+  }
+
+  function onState(st) {
+    if (isTunnelState(st)) {
+      forceTunnelVisible();
+    }
+  }
+
+  function boot() {
+    bindLangToggle();
+    ensureAdminFieldVisible();
+
+    const s = store();
+    if (typeof s?.subscribe === "function") s.subscribe(onState);
+    else if (typeof s?.onChange === "function") s.onChange(onState);
+    else setInterval(() => onState(getState()), 300);
+
+    onState(getState());
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
 
 /* =========================================================
    EPTEC MAIN APPEND 03 — DOOR FIELDS PLACEHOLDERS (Aktions/VIP/Master)
