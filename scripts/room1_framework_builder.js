@@ -340,12 +340,6 @@ function sourceHintFor(code, moduleTitle) {
   }
   return head + " " + refs.join(" · ");
 }
-
-    const head = (lg === "es") ? "Referencia legal (anclajes públicos):" : "Legal reference (public anchors):";
-    return head + " " + basis.join(" · ");
-  }
-
-
   function ensureRoom1Buttons() {
     // existing room1 view uses data-logic-id buttons; we bind our own IDs
     const map = {
