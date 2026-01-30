@@ -23,7 +23,13 @@
   "use strict";
 
   const Safe = {
-    try(fn){ try { return fn(); } catch { return undefined; } },
+    try(fn){
+      try { return fn(); }
+      catch (e) {
+        console.warn("[AI_SERVICES] safe fallback", e);
+        return undefined;
+      }
+    },
     isObj(x){ return x && typeof x === "object" && !Array.isArray(x); },
     now(){ return Date.now(); }
   };
@@ -68,7 +74,11 @@
     const key = String(cfg.adminToggles.storageKey||DEFAULTS.adminToggles.storageKey);
     const raw = Safe.try(()=>localStorage.getItem(key));
     if (!raw) return {};
-    try { return JSON.parse(raw)||{}; } catch { return {}; }
+        try { return JSON.parse(raw)||{}; }
+    catch (e) {
+      console.warn("[AI_SERVICES] toggles parse failed", e);
+      return {};
+    }
   }
 
   function isEnabled(service){
@@ -80,7 +90,6 @@
     if (typeof t[service] === "boolean") return t[service];
     return !!s.enabled;
   }
-
   function getServiceConfig(service){
     const cfg = baseCfg();
     const s = cfg.services[service] || {};
@@ -94,7 +103,6 @@
       type: String(s.type||service)
     });
   }
-
   async function request(service, payload){
     const sc = getServiceConfig(service);
     if (!sc.enabled || !sc.endpoint){
@@ -117,7 +125,11 @@
       const res = await fetch(sc.endpoint, { method:"POST", headers, body: JSON.stringify(body), signal: ctrl.signal });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch { data = { raw:text }; }
+      try { data = JSON.parse(text); }
+      catch (e) {
+        console.warn("[AI_SERVICES] response parse failed", e);
+        data = { raw:text };
+      }
       return { ok:res.ok, status:res.status, data, service };
     } catch(e){
       return { ok:false, error:String(e && e.message ? e.message : e), service };
