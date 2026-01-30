@@ -84,10 +84,10 @@
       if (k?.Dramaturgy?.to) Safe.try(() => k.Dramaturgy.to(scene, { reason }), "Media.Dramaturgy.to");
       else Safe.try(() => UI()?.set?.({ scene, view: scene }), "Media.UI_STATE.setScene");
 
-      // visuals (fallback only)
+      // visuals 
       Visual.showScene(scene);
 
-      // audio cue (fallback only)
+      // audio cue 
       if (k?.Audio?.cue) Safe.try(() => k.Audio.cue(scene, "enter"), "Media.Audio.cue");
       else {
         // fallback minimal cues
