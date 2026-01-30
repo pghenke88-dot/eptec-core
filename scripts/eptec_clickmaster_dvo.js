@@ -134,13 +134,19 @@
       const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
       if (el) el.classList.add("field-invalid");
       const msgEl = Safe.byId(messageTargetId);
-      if (msgEl && message) msgEl.textContent = message;
+      if (msgEl && message) {
+        msgEl.textContent = message;
+        msgEl.classList.add("show");
+      }
     },
     clearInvalid(elOrId, messageTargetId = "login-message") {
       const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
       if (el) el.classList.remove("field-invalid");
       const msgEl = Safe.byId(messageTargetId);
-      if (msgEl) msgEl.textContent = "";
+      if (msgEl) {
+        msgEl.textContent = "";
+        msgEl.classList.remove("show");
+      }
     }
   };
 
