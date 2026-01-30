@@ -262,6 +262,15 @@ html, body{
   align-items: center;
   background: rgba(0,0,0,0.7);
 }
+.modal-card{
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+#r1-framework-list{
+  max-height: 50vh;
+  overflow-y: auto;
+}
 
 .modal-hidden{
   display: none !important;
