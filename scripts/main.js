@@ -1,22 +1,3 @@
-
-// ===== EPTEC TUNNEL TIMING (FINAL FREEZE) =====
-const MIN_TUNNEL_MS = 2200; // fixed professional transition
-let __tunnelEnteredAt = 0;
-
-function enterTunnel() {
-  __tunnelEnteredAt = Date.now();
-}
-
-function leaveTunnel(cb) {
-  const elapsed = Date.now() - __tunnelEnteredAt;
-  const wait = Math.max(0, MIN_TUNNEL_MS - elapsed);
-  setTimeout(() => {
-    try { cb && cb(); }
-    catch (e) { console.warn("[EPTEC MAIN] leaveTunnel callback failed", e); }
-  }, wait);
-}
-// =============================================
-
 /**
  * scripts/main.js
  *
