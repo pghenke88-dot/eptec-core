@@ -16,7 +16,13 @@
   const TOKEN_KEY = "EPTEC_TOKEN_V1";
   const BASE_KEY  = "EPTEC_API_BASE_V1";
 
-  const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
+ const safe = (fn, fallback) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[API_CLIENT] safe fallback", e);
+      return fallback;
+    }
+  };
 
   function trimSlash(u) { return String(u || "").trim().replace(/\/+$/, ""); }
   function isHTTPS(u) { return /^https:\/\//i.test(String(u || "").trim()); }
@@ -165,9 +171,14 @@
 
     const ct = String(res.headers.get("content-type") || "");
     const data = ct.includes("application/json")
-      ? await res.json().catch(() => null)
-      : await res.text().catch(() => "");
-
+       ? await res.json().catch((e) => {
+        console.warn("[API_CLIENT] JSON parse failed", e);
+        return null;
+      })
+      : await res.text().catch((e) => {
+        console.warn("[API_CLIENT] text parse failed", e);
+        return "";
+      });
     if (!res.ok) {
       const msg = (data && typeof data === "object" && data.message)
         ? String(data.message)
@@ -228,4 +239,3 @@
   });
 
 })();
-
