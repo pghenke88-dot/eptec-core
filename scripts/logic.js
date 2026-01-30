@@ -2328,7 +2328,8 @@ const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOG
 
     // audit
     safe(() => window.EPTEC_ACTIVITY?.log?.("i18n.set", { ui, key, locale: meta.locale, dir: meta.dir }));
-
+    console.info("[I18N] lang changed", key);
+     
     // immediate clock refresh
     updateClock();
 
