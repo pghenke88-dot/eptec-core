@@ -21,10 +21,20 @@
   const extOnly = !!(typeof window !== "undefined" && window.EPTEC_EXTERNAL_ONLY);
 
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+ const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[BILLING] safe fallback", e);
+      return undefined;
+    }
+  };
 
   function absUrl(path) {
-    try { return new URL(path, location.href).toString(); } catch { return String(path || ""); }
+    try { return new URL(path, location.href).toString(); }
+    catch (e) {
+      console.warn("[BILLING] absUrl failed", e);
+      return String(path || "");
+    }
   }
 
   async function checkout({ planId = "default", successPath = "/?paid=1", cancelPath = "/?cancelled=1" } = {}) {
