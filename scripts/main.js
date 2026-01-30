@@ -668,10 +668,10 @@ function leaveTunnel(cb) {
     btn.addEventListener("click", () => {
       const last = Number(rail.getAttribute("data-eptec-lang-toggle-ts") || 0);
       if (last && (Date.now() - last) < 120) return;
+      rail.setAttribute("data-eptec-lang-toggle-ts", String(Date.now()));
       const wrap = $("language-switcher");
       rail.classList.toggle("open");
       if (wrap) wrap.classList.toggle("lang-open");
-      rail.classList.toggle("open");
     });
   }
 
