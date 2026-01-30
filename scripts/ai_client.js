@@ -19,7 +19,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[AI_CLIENT] safe fallback", e);
+      return undefined;
+    }
+  };
 
   function activity(name, meta) {
     safe(() => window.EPTEC_ACTIVITY?.logAction?.(name, meta));
@@ -50,8 +56,14 @@
 
     const ct = res.headers.get("content-type") || "";
     const data = ct.includes("application/json")
-      ? await res.json().catch(() => null)
-      : await res.text().catch(() => "");
+     ? await res.json().catch((e) => {
+        console.warn("[AI_CLIENT] JSON parse failed", e);
+        return null;
+      })
+      : await res.text().catch((e) => {
+        console.warn("[AI_CLIENT] text parse failed", e);
+        return "";
+      });
 
     if (!res.ok) return null;
     return data;
@@ -223,4 +235,3 @@
     escalationCallout
   };
 })();
-
