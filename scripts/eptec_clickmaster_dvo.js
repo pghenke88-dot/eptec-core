@@ -81,13 +81,16 @@
     commitScene(scene, reason) {
       const k = K();
       // set state (if your Dramaturgy exists, it owns it)
-      if (k?.Dramaturgy?.to) Safe.try(() => k.Dramaturgy.to(scene, { reason }), "Media.Dramaturgy.to");
-      else Safe.try(() => UI()?.set?.({ scene, view: scene }), "Media.UI_STATE.setScene");
+      if (k?.Dramaturgy?.to) {
+        Safe.try(() => k.Dramaturgy.to(scene, { reason }), "Media.Dramaturgy.to");
+        return;
+      }
+      Safe.try(() => UI()?.set?.({ scene, view: scene }), "Media.UI_STATE.setScene");
 
-      // visuals
+      // visuals (fallback only)
       Visual.showScene(scene);
 
-      // audio cue
+      // audio cue (fallback only)
       if (k?.Audio?.cue) Safe.try(() => k.Audio.cue(scene, "enter"), "Media.Audio.cue");
       else {
         // fallback minimal cues
