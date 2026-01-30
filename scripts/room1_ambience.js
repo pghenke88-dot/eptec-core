@@ -5,7 +5,13 @@
  */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+   const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[R1 AMBIENCE] safe fallback", e);
+      return undefined;
+    }
+  };
   const STORAGE_KEY = "EPTEC_R1_AMBIENCE_ON";
   let audio;
 
@@ -46,7 +52,7 @@
     const want = desiredOn() && isRoom1Visible();
     if (want) {
       // must be triggered by user gesture once; if blocked, it's fine.
-      a.play().catch(() => {});
+      a.play().catch((e) => console.warn("[R1 AMBIENCE] play blocked", e));
     } else {
       a.pause();
     }
