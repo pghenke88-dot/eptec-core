@@ -171,14 +171,15 @@
 
     if (!ok) console.warn("[EPTEC_CLICK]", { triggerId, reason: "no_handler" });
 
-    if (ok) {
-      e.preventDefault?.();
-      e.stopPropagation?.();
-      e.stopImmediatePropagation?.();
-    }
+    // IMPORTANT: UI-Control is change-only; it must not block global click routing.
+    // Therefore no preventDefault/stopPropagation here.
   }
 
-  document.addEventListener("click", handleEvent, true);
+  // =========================================================
+  // ENT-SCHÄRFUNG:
+  // UI-Control darf niemanden mehr beim Click-Routing behindern.
+  // -> KEIN click listener mehr, nur change bleibt aktiv.
+  // =========================================================
   document.addEventListener("change", handleEvent, true);
 
   // =========================================================
