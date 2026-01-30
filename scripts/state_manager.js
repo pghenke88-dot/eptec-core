@@ -36,7 +36,13 @@
   // -----------------------------
   const FEED_KEY = "EPTEC_FEED";
 
-  const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
+  const safe = (fn, fallback) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[STATE_MANAGER] safe fallback", e);
+      return fallback;
+    }
+  };
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 
   const $ui = () => window.EPTEC_UI_STATE;
@@ -91,7 +97,8 @@
       const s = backend()?.getSession?.();
       const u = s?.username ? String(s.username).toLowerCase() : "";
       return u || null;
-    } catch {
+    } catch (e) {
+      console.warn("[STATE_MANAGER] getSessionUsername failed", e);
       return null;
     }
   }
