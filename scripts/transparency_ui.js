@@ -24,7 +24,13 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
+  const safe = (fn, fallback) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[TransparencyUI] safe fallback", e);
+      return fallback;
+    }
+  };
 
   // -----------------------------
   // Optional toast hook
@@ -81,11 +87,15 @@
     let res;
     try {
       res = await fetch(base + path, { method: "GET", headers, cache: "no-store" });
-    } catch {
+    } catch (e) {
+      console.warn("[TransparencyUI] apiGet failed", e);
       throw Object.assign(new Error("NETWORK_ERROR"), { code: "NETWORK_ERROR", status: 0 });
     }
 
-    const data = await res.json().catch(() => null);
+    const data = await res.json().catch((e) => {
+      console.warn("[TransparencyUI] apiGet JSON parse failed", e);
+      return null;
+    });
 
     if (!res.ok) {
       const code = (data && typeof data === "object" && data.code) ? String(data.code) : ("HTTP_" + res.status);
