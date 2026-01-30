@@ -253,6 +253,8 @@
         <input id="reg-birthdate" type="text" placeholder="DD.MM.YYYY" />
         <input id="reg-email" type="email" placeholder="Email" />
         <input id="reg-username" type="text" placeholder="Username" />
+        <input id="reg-company" type="text" placeholder="Company (optional)" />
+        <input id="reg-sec-answer" type="text" placeholder="Birth name of parent" />
         <input id="reg-password" type="password" autocomplete="off" />
       </div>
 
@@ -272,6 +274,9 @@
       <h2>Forgot Password</h2>
 
       <input id="forgot-identity" type="text" placeholder="Username or email" />
+      <input id="forgot-sec-answer" type="text" placeholder="Birth name of parent" />
+      <input id="forgot-new-password" type="password" autocomplete="off" />
+      <input id="forgot-confirm-password" type="password" autocomplete="off" />
       <div id="forgot-message" class="system-msg"></div>
 
       <div class="modal-actions">
@@ -474,8 +479,8 @@
       </div>
     </div>
   </section>
-
-  <footer class="app-footer">
+  
+    <footer id="eptec-footer" class="app-footer">
     <a id="link-imprint" href="#">Imprint</a>
     <a id="link-terms" href="#">Terms</a>
     <a id="link-support" href="#">Support</a>
