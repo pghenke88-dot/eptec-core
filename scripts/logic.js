@@ -2861,7 +2861,7 @@ const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOG
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } ;
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   function username() {
     const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
