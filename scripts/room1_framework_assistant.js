@@ -61,7 +61,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
+  const safe = (fn, fallback) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[R1 ASSIST] safe fallback", e);
+      return fallback;
+    }
+  };;
 
   function toast(msg, type = "info", ms = 2400) {
     const t = safe(() => window.EPTEC_UI?.toast, null);
