@@ -122,26 +122,30 @@
 
   // ---------------------------------------------------------
   // Trigger resolver (DVO-first, safe fallbacks)
+  // (BLOCKER REMOVED): resolve from closest actionable node
   // ---------------------------------------------------------
   function resolveTriggerFromTarget(t) {
     if (!t) return null;
 
+    // IMPORTANT: clicks often hit child nodes (span/img/svg). Bubble to an actionable parent.
+    const n = t.closest?.("[data-logic-id], .lang-item, #admin-camera-toggle, [id]") || t;
+
     // lang item: DVO preferred, fallback literal
-    if (t.classList?.contains("lang-item")) {
-      return { id: TR("langItem") || "lang-item", ctx: { lang: t.getAttribute?.("data-lang") || null } };
+    if (n.classList?.contains("lang-item")) {
+      return { id: TR("langItem") || "lang-item", ctx: { lang: n.getAttribute?.("data-lang") || null } };
     }
 
     // data-logic-id is canonical
-    const dl = Safe.try(() => t.getAttribute?.("data-logic-id"), "resolve.dataLogicId");
+    const dl = Safe.try(() => n.getAttribute?.("data-logic-id"), "resolve.dataLogicId");
     if (dl) return { id: dl, ctx: {} };
 
     // id fallback
-    const id = t.id;
+    const id = n.id;
     if (id) {
       if (id === "admin-camera-toggle") {
         return {
-          id: t.checked ? (TR("cameraOn") || "admin-camera-toggle:on") : (TR("cameraOff") || "admin-camera-toggle:off"),
-          ctx: { checked: !!t.checked }
+          id: n.checked ? (TR("cameraOn") || "admin-camera-toggle:on") : (TR("cameraOff") || "admin-camera-toggle:off"),
+          ctx: { checked: !!n.checked }
         };
       }
       if (id.startsWith("btn-logout")) return { id: TR("logoutAny") || "logout.any", ctx: { sourceId: id } };
@@ -196,6 +200,7 @@
   function handleEvent(e) {
     const resolved = resolveTriggerFromTarget(e.target);
     if (!resolved) return;
+
     const triggerId = resolved.id;
     if (!triggerId) return;
     if (isDuplicate(triggerId)) return;
@@ -205,7 +210,9 @@
 
     const ctx = { event: e, triggerId, ...resolved.ctx };
     const ok = route(triggerId, ctx);
+
     if (!ok) console.warn("[EPTEC_CLICK]", { triggerId, reason: "no_handler" });
+
     if (ok) {
       e.preventDefault?.();
       e.stopPropagation?.();
@@ -248,41 +255,42 @@
 
   // =========================================================
   // KERNEL CORE — DVO Trigger Channels (boot/login/demo/master/doors/docs/logout)
+  // (BLOCKER REMOVED): always register with safe fallback ids if DVO key missing
   // =========================================================
   function registerCoreChannels() {
     // boot -> Dramaturgy.to(meadow)
-    registerAction(TR("boot"), "Dramaturgy.boot", () => {
+    registerAction(TR("boot") || "boot", "Dramaturgy.boot", () => {
       const k = KERNEL();
       const meadow = SC("meadow");
       if (!meadow) return;
       Safe.try(() => k?.Dramaturgy?.to?.(meadow, { boot: true }), "KERNEL.Dramaturgy.to(meadow)");
     });
 
-    registerAction(TR("login"), "Entry.userLogin", () => {
+    registerAction(TR("login") || "login", "Entry.userLogin", () => {
       const k = KERNEL();
       const u = Safe.str(Safe.byId("login-username")?.value);
       const p = Safe.str(Safe.byId("login-password")?.value);
       Safe.try(() => k?.Entry?.userLogin?.(u, p), "KERNEL.Entry.userLogin");
     });
 
-    registerAction(TR("demo"), "Entry.demo", () => {
+    registerAction(TR("demo") || "demo", "Entry.demo", () => {
       const k = KERNEL();
       Safe.try(() => k?.Entry?.demo?.(), "KERNEL.Entry.demo");
     });
 
-    registerAction(TR("register"), "Registration.open", () => {
+    registerAction(TR("register") || "register", "Registration.open", () => {
       const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
       if (re?.open) return Safe.try(() => re.open({ mode: "new-user" }), "RegistrationEngine.open");
       Safe.try(() => UI()?.set?.({ modal: "register" }), "UI_STATE.modal.register");
     });
 
-    registerAction(TR("forgot"), "Registration.openForgot", () => {
+    registerAction(TR("forgot") || "forgot", "Registration.openForgot", () => {
       const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
       if (re?.openForgot) return Safe.try(() => re.openForgot({ securityQuestion: true }), "RegistrationEngine.openForgot");
       Safe.try(() => UI()?.set?.({ modal: "forgot" }), "UI_STATE.modal.forgot");
     });
 
-    registerAction(TR("masterEnter"), "Entry.authorStartMaster", () => {
+    registerAction(TR("masterEnter") || "admin-submit", "Entry.authorStartMaster", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("admin-code")?.value);
       if (k?.Entry?.authorStartMaster) {
@@ -292,20 +300,21 @@
       fallbackNotice(TR("masterEnter") || "admin-submit", { code: code ? "***" : "" }, "Master-Start nicht verfügbar.");
     });
 
-    registerAction(TR("door1"), "Doors.clickDoor(door1)", () => {
+    // DOORS (critical): ensure fallback ids exist even if DVO trigger keys missing
+    registerAction(TR("door1") || "door1", "Doors.clickDoor(door1)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door1 || "door1"), "KERNEL.Doors.clickDoor(door1)");
     });
 
-    registerAction(TR("door2"), "Doors.clickDoor(door2)", () => {
+    registerAction(TR("door2") || "door2", "Doors.clickDoor(door2)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door2 || "door2"), "KERNEL.Doors.clickDoor(door2)");
     });
 
-    registerAction(TR("imprint"), "LEGAL.open(imprint)", () => LEGAL.open(DOC("imprint")));
-    registerAction(TR("terms"), "LEGAL.open(terms)", () => LEGAL.open(DOC("terms")));
-    registerAction(TR("support"), "LEGAL.open(support)", () => LEGAL.open(DOC("support")));
-    registerAction(TR("privacyFooter"), "LEGAL.open(privacy)", () => LEGAL.open(DOC("privacy")));
+    registerAction(TR("imprint") || "imprint", "LEGAL.open(imprint)", () => LEGAL.open(DOC("imprint")));
+    registerAction(TR("terms") || "terms", "LEGAL.open(terms)", () => LEGAL.open(DOC("terms")));
+    registerAction(TR("support") || "support", "LEGAL.open(support)", () => LEGAL.open(DOC("support")));
+    registerAction(TR("privacyFooter") || "privacyFooter", "LEGAL.open(privacy)", () => LEGAL.open(DOC("privacy")));
 
     registerAction(TR("logoutAny") || "logout.any", "Auth.logout", () => {
       const k = KERNEL();
@@ -340,7 +349,7 @@
     });
 
     // Language globe toggle (pure UI)
-    registerAction(TR("langToggle"), "I18N.toggleRail", () => {
+    registerAction(TR("langToggle") || "langToggle", "I18N.toggleRail", () => {
       const rail = Safe.byId("lang-rail");
       const wrap = Safe.byId("language-switcher");
       if (rail) rail.classList.toggle("open");
@@ -452,3 +461,4 @@
   else boot();
 
 })();
+
