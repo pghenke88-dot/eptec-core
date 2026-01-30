@@ -407,7 +407,9 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
     try {
       window.EPTEC_BRAIN = window.EPTEC_BRAIN || {};
       window.EPTEC_BRAIN.CORE_AXIOMS = CORE_AXIOMS;
-    } catch {}
+        } catch (e) {
+      console.warn("[EPTEC AXIOMS] failed to wire EPTEC_BRAIN", e);
+    }
   }
 
   // Final guarantee: nothing below this line may negate the above.
@@ -635,7 +637,7 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
         const el = Safe.byId(id);
         if (!el) return;
         el.volume = Safe.clamp01(vol);
-        el.play().catch(() => {});
+      el.play().catch((e) => console.warn("[EPTEC LOGIC] playTag blocked", e));
       }, "Audio.playTag");
     },
     // canonical cues
@@ -1482,7 +1484,7 @@ PASTE HERE:
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+   const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   // -----------------------------
   // CONFIG (override BEFORE this loads)
@@ -1536,7 +1538,9 @@ PASTE HERE:
         crypto.getRandomValues(a);
         return Array.from(a).map(b => b.toString(16).padStart(2, "0")).join("");
       }
-    } catch {}
+     } catch (e) {
+      console.warn("[EPTEC LOGIC] crypto randToken failed", e);
+    }
     return (Math.random().toString(16).slice(2).padEnd(len * 2, "0")).slice(0, len * 2);
   }
 
@@ -1744,7 +1748,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };;
 
   const AudioBridge = {
     cue(scene) {
@@ -1763,7 +1767,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const store = () => window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE;
 
   function apply(scene) {
@@ -1797,7 +1801,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
   function getState() {
@@ -1904,7 +1908,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
   function getState() {
@@ -2028,7 +2032,7 @@ PASTE HERE:
   /* -----------------------------
      SAFE HELPERS
      ----------------------------- */
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
   const nowISO = () => new Date().toISOString();
   const addDaysISO = (d) => new Date(Date.now() + (Number(d) || 0) * 86400000).toISOString();
@@ -2197,7 +2201,7 @@ PASTE HERE:
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
   const $ = (id) => document.getElementById(id);
 
@@ -2406,7 +2410,8 @@ PASTE HERE:
         const out = isObj(j) ? j : {};
         cache.set(k, out);
         return out;
-      } catch {
+      } catch (e) {
+        console.warn("[EPTEC LOGIC] loadLocaleJSON failed", { lang: k, error: e });
         cache.set(k, {});
         return {};
       } finally {
@@ -2489,7 +2494,7 @@ PASTE HERE:
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   // ---------- state bridge ----------
@@ -2685,7 +2690,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };;
 
   const REG = (window.EPTEC_ID_REGISTRY = window.EPTEC_ID_REGISTRY || {});
   REG.required = REG.required || Object.freeze({
@@ -2762,7 +2767,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
   function getState() {
@@ -2805,8 +2810,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
   function getState() {
     const s = store();
@@ -2857,7 +2861,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } ;
 
   function username() {
     const sess = safe(() => window.EPTEC_MOCK_BACKEND?.getSession?.());
@@ -2904,7 +2908,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+ const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
 
   function store() { return window.EPTEC_MASTER?.UI_STATE || window.EPTEC_UI_STATE; }
   function getState() {
@@ -2949,7 +2953,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   const KEY = Object.freeze({
@@ -3165,7 +3169,7 @@ PASTE HERE:
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOGIC] safe fallback", e); return undefined; } };
   const $ = (id) => document.getElementById(id);
 
   const KEY = "EPTEC_LANG_EMERGENCY_V1";
