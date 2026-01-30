@@ -33,7 +33,11 @@
   function load(){
     const raw = Safe.try(()=>localStorage.getItem(storageKey()));
     if (!raw) return {};
-    try { return JSON.parse(raw)||{}; } catch { return {}; }
+        try { return JSON.parse(raw)||{}; }
+    catch (e) {
+      console.warn("[AI_ADMIN] load parse failed", e);
+      return {};
+    }
   }
 
   function save(obj){
