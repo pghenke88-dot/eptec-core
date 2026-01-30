@@ -13,8 +13,13 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-
+ const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[R1 BUILDER] safe fallback", e);
+      return undefined;
+    }
+  };
   const STORAGE = {
     plan: "EPTEC_PLAN", // "basic" | "premium"
     selections: "EPTEC_R1_SELECTIONS",
@@ -34,7 +39,11 @@ function getPlan() {
   }
 
   function loadSelections() {
-    try { return JSON.parse(localStorage.getItem(STORAGE.selections) || "{}"); } catch { return {}; }
+     try { return JSON.parse(localStorage.getItem(STORAGE.selections) || "{}"); }
+    catch (e) {
+      console.warn("[R1 BUILDER] loadSelections failed", e);
+      return {};
+    }
   }
   function saveSelections(sel) {
     localStorage.setItem(STORAGE.selections, JSON.stringify(sel || {}));
@@ -55,7 +64,8 @@ function getPlan() {
       if (l === "en") return "en";
       // Phase 1: EN/DE/ES supported for framework content; all other languages fall back to EN
       return "en";
-    } catch {
+    } catch (e) {
+      console.warn("[R1 BUILDER] resolveFrameworkLang failed", e);
       return "en";
     }
   }
@@ -81,7 +91,9 @@ function getPlan() {
         if (!res.ok) continue;
         const data = await res.json();
         if (data && Array.isArray(data.items)) return data;
-      } catch {}
+      } catch (e) {
+        console.warn("[R1] loadRoom1Table failed", e);
+      }
     }
     return { items: [] };
   }
@@ -580,7 +592,11 @@ function sourceHintFor(code, moduleTitle) {
     localStorage.setItem(STORAGE.archive, JSON.stringify(payload));
   }
   function loadArchive() {
-    try { return JSON.parse(localStorage.getItem(STORAGE.archive) || "null"); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(STORAGE.archive) || "null"); }
+    catch (e) {
+      console.warn("[R1 BUILDER] loadArchive failed", e);
+      return null;
+    }
   }
 
   function downloadText(filename, text) {
