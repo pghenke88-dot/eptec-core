@@ -83,6 +83,7 @@
       pass_min: "Password: minimum 5 characters.",
       pass_upper: "Password: at least 1 uppercase letter.",
       pass_special: "Password: at least 1 special character.",
+       pass_user_match: "Password must not match the username.",
       pass_match: "Passwords do not match.",
       reset_sent: "If the account exists, a reset link was sent.",
       reset_done: "Password updated. You can log in.",
@@ -102,6 +103,7 @@
       pass_min: "Passwort: mindestens 5 Zeichen.",
       pass_upper: "Passwort: mindestens 1 Großbuchstabe.",
       pass_special: "Passwort: mindestens 1 Sonderzeichen.",
+      pass_user_match: "Passwort darf nicht dem Benutzernamen entsprechen.",
       pass_match: "Passwörter stimmen nicht überein.",
       reset_sent: "Wenn der Account existiert, wurde ein Link gesendet.",
       reset_done: "Passwort aktualisiert. Sie können sich anmelden.",
@@ -131,7 +133,21 @@
   // -----------------------------
   function stripPasswordPlaceholders(root = document) {
     safe(() => {
-@@ -143,51 +154,56 @@
+      const scope = root || document;
+      scope.querySelectorAll('input[type="password"]').forEach((el) => {
+        if (el.hasAttribute("placeholder")) el.removeAttribute("placeholder");
+      });
+    });
+  }
+
+  function hasRealApi() {
+    return !!(window.EPTEC_API && typeof window.EPTEC_API.register === "function");
+  }
+
+  async function backendRegister(payload) {
+    if (hasRealApi() && window.EPTEC_API?.register) return window.EPTEC_API.register(payload);
+    if (window.EPTEC_MOCK_BACKEND?.register) return window.EPTEC_MOCK_BACKEND.register(payload);
+    return { ok: false, message: t("backend_missing") };
   }
 
   async function backendForgot(identity) {
@@ -188,7 +204,52 @@
 
   function isRealDate(yy, mm, dd) {
     if (!(yy >= 1900 && yy <= 2100)) return false;
-@@ -250,205 +266,304 @@
+        if (!(mm >= 1 && mm <= 12)) return false;
+    if (!(dd >= 1 && dd <= 31)) return false;
+    const d = new Date(yy, mm - 1, dd);
+    return d.getFullYear() === yy && d.getMonth() === (mm - 1) && d.getDate() === dd;
+  }
+
+  function parseDOB(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return null;
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return { yy: Number(iso[1]), mm: Number(iso[2]), dd: Number(iso[3]) };
+
+    const de = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (de) return { yy: Number(de[3]), mm: Number(de[2]), dd: Number(de[1]) };
+
+    const us = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (us) return { yy: Number(us[3]), mm: Number(us[1]), dd: Number(us[2]) };
+
+    return null;
+  }
+
+  function validateDOB(v) {
+    const s = String(v || "").trim();
+    if (!s) return { ok: false, msg: t("req") };
+    const parsed = parseDOB(s);
+    if (!parsed) return { ok: false, msg: t("dob_bad") };
+    if (!isRealDate(parsed.yy, parsed.mm, parsed.dd)) return { ok: false, msg: t("dob_bad") };
+    return { ok: true, msg: "" };
+  }
+
+  function validateEmail(v) {
+    const s = String(v || "").trim();
+    if (!s) return { ok: false, msg: t("req") };
+    if (!RX_EMAIL.test(s)) return { ok: false, msg: t("email_bad") };
+    return { ok: true, msg: "" };
+  }
+
+  function validateUsername(v) {
+    const s = String(v || "").trim();
+    if (!s) return { ok: false, msg: t("req") };
+    if (s.length < 6) return { ok: false, msg: t("user_min") };
+    if (!RX_UPPER.test(s)) return { ok: false, msg: t("user_upper") };
+    if (!RX_USER_SPECIAL.test(s)) return { ok: false, msg: t("user_special") };
+
+    const allowed = backendUsernameAllowed(s);
+    if (allowed && allowed.ok === false) return { ok: false, msg: t("user_forbidden") };
 
     const free = backendUsernameFree(s);
     if (!free) return { ok: false, msg: t("user_taken") };
@@ -196,12 +257,13 @@
     return { ok: true, msg: "" };
   }
 
-  function validatePassword(v) {
+  function validatePassword(v, username = "") {
     const s = String(v || "");
     if (!s) return { ok: false, msg: t("req") };
     if (s.length < 5) return { ok: false, msg: t("pass_min") };
     if (!RX_UPPER.test(s)) return { ok: false, msg: t("pass_upper") };
     if (!RX_PASS_SPECIAL.test(s)) return { ok: false, msg: t("pass_special") };
+    if (username && s === String(username || "")) return { ok: false, msg: t("pass_user_match") };
     return { ok: true, msg: "" };
   }
 
@@ -240,7 +302,7 @@
         const dobRes = validateDOB(dob.value);
         const emRes  = validateEmail(em.value);
         const unRes  = validateUsername(un.value);
-        const pwRes  = validatePassword(pw.value);
+        const pwRes  = validatePassword(pw.value, un.value);
 
         setInvalid(f1, shouldShow(f1) && !firstOk);
         setInvalid(f2, shouldShow(f2) && !lastOk);
