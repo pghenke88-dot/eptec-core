@@ -19,7 +19,10 @@
   if (window.EPTEC_UI_CONTROL && window.EPTEC_UI_CONTROL.__ACTIVE) return;
 
   const Safe = {
-    try(fn, scope = "UICTRL") { try { return fn(); } catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; } },
+    try(fn, scope = "UICTRL") {
+      try { return fn(); }
+      catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; }
+    },
     isFn(x) { return typeof x === "function"; },
     str(x) { return String(x ?? ""); },
     byId(id) { return document.getElementById(id); },
@@ -47,13 +50,13 @@
   const UI_CONTROL = {
     __ACTIVE: true,
     __CLICKMASTER_ACTIVATED: false,
-        __CLICK_ROUTER_ACTIVE: true,
+    __CLICK_ROUTER_ACTIVE: true,
     __ROUTER_DEDUPE_MS: 800,
     _actions: Object.create(null) // triggerId -> { handler, fn }
   };
   window.EPTEC_UI_CONTROL = UI_CONTROL;
   window.EPTEC_CLICK_ROUTER_ACTIVE = true;
-   
+
   // ---------------------------------------------------------
   // Assistants (delegation only)
   // ---------------------------------------------------------
@@ -95,7 +98,8 @@
       setTimeout(() => { el.style.display = "none"; }, 2200);
     }
     return { toast };
-  })(); 
+  })();
+
   const LEGAL = {
     // Delegation target: scripts/transparency_ui.js (optional)
     open(docKey) {
@@ -150,7 +154,7 @@
   // ---------------------------------------------------------
   // Global capture dispatch (no decisions)
   // ---------------------------------------------------------
-   const DEDUPE = new Map();
+  const DEDUPE = new Map();
 
   function isDuplicate(actionId) {
     const now = Date.now();
@@ -165,20 +169,22 @@
     }, UI_CONTROL.__ROUTER_DEDUPE_MS + 25);
     return false;
   }
+
   function dispatch(triggerId, ctx) {
     const action = UI_CONTROL._actions[triggerId];
     if (!action) return false;
     const result = Safe.try(() => action.fn(ctx), `ACTION:${action.handler}`);
     console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
+    return true;
   }
 
- function fallbackNotice(triggerId, ctx, message) {
+  function fallbackNotice(triggerId, ctx, message) {
     const msg = message || `Kein Handler für ${triggerId}.`;
     console.warn("[EPTEC_FALLBACK]", { triggerId, ctx, message: msg });
     FEEDBACK.toast(msg, "warn");
-  }   
-   
-function route(triggerId, ctx) {
+  }
+
+  function route(triggerId, ctx) {
     const clickmasterHandled = Safe.try(
       () => window.EPTEC_CLICKMASTER?.run?.(triggerId, ctx),
       "CLICKMASTER.run"
@@ -193,7 +199,7 @@ function route(triggerId, ctx) {
     const triggerId = resolved.id;
     if (!triggerId) return;
     if (isDuplicate(triggerId)) return;
-     
+
     // UI confirm sound is allowed as pure UI feedback
     AUDIO.uiConfirm();
 
@@ -221,7 +227,7 @@ function route(triggerId, ctx) {
     registerAction(TR("masterResetLink") || "master-reset-link", "APPEND1.requestReset", () => {
       const identity = Safe.str(Safe.byId("master-identity")?.value).trim();
       Safe.try(() => APPEND_1()?.requestReset?.(identity), "APPEND1.requestReset");
-    });;
+    });
 
     registerAction(TR("masterResetApply") || "master-reset-apply", "APPEND1.applyReset", () => {
       const token = Safe.str(Safe.byId("master-reset-token")?.value).trim().toUpperCase();
@@ -230,7 +236,7 @@ function route(triggerId, ctx) {
       const newDoorCode  = Safe.str(Safe.byId("master-new-door")?.value).trim();
       Safe.try(() => APPEND_1()?.applyReset?.({ token, securityAnswer, newDoorCode, newStartCode }), "APPEND1.applyReset");
     });
-    }
+  }
 
   // =========================================================
   // APPEND 4/5/6/7 refs (delegation only)
@@ -300,7 +306,7 @@ function route(triggerId, ctx) {
     registerAction(TR("terms"), "LEGAL.open(terms)", () => LEGAL.open(DOC("terms")));
     registerAction(TR("support"), "LEGAL.open(support)", () => LEGAL.open(DOC("support")));
     registerAction(TR("privacyFooter"), "LEGAL.open(privacy)", () => LEGAL.open(DOC("privacy")));
-     
+
     registerAction(TR("logoutAny") || "logout.any", "Auth.logout", () => {
       const k = KERNEL();
       Safe.try(() => k?.Auth?.logout?.(), "KERNEL.Auth.logout");
@@ -326,7 +332,7 @@ function route(triggerId, ctx) {
       const btn = t?.closest?.(".lang-item,[data-lang]");
       const code = Safe.str(btn?.getAttribute?.("data-lang") || "").trim();
       if (!code) return;
-     if (APPEND_7()?.apply) {
+      if (APPEND_7()?.apply) {
         Safe.try(() => APPEND_7().apply(code), "APPEND7.apply");
         return;
       }
@@ -340,7 +346,8 @@ function route(triggerId, ctx) {
       if (rail) rail.classList.toggle("open");
       if (wrap) wrap.classList.toggle("lang-open");
     });
-        registerAction("admin-code", "UI.masterCode.focus", (ctx) => {
+
+    registerAction("admin-code", "UI.masterCode.focus", (ctx) => {
       const value = Safe.str(Safe.byId("admin-code")?.value || "");
       fallbackNotice("admin-code", ctx, value ? "Master-Code erfasst. Mit „Admin Submit“ bestätigen." : "Master-Code Feld aktiv.");
     });
@@ -373,6 +380,7 @@ function route(triggerId, ctx) {
       }
       fallbackNotice("door1-present-apply", { code: code ? "***" : "" }, "Door 1 Geschenkcode kann nicht verarbeitet werden.");
     });
+
     registerAction("door1-vip-apply", "Doors.applyVip(door1)", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("door1-vip")?.value);
@@ -382,6 +390,7 @@ function route(triggerId, ctx) {
       }
       fallbackNotice("door1-vip-apply", { code: code ? "***" : "" }, "Door 1 VIP-Code kann nicht verarbeitet werden.");
     });
+
     registerAction("door1-master-apply", "Doors.applyMaster(door1)", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("door1-master")?.value);
@@ -391,6 +400,7 @@ function route(triggerId, ctx) {
       }
       fallbackNotice("door1-master-apply", { code: code ? "***" : "" }, "Door 1 Master-Code kann nicht verarbeitet werden.");
     });
+
     registerAction("door2-present-apply", "Doors.applyPresent(door2)", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("door2-present")?.value);
@@ -400,6 +410,7 @@ function route(triggerId, ctx) {
       }
       fallbackNotice("door2-present-apply", { code: code ? "***" : "" }, "Door 2 Geschenkcode kann nicht verarbeitet werden.");
     });
+
     registerAction("door2-vip-apply", "Doors.applyVip(door2)", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("door2-vip")?.value);
@@ -409,6 +420,7 @@ function route(triggerId, ctx) {
       }
       fallbackNotice("door2-vip-apply", { code: code ? "***" : "" }, "Door 2 VIP-Code kann nicht verarbeitet werden.");
     });
+
     registerAction("door2-master-apply", "Doors.applyMaster(door2)", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("door2-master")?.value);
@@ -417,7 +429,7 @@ function route(triggerId, ctx) {
         return;
       }
       fallbackNotice("door2-master-apply", { code: code ? "***" : "" }, "Door 2 Master-Code kann nicht verarbeitet werden.");
-    }); 
+    });
   }
 
   // ---------------------------------------------------------
