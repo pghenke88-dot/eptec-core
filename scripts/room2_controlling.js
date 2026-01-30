@@ -17,7 +17,13 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+ const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[R2] safe fallback", e);
+      return undefined;
+    }
+  };
 
   const STORAGE = {
     files: "EPTEC_R2_FILES",          // {slot:{name,type,dataUrl,ts}}
@@ -36,7 +42,11 @@
   function nowTs() { return Date.now(); }
 
   function readJSON(key, fallback) {
-    try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
+      try { return JSON.parse(localStorage.getItem(key) || ""); }
+    catch (e) {
+      console.warn("[R2] readJSON failed", { key, error: e });
+      return fallback;
+    }
   }
   function writeJSON(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
@@ -93,7 +103,9 @@ function setSlotStatus(slotKey, status, reason) {
         { slot: slotKey, status: map[slotKey].status, reason: map[slotKey].reason || "" }
       );
     }
-  } catch {}
+  } catch (e) {
+    console.warn("[R2] evidence traffic event failed", e);
+  }
 }
 
 function statusLabel(status, lang) {
@@ -258,7 +270,11 @@ if (selTraffic) {
     const map = getFileTraffic();
     if (!map[slotKey]) { map[slotKey] = { status:"none", ts: nowTs(), reason:"" }; setFileTraffic(map); }
 
-    try { window.EPTEC_EVIDENCE && window.EPTEC_EVIDENCE.event && window.EPTEC_EVIDENCE.event("R2_FILE_UPLOAD", { slot: slotKey, name: file.name, type: file.type || "", size: file.size || 0 }); } catch {}
+    try {
+      window.EPTEC_EVIDENCE && window.EPTEC_EVIDENCE.event && window.EPTEC_EVIDENCE.event("R2_FILE_UPLOAD", { slot: slotKey, name: file.name, type: file.type || "", size: file.size || 0 });
+    } catch (e) {
+      console.warn("[R2] evidence upload event failed", e);
+    }
     pushLog("upload", `${key}: ${file.name}`);
 
     renderSlot(key);
@@ -350,7 +366,8 @@ if (selTraffic) {
       if (l === "en") return "en";
       // Phase 1: EN/DE/ES supported for framework content; all other languages fall back to EN
       return "en";
-    } catch {
+    } catch (e) {
+      console.warn("[R2] resolveEscalationLang failed", e);
       return "en";
     }
   }
@@ -390,16 +407,25 @@ if (selTraffic) {
       }
       const text = out.join(" ");
       return normalizeText(text.replace(/\\n/g," ").replace(/\\r/g," ").replace(/\\t/g," "));
-    } catch {
+    } catch (e) {
+      console.warn("[R2] extractPdfTextFromDataUrl failed", e);
       return "";
     }
   }
 
   function loadR1Selections() {
-    try { return JSON.parse(localStorage.getItem("EPTEC_R1_SELECTIONS") || "{}"); } catch { return {}; }
+   try { return JSON.parse(localStorage.getItem("EPTEC_R1_SELECTIONS") || "{}"); }
+    catch (e) {
+      console.warn("[R2] loadR1Selections failed", e);
+      return {};
+    }
   }
   function loadR1Archive() {
-    try { return JSON.parse(localStorage.getItem("EPTEC_R1_ARCHIVE_LAST") || "null"); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("EPTEC_R1_ARCHIVE_LAST") || "null"); }
+    catch (e) {
+      console.warn("[R2] loadR1Archive failed", e);
+      return null;
+    }
   }
 
   async function loadFrameworkHints(lang) {
@@ -690,7 +716,9 @@ if (selTraffic) {
   function audioTick() {
     const a = ensureAudio();
     const want = desiredOn() && isRoom2Visible();
-    if (want) a.play().catch(()=>{});
+    if (want) {
+      a.play().catch((e) => console.warn("[R2] ambience play blocked", e));
+    }
     else a.pause();
   }
   document.addEventListener("click", (e) => {
@@ -712,7 +740,9 @@ if (selTraffic) {
         renderTraffic(escalationData);
         renderAnnexJm(escalationData);
       });
-    }catch{}
+    } catch (e) {
+      console.warn("[R2] bindPlantBackupOpenTraffic failed", e);
+    }
   }
 async function init() {
     if (!$("room-2-view")) return;
