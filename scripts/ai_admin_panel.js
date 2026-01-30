@@ -11,7 +11,13 @@
   "use strict";
 
   const Safe = {
-    try(fn){ try { return fn(); } catch { return undefined; } },
+     try(fn){
+      try { return fn(); }
+      catch (e) {
+        console.warn("[AI_ADMIN] safe fallback", e);
+        return undefined;
+      }
+    },
     isObj(x){ return x && typeof x === "object" && !Array.isArray(x); },
   };
 
