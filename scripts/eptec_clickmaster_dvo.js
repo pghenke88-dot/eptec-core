@@ -446,256 +446,134 @@
   };
 
   /* =========================
-     8) CHAINS (YOUR CLICK DVO)
-     ========================= */
-  const CHAINS = {
-    /* ---- BOOT ---- */
-    "system.boot": () => ({
-      steps: [
-        () => Audit.log("SYSTEM", "BOOT", { at: Safe.iso() }),
-        () => Phase.switchTo("start", "boot") // commits start visuals+audio via kernel renderer/audio cue
-      ]
-    }),
+   8) CHAINS (CLICK DVO — DIRIGENT)
+   -------------------------
+   RULES (hard):
+   - Clickmaster executes flows and scene transitions.
+   - Business decisions are delegated to Logic (EPTEC_MASTER.Entry).
+   - NO auth checks, NO state mutation beyond execution.
+   ========================= */
 
-    /* ---- LOGIN ---- */
-    "btn-login": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:LOGIN", {}),
-        () => Visual.clearInvalid("login-username"),
-        () => Visual.clearInvalid("login-password"),
-        () => {
-          const u = Safe.str(Safe.byId("login-username")?.value).trim();
-          const p = Safe.str(Safe.byId("login-password")?.value).trim();
-          if (!u || !p) {
-            Visual.markInvalid("login-username", "Login nicht möglich.");
-            Visual.markInvalid("login-password", "Login nicht möglich.");
-            Audit.log("AUTH", "LOGIN_BLOCKED_MISSING", { uPresent: !!u, pPresent: !!p });
-            return { ok: false };
-          }
+const CHAINS = {
 
-          const k = K();
-          const res = Safe.try(() => k?.Auth?.loginUser?.({ username: u, password: p }), "Auth.loginUser");
-          if (!res?.ok) {
-            Visual.markInvalid("login-username", "Login fehlgeschlagen.");
-            Visual.markInvalid("login-password", "Login fehlgeschlagen.");
-            Audit.log("AUTH", "LOGIN_FAIL", { username: u });
-            return { ok: false };
-          }
+  /* ---------- SYSTEM BOOT ---------- */
+  "system.boot": () => ({
+    steps: [
+      () => Audit.log("SYS", "BOOT", {}),
+      () => Phase.switchTo("meadow", "boot")
+    ]
+  }),
 
-          // set mode + auth state (kernel style)
-          Safe.try(() => k?.Auth?.setMode?.(k?.TERMS?.modes?.user || "user"), "Auth.setMode.user");
-          Safe.try(() => UI()?.set?.({ auth: { isAuthed: true, userId: res.userId || null } }), "UI_STATE.auth.set");
+  /* ---------- LOGIN ---------- */
+  "btn-login": () => ({
+    steps: [
+      () => Audit.log("UI", "CLICK:LOGIN", {}),
+      () => Visual.clearInvalid("login-username"),
+      () => Visual.clearInvalid("login-password"),
 
-          Audit.log("AUTH", "LOGIN_OK", { userId: res.userId || null });
+      () => {
+        const u = Safe.str(Safe.byId("login-username")?.value).trim();
+        const p = Safe.str(Safe.byId("login-password")?.value).trim();
 
-          // Phase switch: start -> tunnel (hard cut + 20s timer)
-          Phase.switchTo("tunnel", "login_ok");
-          // logout becomes visible naturally because tunnel/doors/rooms have their own logout buttons
-          return { ok: true };
+        const k = K();
+        const plan =
+          Safe.try(() => k?.Entry?.userLogin?.(u, p), "LOGIC.Entry.userLogin") || {};
+
+        if (!plan.ok) {
+          Visual.markInvalid("login-username", "Login fehlgeschlagen.");
+          Visual.markInvalid("login-password", "Login fehlgeschlagen.");
+          Audit.log("AUTH", "LOGIN_DENIED", { username: u });
+          return;
         }
-      ]
-    }),
 
-    /* ---- DEMO ---- */
-    "btn-demo": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:DEMO", {}),
-        () => Capture.forceStop("demo_no_capture"),
-        () => {
-          const k = K();
-          Safe.try(() => k?.Auth?.setMode?.(k?.TERMS?.modes?.demo || "demo"), "Auth.setMode.demo");
-          Safe.try(() => UI()?.set?.({ auth: { isAuthed: false, userId: "DEMO" } }), "UI_STATE.auth.demo");
-          Audit.log("ENTRY", "DEMO_START", {});
-          Phase.switchTo("tunnel", "demo_start");
+        Audit.log("AUTH", "LOGIN_OK", { mode: plan.mode || null });
+        Phase.switchTo(plan.nextScene || "tunnel", plan.reason || "login_ok");
+      }
+    ]
+  }),
+
+  /* ---------- DEMO ---------- */
+  "btn-demo": () => ({
+    steps: [
+      () => Audit.log("UI", "CLICK:DEMO", {}),
+      () => Capture.forceStop("demo"),
+
+      () => {
+        const k = K();
+        const plan =
+          Safe.try(() => k?.Entry?.demo?.(), "LOGIC.Entry.demo") || {};
+
+        if (!plan.ok) {
+          Audit.log("ENTRY", "DEMO_DENIED", {});
+          return;
         }
-      ]
-    }),
 
-    /* ---- REGISTER OPEN (PIP yes) ---- */
-    "btn-register": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:REGISTER_OPEN", {}),
-        () => {
-          // Prefer your real RegistrationEngine if present
-          const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
-          if (re?.open) return Safe.try(() => re.open({ mode: "new-user" }), "RegistrationEngine.open");
+        Audit.log("ENTRY", "DEMO_START", { mode: plan.mode || null });
+        Phase.switchTo(plan.nextScene || "tunnel", plan.reason || "demo_start");
+      }
+    ]
+  }),
 
-          // fallback placeholder modal
-          const el = Safe.byId("register-screen");
-          if (!el) return;
-          el.classList.remove("modal-hidden");
-          el.style.display = "flex";
-          if (!el.querySelector?.(".modal-card")) {
-            el.innerHTML = `
-              <div class="modal-card">
-                <h3>Register</h3>
-                <p>Placeholder — use registration_engine.js to render real fields with placeholders & live validation.</p>
-              </div>`;
-          }
-          Safe.try(() => UI()?.set?.({ modal: "register" }), "UI_STATE.modal.register");
+  /* ---------- MASTER / AUTHOR ---------- */
+  "admin-submit": () => ({
+    steps: [
+      () => Audit.log("UI", "CLICK:MASTER_ENTER", {}),
+      () => Visual.clearInvalid("admin-code", "login-message"),
+
+      () => {
+        const code = Safe.str(Safe.byId("admin-code")?.value).trim();
+        const k = K();
+
+        const plan =
+          Safe.try(
+            () => k?.Entry?.authorStartMaster?.(code),
+            "LOGIC.Entry.authorStartMaster"
+          ) || {};
+
+        if (!plan.ok) {
+          Visual.markInvalid("admin-code", "Zugriff verweigert.", "login-message");
+          Audit.log("AUTH", "MASTER_DENIED", {});
+          return;
         }
-      ]
-    }),
 
-    /* ---- FORGOT OPEN (PIP yes; security question) ---- */
-    "btn-forgot": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:FORGOT_OPEN", {}),
-        () => {
-          const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
-          if (re?.openForgot) return Safe.try(() => re.openForgot({ securityQuestion: true }), "RegistrationEngine.openForgot");
+        Audit.log("AUTH", "MASTER_OK", { mode: plan.mode || null });
+        Phase.switchTo(plan.nextScene || "tunnel", plan.reason || "master_ok");
+      }
+    ]
+  }),
 
-          const el = Safe.byId("forgot-screen");
-          if (!el) return;
-          el.classList.remove("modal-hidden");
-          el.style.display = "flex";
-          if (!el.querySelector?.(".modal-card")) {
-            el.innerHTML = `
-              <div class="modal-card">
-                <h3>Forgot password</h3>
-                <p>Placeholder — email + security answer → reset link → new password.</p>
-              </div>`;
-          }
-          Safe.try(() => UI()?.set?.({ modal: "forgot" }), "UI_STATE.modal.forgot");
-        }
-      ]
-    }),
+  /* ---------- TUNNEL TIMER ---------- */
+  "timer.tunnel.expired": () => ({
+    steps: [
+      () => Audit.log("FLOW", "TUNNEL_EXPIRED", {}),
+      () => Phase.switchTo("doors", "tunnel_complete")
+    ]
+  }),
 
-    /* ---- MASTER ENTER ---- */
-    "admin-submit": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:MASTER_ENTER", {}),
-        () => Visual.clearInvalid("admin-code", "login-message"),
-        () => {
-          const k = K();
-          const code = Safe.str(Safe.byId("admin-code")?.value).trim();
-          const ok = Safe.try(() => k?.Auth?.verifyStartMaster?.(code), "Auth.verifyStartMaster");
+  /* ---------- DOORS ---------- */
+  "doors.door1": () => ({
+    steps: [
+      () => Audit.log("UI", "CLICK:DOOR1", {}),
+      () => Phase.switchTo("room1", "door1_enter")
+    ]
+  }),
 
-          if (!ok) {
-            Visual.markInvalid("admin-code", "Master verweigert.", "login-message");
-            Audit.log("AUTH", "MASTER_START_DENIED", {});
-            return;
-          }
+  "doors.door2": () => ({
+    steps: [
+      () => Audit.log("UI", "CLICK:DOOR2", {}),
+      () => Phase.switchTo("room2", "door2_enter")
+    ]
+  }),
 
-          Safe.try(() => k?.Auth?.setMode?.(k?.TERMS?.modes?.author || "author"), "Auth.setMode.author");
-          Safe.try(() => UI()?.set?.({ auth: { isAuthed: true, userId: "AUTHOR" } }), "UI_STATE.auth.author");
-          Audit.log("AUTH", "MASTER_START_OK", {});
-          Phase.switchTo("tunnel", "master_ok");
-        }
-      ]
-    }),
+  /* ---------- LOGOUT (ANY) ---------- */
+  "logout.any": () => ({
+    steps: [
+      () => Audit.log("AUTH", "LOGOUT", {}),
+      () => Phase.switchTo("meadow", "logout")
+    ]
+  })
+};
 
-    /* ---- CAMERA ADMIN OPTION (SCREEN) ---- */
-    "admin-camera-toggle:on": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:CAPTURE_ON", {}),
-        () => Safe.try(() => K()?.Entry?.setCameraOption?.(true), "Entry.setCameraOption.true"),
-        () => Capture.start()
-      ]
-    }),
-    "admin-camera-toggle:off": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:CAPTURE_OFF", {}),
-        () => Capture.forceStop("toggle_off"),
-        () => Safe.try(() => K()?.Entry?.setCameraOption?.(false), "Entry.setCameraOption.false")
-      ]
-    }),
-    "capture.off": () => ({
-      steps: [
-        () => Audit.log("UI", "CLICK:CAPTURE_ICON_OFF", {}),
-        () => Capture.forceStop("icon_off"),
-        () => Safe.try(() => K()?.Entry?.setCameraOption?.(false), "Entry.setCameraOption.false"),
-        () => { const cb = Safe.byId("admin-camera-toggle"); if (cb) cb.checked = false; }
-      ]
-    }),
-
-    /* ---- TUNNEL TIMER EXPIRED (forced end) ---- */
-    "timer.tunnel.expired": () => ({
-      steps: [
-        () => Audit.log("TIMER", "TUNNEL_EXPIRED", { ms: CFG.TUNNEL_MS }),
-        () => Phase.switchTo("viewdoors", "tunnel_timeout")
-      ]
-    }),
-
-    /* ---- DOORS PAYWALL INPUTS ---- */
-    // door1 present/vip/master apply
-    "door1-present-apply": () => ({ steps: [() => Doors.applyCode("door1", "present")] }),
-    "door1-vip-apply": () => ({ steps: [() => Doors.applyCode("door1", "vip")] }),
-    "door1-master-apply": () => ({ steps: [() => Doors.applyCode("door1", "master")] }),
-    // door2 present/vip/master apply
-    "door2-present-apply": () => ({ steps: [() => Doors.applyCode("door2", "present")] }),
-    "door2-vip-apply": () => ({ steps: [() => Doors.applyCode("door2", "vip")] }),
-    "door2-master-apply": () => ({ steps: [() => Doors.applyCode("door2", "master")] }),
-
-    /* ---- DOOR CLICK (enter room) ---- */
-    "doors.door1": () => ({ steps: [() => Doors.enterDoor("door1")] }),
-    "doors.door2": () => ({ steps: [() => Doors.enterDoor("door2")] }),
-
-    /* ---- LOGOUT ANYWHERE (doors/rooms) ---- */
-    "logout.any": () => ({
-      steps: [
-        () => Audit.log("AUTH", "LOGOUT_CLICK", {}),
-        () => Capture.forceStop("logout_force"),
-        () => Phase.hardStop("logout"),
-        () => Safe.try(() => K()?.Auth?.logout?.(), "Auth.logout"),
-        () => Phase.switchTo("start", "logout")
-      ]
-    }),
-
-    /* ---- FOOTER LEGAL (placeholder now; local-first) ---- */
-    "link-imprint": () => ({ steps: [() => Legal.open("imprint")] }),
-    "link-terms":   () => ({ steps: [() => Legal.open("terms")] }),
-    "link-support": () => ({ steps: [() => Legal.open("support")] }),
-    "link-privacy-footer": () => ({ steps: [() => Legal.open("privacy")] }),
-    "legal-close":  () => ({ steps: [() => TermsPrivacyModal.close()] }),
-
-    /* ---- LANGUAGE ---- */
-    "lang-toggle": () => ({
-      steps: [
-        () => Audit.log("I18N", "LANG_RAIL_TOGGLE", {}),
-        () => {
-          const rail = Safe.byId("lang-rail");
-          const wrap = Safe.byId("language-switcher");
-          if (!rail) return;
-          rail.setAttribute("data-eptec-lang-toggle-ts", String(Date.now()));
-          rail.classList.toggle("open");
-          if (wrap) wrap.classList.toggle("lang-open");
-        }
-      ]
-    }),
-    "lang-item": (ctx) => ({
-      steps: [
-        () => {
-          const lang = Safe.str(ctx?.lang).toLowerCase();
-          if (!lang) return;
-          Audit.log("I18N", "SET_LANG", { lang });
-          const k = K();
-          Safe.try(() => k?.I18N?.setLang?.(lang), "I18N.setLang");
-          // auto-close rail after selection
-          const rail = Safe.byId("lang-rail");
-          if (rail) rail.classList.remove("open");
-          const wrap = Safe.byId("language-switcher");
-          if (wrap) wrap.classList.remove("lang-open");
-        }
-      ]
-    }),
-
-    /* ---- ROOM HOTSPOTS (respect demo view-only) ---- */
-    "r1.savepoint": () => ({ steps: [() => RoomActions.room1("savepoint")] }),
-    "r1.table.download": () => ({ steps: [() => RoomActions.room1("table.download")] }),
-    "r1.mirror.download": () => ({ steps: [() => RoomActions.room1("mirror.download")] }),
-    "r1.traffic.enable": () => ({ steps: [() => RoomActions.room1("traffic.enable")] }),
-
-    "r2.hotspot.left1": () => ({ steps: [() => RoomActions.room2("hotspot.left1")] }),
-    "r2.hotspot.left2": () => ({ steps: [() => RoomActions.room2("hotspot.left2")] }),
-    "r2.hotspot.center": () => ({ steps: [() => RoomActions.room2("hotspot.center")] }),
-    "r2.hotspot.right1": () => ({ steps: [() => RoomActions.room2("hotspot.right1")] }),
-    "r2.hotspot.right2": () => ({ steps: [() => RoomActions.room2("hotspot.right2")] }),
-    "r2.plant.backup": () => ({ steps: [() => RoomActions.room2("plant.backup")] }),
-
-    /* ---- CONSENT ACCEPT BUTTON (appears after load) ---- */
-    "legal-accept": () => ({ steps: [() => Legal.acceptCurrent()] })
-  };
   /* =========================
      9) DOORS (codes + enter + consent gate)
      ========================= */
