@@ -732,7 +732,9 @@ function ensureTempDownloadFallback() {
       card.appendChild(sh);
       wrap.appendChild(card);
     });
-        function buildMirrorReport(affected) {
+    }
+
+  function buildMirrorReport(affected) {
         const sel = loadSelections();
         const all = [];
         Object.keys(sel).forEach(mid => (sel[mid] || []).forEach(x => all.push(x)));
@@ -787,8 +789,6 @@ Affected subpoints (deviations only):
           flashStatus("Mirror report downloaded.", "ok");
         });
       }
-
-}
 
   function wireCompare() {
     const run = $("r1-compare-run");
