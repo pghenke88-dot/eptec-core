@@ -81,7 +81,6 @@
     try {
       const p = audio.play();
       if (p && typeof p.catch === "function") {
-       p.catch((e) => console.warn("[SOUND] autoplay prevented", e)); // NEVER propagate autoplay errors
       }
      } catch (e) {
       console.warn("[SOUND] play failed", e);
