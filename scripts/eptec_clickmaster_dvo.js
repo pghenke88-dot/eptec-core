@@ -647,9 +647,11 @@
         () => Audit.log("I18N", "LANG_RAIL_TOGGLE", {}),
         () => {
           const rail = Safe.byId("lang-rail");
+          const wrap = Safe.byId("language-switcher");
           if (!rail) return;
           rail.setAttribute("data-eptec-lang-toggle-ts", String(Date.now()));
           rail.classList.toggle("open");
+          if (wrap) wrap.classList.toggle("lang-open");
         }
       ]
     }),
@@ -664,6 +666,8 @@
           // auto-close rail after selection
           const rail = Safe.byId("lang-rail");
           if (rail) rail.classList.remove("open");
+          const wrap = Safe.byId("language-switcher");
+          if (wrap) wrap.classList.remove("lang-open");
         }
       ]
     }),
@@ -684,7 +688,6 @@
     /* ---- CONSENT ACCEPT BUTTON (appears after load) ---- */
     "legal-accept": () => ({ steps: [() => Legal.acceptCurrent()] })
   };
-
   /* =========================
      9) DOORS (codes + enter + consent gate)
      ========================= */
