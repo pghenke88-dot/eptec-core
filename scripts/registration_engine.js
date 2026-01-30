@@ -46,6 +46,8 @@
     regDob:   "reg-birthdate",
     regEmail: "reg-email",
     regUser:  "reg-username",
+    regCompany: "reg-company",
+    regSec:  "reg-sec-answer",
     regPass:  "reg-password",
     regRulesUser: "reg-rules-username",
     regRulesPass: "reg-rules-password",
@@ -56,6 +58,9 @@
     // Forgot modal container exists; fields may or may not exist (safe no-op)
     forgotScreen: "forgot-screen",
     forgotIdentity: "forgot-identity",
+    forgotSec: "forgot-sec-answer",
+    forgotNew: "forgot-new-password",
+    forgotConfirm: "forgot-confirm-password",
     forgotMsg: "forgot-message",
     forgotSubmit: "forgot-submit",
     forgotClose: "forgot-close"
@@ -78,7 +83,10 @@
       pass_min: "Password: minimum 5 characters.",
       pass_upper: "Password: at least 1 uppercase letter.",
       pass_special: "Password: at least 1 special character.",
+      pass_match: "Passwords do not match.",
       reset_sent: "If the account exists, a reset link was sent.",
+      reset_done: "Password updated. You can log in.",
+      reset_failed: "Reset failed.",
       backend_missing: "Backend missing."
     },
     de: {
@@ -94,7 +102,10 @@
       pass_min: "Passwort: mindestens 5 Zeichen.",
       pass_upper: "Passwort: mindestens 1 Großbuchstabe.",
       pass_special: "Passwort: mindestens 1 Sonderzeichen.",
+      pass_match: "Passwörter stimmen nicht überein.",
       reset_sent: "Wenn der Account existiert, wurde ein Link gesendet.",
+      reset_done: "Passwort aktualisiert. Sie können sich anmelden.",
+      reset_failed: "Zurücksetzen fehlgeschlagen.",
       backend_missing: "Backend fehlt."
     }
   };
@@ -120,26 +131,7 @@
   // -----------------------------
   function stripPasswordPlaceholders(root = document) {
     safe(() => {
-      const list = Array.from(root.querySelectorAll("input[type='password']"));
-      for (const inp of list) {
-        if (inp.hasAttribute("placeholder")) inp.removeAttribute("placeholder");
-        if (!inp.hasAttribute("autocomplete")) inp.setAttribute("autocomplete", "off");
-      }
-    });
-  }
-
-  // -----------------------------
-  // Backend selection (Real API if configured, else Mock)
-  // -----------------------------
-  function hasRealApi() {
-    const b = safe(() => window.EPTEC_API?.base?.get?.()) || "";
-    return !!String(b || "").trim();
-  }
-
-  async function backendRegister(payload) {
-    if (hasRealApi() && window.EPTEC_API?.register) return window.EPTEC_API.register(payload);
-    if (window.EPTEC_MOCK_BACKEND?.register) return window.EPTEC_MOCK_BACKEND.register(payload);
-    return { ok: false, message: t("backend_missing") };
+@@ -143,51 +154,56 @@
   }
 
   async function backendForgot(identity) {
@@ -165,7 +157,12 @@
   // -----------------------------
   function setText(id, msg) {
     const el = $(id);
-    if (el) el.textContent = String(msg || "");
+    if (el) {
+      const text = String(msg || "");
+      el.textContent = text;
+      if (text) el.classList.add("show");
+      else el.classList.remove("show");
+    }
   }
 
   function setLocked(btn, locked) {
@@ -191,62 +188,7 @@
 
   function isRealDate(yy, mm, dd) {
     if (!(yy >= 1900 && yy <= 2100)) return false;
-    if (!(mm >= 1 && mm <= 12)) return false;
-    if (!(dd >= 1 && dd <= 31)) return false;
-    const d = new Date(yy, mm - 1, dd);
-    return d.getFullYear() === yy && (d.getMonth() + 1) === mm && d.getDate() === dd;
-  }
-
-  function validateDOB(v) {
-    const s = String(v || "").trim();
-    if (!s) return { ok: false, msg: t("req") };
-
-    // ISO yyyy-mm-dd
-    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m) return isRealDate(+m[1], +m[2], +m[3])
-      ? { ok: true, msg: "" }
-      : { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-
-    if (getLang() === "en") {
-      // MM/DD/YYYY
-      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!m) return { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-      return isRealDate(+m[3], +m[1], +m[2])
-        ? { ok: true, msg: "" }
-        : { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-    }
-
-    // DD.MM.YYYY
-    m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (m) return isRealDate(+m[3], +m[2], +m[1])
-      ? { ok: true, msg: "" }
-      : { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-
-    // DD/MM/YYYY
-    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (m) return isRealDate(+m[3], +m[2], +m[1])
-      ? { ok: true, msg: "" }
-      : { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-
-    return { ok: false, msg: `${t("dob_bad")} (${dobHint()})` };
-  }
-
-  function validateEmail(v) {
-    const s = String(v || "").trim();
-    if (!s) return { ok: false, msg: t("req") };
-    if (!RX_EMAIL.test(s)) return { ok: false, msg: t("email_bad") };
-    return { ok: true, msg: "" };
-  }
-
-  function validateUsername(v) {
-    const s = String(v || "").trim();
-    if (!s) return { ok: false, msg: t("req") };
-    if (s.length < 6) return { ok: false, msg: t("user_min") };
-    if (!RX_UPPER.test(s)) return { ok: false, msg: t("user_upper") };
-    if (!RX_USER_SPECIAL.test(s)) return { ok: false, msg: t("user_special") };
-
-    const policy = backendUsernameAllowed(s);
-    if (policy && policy.ok === false) return { ok: false, msg: t("user_forbidden") };
+@@ -250,205 +266,304 @@
 
     const free = backendUsernameFree(s);
     if (!free) return { ok: false, msg: t("user_taken") };
@@ -272,65 +214,85 @@
     const dob = $(IDS.regDob);
     const em = $(IDS.regEmail);
     const un = $(IDS.regUser);
+    const company = $(IDS.regCompany);
+    const sec = $(IDS.regSec);
     const pw = $(IDS.regPass);
     const submit = $(IDS.regSubmit);
 
-    if (!f1 || !f2 || !dob || !em || !un || !pw || !submit) return;
+    if (!f1 || !f2 || !dob || !em || !un || !pw || !sec || !submit) return;
 
     stripPasswordPlaceholders(document);
 
     let raf = 0;
+    let submitAttempted = false;
+    const touched = new WeakMap();
+    const markTouched = (el) => { if (el) touched.set(el, true); };
+    const isTouched = (el) => !!(el && touched.get(el));
+    const shouldShow = (el) => submitAttempted || isTouched(el);
+
     function refresh() {
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        setText(IDS.regMsg, "");
-
         const firstOk = !!String(f1.value || "").trim();
         const lastOk  = !!String(f2.value || "").trim();
+        const secOk   = !!String(sec.value || "").trim();
 
         const dobRes = validateDOB(dob.value);
         const emRes  = validateEmail(em.value);
         const unRes  = validateUsername(un.value);
         const pwRes  = validatePassword(pw.value);
 
-        setInvalid(f1, !firstOk && f1.value.length > 0);
-        setInvalid(f2, !lastOk && f2.value.length > 0);
-        setInvalid(dob, !!String(dob.value||"").trim() && !dobRes.ok);
-        setInvalid(em,  !!String(em.value||"").trim()  && !emRes.ok);
-        setInvalid(un,  !!String(un.value||"").trim()  && !unRes.ok);
-        setInvalid(pw,  !!String(pw.value||"").trim()  && !pwRes.ok);
+        setInvalid(f1, shouldShow(f1) && !firstOk);
+        setInvalid(f2, shouldShow(f2) && !lastOk);
+        setInvalid(dob, shouldShow(dob) && !dobRes.ok);
+        setInvalid(em,  shouldShow(em)  && !emRes.ok);
+        setInvalid(un,  shouldShow(un)  && !unRes.ok);
+        setInvalid(pw,  shouldShow(pw)  && !pwRes.ok);
+        setInvalid(sec, shouldShow(sec) && !secOk);
 
-        const allOk = firstOk && lastOk && dobRes.ok && emRes.ok && unRes.ok && pwRes.ok;
+        const allOk = firstOk && lastOk && dobRes.ok && emRes.ok && unRes.ok && pwRes.ok && secOk;
         setLocked(submit, !allOk);
 
-        if (!firstOk || !lastOk) setText(IDS.regMsg, t("req"));
-        else if (!dobRes.ok) setText(IDS.regMsg, dobRes.msg);
-        else if (!emRes.ok) setText(IDS.regMsg, emRes.msg);
-        else if (!unRes.ok) setText(IDS.regMsg, unRes.msg);
-        else if (!pwRes.ok) setText(IDS.regMsg, pwRes.msg);
+        const anyTouched = [f1, f2, dob, em, un, pw, sec].some((el) => isTouched(el));
+        if (submitAttempted || anyTouched) {
+          if (!firstOk || !lastOk) setText(IDS.regMsg, t("req"));
+          else if (!dobRes.ok) setText(IDS.regMsg, dobRes.msg);
+          else if (!emRes.ok) setText(IDS.regMsg, emRes.msg);
+          else if (!unRes.ok) setText(IDS.regMsg, unRes.msg);
+          else if (!pwRes.ok) setText(IDS.regMsg, pwRes.msg);
+          else if (!secOk) setText(IDS.regMsg, t("req"));
+          else setText(IDS.regMsg, "");
+        } else {
+          setText(IDS.regMsg, "");
+        }
 
         stripPasswordPlaceholders(document);
       });
     }
 
-    [f1, f2, dob, em, un, pw].forEach((el) => {
+    [f1, f2, dob, em, un, pw, sec].forEach((el) => {
       if (el.__eptec_reg_bound) return;
       el.__eptec_reg_bound = true;
-      el.addEventListener("input", refresh);
-      el.addEventListener("blur", refresh);
+      el.addEventListener("input", () => { markTouched(el); refresh(); });
+      el.addEventListener("blur", () => { markTouched(el); refresh(); });
     });
 
     if (!submit.__eptec_reg_submit) {
       submit.__eptec_reg_submit = true;
       submit.addEventListener("click", async () => {
+        submitAttempted = true;
         refresh();
         if (submit.disabled) return;
+
+        console.info("[REGISTER] submit", { username: String(un.value || "").trim() });
 
         const payload = {
           firstName: String(f1.value || "").trim(),
           lastName:  String(f2.value || "").trim(),
           birthdate: String(dob.value || "").trim(),
           email:     String(em.value || "").trim(),
+          company:   String(company?.value || "").trim(),
+          securityAnswer: String(sec.value || "").trim(),
           username:  String(un.value || "").trim(),
           password:  String(pw.value || "")
         };
@@ -356,35 +318,88 @@
   // -----------------------------
   function bindForgot() {
     const inp = $(IDS.forgotIdentity);
+    const sec = $(IDS.forgotSec);
+    const npw = $(IDS.forgotNew);
+    const cpw = $(IDS.forgotConfirm);
     const btn = $(IDS.forgotSubmit);
 
-    if (!inp || !btn) return;
+    if (!inp || !sec || !npw || !cpw || !btn) return;
+
+    let submitAttempted = false;
+    const touched = new WeakMap();
+    const markTouched = (el) => { if (el) touched.set(el, true); };
+    const isTouched = (el) => !!(el && touched.get(el));
+    const shouldShow = (el) => submitAttempted || isTouched(el);
 
     function refresh() {
-      const ok = !!String(inp.value || "").trim();
-      setLocked(btn, !ok);
-      if (!ok) setText(IDS.forgotMsg, t("req"));
-      else setText(IDS.forgotMsg, "");
+      const idOk = !!String(inp.value || "").trim();
+      const secOk = !!String(sec.value || "").trim();
+      const pwRes = validatePassword(npw.value);
+      const matchOk = !!String(npw.value || "") && String(npw.value || "") === String(cpw.value || "");
+
+      setInvalid(inp, shouldShow(inp) && !idOk);
+      setInvalid(sec, shouldShow(sec) && !secOk);
+      setInvalid(npw, shouldShow(npw) && !pwRes.ok);
+      setInvalid(cpw, shouldShow(cpw) && !matchOk);
+
+      const allOk = idOk && secOk && pwRes.ok && matchOk;
+      setLocked(btn, !allOk);
+
+      const anyTouched = [inp, sec, npw, cpw].some((el) => isTouched(el));
+      if (submitAttempted || anyTouched) {
+        if (!idOk) setText(IDS.forgotMsg, t("req"));
+        else if (!secOk) setText(IDS.forgotMsg, t("req"));
+        else if (!pwRes.ok) setText(IDS.forgotMsg, pwRes.msg);
+        else if (!matchOk) setText(IDS.forgotMsg, t("pass_match"));
+        else setText(IDS.forgotMsg, "");
+      } else {
+        setText(IDS.forgotMsg, "");
+      }
     }
 
     if (!inp.__eptec_forgot_bound) {
       inp.__eptec_forgot_bound = true;
-      inp.addEventListener("input", refresh);
-      inp.addEventListener("blur", refresh);
+      inp.addEventListener("input", () => { markTouched(inp); refresh(); });
+      inp.addEventListener("blur", () => { markTouched(inp); refresh(); });
     }
+
+    [sec, npw, cpw].forEach((el) => {
+      if (el.__eptec_forgot_bound) return;
+      el.__eptec_forgot_bound = true;
+      el.addEventListener("input", () => { markTouched(el); refresh(); });
+      el.addEventListener("blur", () => { markTouched(el); refresh(); });
+    });
 
     if (!btn.__eptec_forgot_btn) {
       btn.__eptec_forgot_btn = true;
       btn.addEventListener("click", async () => {
+        submitAttempted = true;
         refresh();
         if (btn.disabled) return;
 
         const identity = String(inp.value || "").trim();
-         const res = await backendForgot(identity).catch((e) => {
+        const securityAnswer = String(sec.value || "").trim();
+        const newPassword = String(npw.value || "");
+
+        console.info("[FORGOT] request", { identity });
+
+        const res = await backendForgot(identity).catch((e) => {
           console.warn("[REGISTRATION] backendForgot failed", e);
           return { ok: true, message: t("reset_sent") };
         });
-        setText(IDS.forgotMsg, String(res?.message || t("reset_sent")));
+        let resetOk = false;
+        const link = String(res?.resetLink || "");
+        const tokenMatch = link.match(/#reset:([A-Za-z0-9]+)/);
+        const token = tokenMatch ? tokenMatch[1] : "";
+        if (token && window.EPTEC_MOCK_BACKEND?.resetPasswordByToken) {
+          const resetRes = safe(() => window.EPTEC_MOCK_BACKEND.resetPasswordByToken({ token, newPassword, securityAnswer }));
+          resetOk = !!resetRes?.ok;
+        } else {
+          console.warn("[REGISTRATION] reset token missing or backend reset not available", { hasToken: !!token });
+        }
+
+        if (resetOk) setText(IDS.forgotMsg, t("reset_done"));
+        else setText(IDS.forgotMsg, String(res?.message || t("reset_sent")));
 
         setTimeout(() => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })), 650);
       });
@@ -414,6 +429,30 @@
         if (scr) { scr.classList.add("modal-hidden"); scr.style.display = "none"; }
       });
     }
+  }
+
+  function openRegister() {
+    const scr = $(IDS.registerScreen);
+    if (!scr) return false;
+    scr.classList.remove("modal-hidden");
+    scr.style.display = "flex";
+    applyNonPasswordHints();
+    bindRegister();
+    bindCloseButtons();
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "register" }));
+    return true;
+  }
+
+  function openForgot() {
+    const scr = $(IDS.forgotScreen);
+    if (!scr) return false;
+    scr.classList.remove("modal-hidden");
+    scr.style.display = "flex";
+    stripPasswordPlaceholders(document);
+    bindForgot();
+    bindCloseButtons();
+    safe(() => window.EPTEC_UI_STATE?.set?.({ modal: "forgot" }));
+    return true;
   }
 
   function applyNonPasswordHints() {
@@ -446,6 +485,8 @@
 
     window.RegistrationEngine = window.RegistrationEngine || {};
     window.RegistrationEngine.dobFormatHint = () => dobHint();
+    window.RegistrationEngine.open = () => openRegister();
+    window.RegistrationEngine.openForgot = () => openForgot();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
