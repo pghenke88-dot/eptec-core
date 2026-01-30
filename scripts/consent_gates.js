@@ -14,7 +14,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[CONSENT_GATES] safe fallback", e);
+      return undefined;
+    }
+  };
   const $ = (id) => document.getElementById(id);
 
   const LS = {
@@ -256,4 +262,3 @@
   window.EPTEC_CONSENT_GATES.refreshRoom2TopNotice = window.EPTEC_CONSENT_GATES.refreshRoom2TopNotice || setRoom2TopNotice;
 
 })();
-
