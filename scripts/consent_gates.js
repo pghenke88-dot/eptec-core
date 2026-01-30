@@ -157,8 +157,16 @@
     overlay.appendChild(box);
     document.body.appendChild(overlay);
   }
+  function isDemoMode() {
+    const st = safe(() => window.EPTEC_UI_STATE?.get?.()) || safe(() => window.EPTEC_UI_STATE?.state) || {};
+    return !!st?.modes?.demo;
+  }
 
   function room1MethodGate(cb) {
+    if (isDemoMode()) {
+      console.warn("[EPTEC_GUARD]", { area: "consent.r1", reason: "demo_skip_gate" });
+      return safe(() => cb && cb(true));
+    }
     const ok = localStorage.getItem(LS.r1_ok) === "1";
     if (ok) return safe(() => cb && cb(true));
 
