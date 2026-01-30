@@ -390,7 +390,13 @@
    ========================================================= */
 (() => {
   "use strict";
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+ const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[EPTEC DEMO] safe fallback", e);
+      return undefined;
+    }
+  };
 
   function store(){ return window.EPTEC_UI_STATE || window.EPTEC_MASTER?.UI_STATE || null; }
   function setState(p){
