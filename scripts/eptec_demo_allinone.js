@@ -62,8 +62,8 @@
     }
   }
 
-  // default OFF if not set
-  if (localStorage.getItem(LS_KEY) == null) localStorage.setItem(LS_KEY, "0");
+ // default ON if not set (ensure demo button is reachable)
+  if (localStorage.getItem(LS_KEY) == null) localStorage.setItem(LS_KEY, "1");
 
   // ---------------------------
   // UI: Admin toggle (dashboard) + demo badge
@@ -253,9 +253,12 @@
         e.preventDefault();
         e.stopPropagation();
         safe(() => window.SoundEngine?.uiConfirm?.());
+        const D = window.EPTEC_MASTER?.Dramaturgy;
+        if (D?.to) return safe(() => D.to(toScene, { via: "demo_button" })); 
         setState({ scene: toScene, view: toScene });
       }, true);
-      doorEl.appendChild(btn);
+      const host = doorEl.parentElement || doorEl;
+      host.appendChild(btn);
     }
 
     inject(door1, "demo-enter-door1", "DEMO: Enter Room 1", "room1");
@@ -292,9 +295,40 @@
     return orb;
   }
 
+     function ensureBackToDoors() {
+    let btn = $("demo-back-doors");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "demo-back-doors";
+      btn.type = "button";
+      btn.textContent = "Back to Doors";
+      btn.style.position = "fixed";
+      btn.style.left = "18px";
+      btn.style.bottom = "22px";
+      btn.style.zIndex = "99999";
+      btn.style.padding = "10px 14px";
+      btn.style.borderRadius = "12px";
+      btn.style.border = "1px solid rgba(255,255,255,0.25)";
+      btn.style.background = "rgba(0,0,0,0.35)";
+      btn.style.color = "#fff";
+      btn.style.cursor = "pointer";
+      btn.style.display = "none";
+      document.body.appendChild(btn);
+    }
+    return btn;
+  }
+
   function inRoom(st) {
     const s = String(st?.scene || st?.view || "").toLowerCase();
     return s === "room1" || s === "room2" || s === "room-1" || s === "room-2";
+  }
+
+    function updateBackToDoors() {
+    const st = getState();
+    const btn = ensureBackToDoors();
+    const show = isDemo(st) && inRoom(st);
+    btn.style.display = show ? "block" : "none";
+    btn.style.pointerEvents = show ? "auto" : "none";
   }
 
   function updateOrb() {
@@ -323,6 +357,21 @@
     });
   }
 
+   function bindBackToDoors() {
+    const btn = ensureBackToDoors();
+    if (btn.__bound) return;
+    btn.__bound = true;
+
+    btn.addEventListener("click", () => {
+      const st = getState();
+      if (!isDemo(st) || !inRoom(st)) return;
+      safe(() => window.SoundEngine?.uiConfirm?.());
+      const D = window.EPTEC_MASTER?.Dramaturgy;
+      if (D?.to) return safe(() => D.to("doors", { via: "demo_back" }));
+      setState({ scene: "doors", view: "doors" });
+    });
+  }
+
   // ---------------------------
   // UI update
   // ---------------------------
@@ -347,6 +396,7 @@
     applyDemoDisabledLook();
     ensureDemoDoorButtons();
     updateOrb();
+    updateBackToDoors(); 
   }
 
   // ---------------------------
@@ -371,7 +421,8 @@
 
     // Orb
     bindOrb();
-
+    bindBackToDoors();
+     
     // Update loop
     updateUI();
     subscribe(updateUI);
@@ -415,7 +466,7 @@
     btn.addEventListener("click", (e) => {
       // let existing handlers run too, but we enforce view timing via state
       setState({ scene: "tunnel", view: "tunnel" });
-      setTimeout(() => setState({ scene: "viewdoors", view: "doors" }), 28000);
+      setTimeout(() => setState({ scene: "viewdoors", view: "doors" }), 3000);
     }, true);
   }
 
