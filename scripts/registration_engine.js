@@ -131,7 +131,7 @@
   // HARD RULE: no placeholders on password inputs
   // (No MutationObserver. Enforce on init + on modal open.)
   // -----------------------------
-  function stripPasswordPlaceholders(root = document) {
+  function stripPasswordPlaceholders(root) {
     safe(() => {
       const scope = root || document;
       scope.querySelectorAll('input[type="password"]').forEach((el) => {
