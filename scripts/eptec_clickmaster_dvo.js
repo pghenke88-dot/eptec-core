@@ -270,8 +270,8 @@
     }
 
     function forceStop(reason = "manual") {
-      try { recorder?.stop?.(); } catch {}
-      try { stream?.getTracks?.().forEach(t => t.stop()); } catch {}
+      try { recorder?.stop?.(); } catch (e) { console.warn("[EPTEC CLICKMASTER] recorder stop failed", e); }
+      try { stream?.getTracks?.().forEach(t => t.stop()); } catch (e) { console.warn("[EPTEC CLICKMASTER] track stop failed", e); }
       stream = null; recorder = null;
       showIcon(false);
       Safe.try(() => UI()?.set?.({ camera: false, capture: { status: "off", stoppedAt: Safe.now(), reason } }), "Capture.UI_STATE.stop");
