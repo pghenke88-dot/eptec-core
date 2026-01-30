@@ -612,14 +612,13 @@ function sourceHintFor(code, moduleTitle) {
   }
 function ensureTempDownloadFallback() {
     if (window.urlTempDownload) return;
-    window.urlTempDownload = (filename, text) => {
-      if (typeof downloadText === "function") {
-        downloadText(filename || "download.txt", text || "");
-        return;
-      }
+    if (typeof downloadText !== "function") {
       console.warn("[EPTEC R1] urlTempDownload fallback unavailable: downloadText missing.");
+      return;
+    }
+    window.urlTempDownload = (filename, text) => {
+      downloadText(filename || "download.txt", text || "");
     };
-    console.warn("[EPTEC R1] urlTempDownload missing; fallback installed.");
   }
   function wireWorkbench() {
     const doDownload = () => {
