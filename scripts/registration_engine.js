@@ -17,7 +17,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[REGISTRATION] safe fallback", e);
+      return undefined;
+    }
+  };
   const $ = (id) => document.getElementById(id);
 
   // -----------------------------
@@ -329,7 +335,10 @@
           password:  String(pw.value || "")
         };
 
-        const res = await backendRegister(payload).catch(() => ({ ok: false, message: "Registration failed." }));
+        const res = await backendRegister(payload).catch((e) => {
+          console.warn("[REGISTRATION] backendRegister failed", e);
+          return { ok: false, message: "Registration failed." };
+        });
         if (!res?.ok) {
           setText(IDS.regMsg, String(res?.message || "Registration failed."));
           return;
@@ -371,7 +380,10 @@
         if (btn.disabled) return;
 
         const identity = String(inp.value || "").trim();
-        const res = await backendForgot(identity).catch(() => ({ ok: true, message: t("reset_sent") }));
+         const res = await backendForgot(identity).catch((e) => {
+          console.warn("[REGISTRATION] backendForgot failed", e);
+          return { ok: true, message: t("reset_sent") };
+        });
         setText(IDS.forgotMsg, String(res?.message || t("reset_sent")));
 
         setTimeout(() => safe(() => window.EPTEC_UI_STATE?.set?.({ modal: null })), 650);
