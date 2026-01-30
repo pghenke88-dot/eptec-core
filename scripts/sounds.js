@@ -81,9 +81,11 @@
     try {
       const p = audio.play();
       if (p && typeof p.catch === "function") {
-        p.catch(() => {}); // NEVER propagate autoplay errors
+       p.catch((e) => console.warn("[SOUND] autoplay prevented", e)); // NEVER propagate autoplay errors
       }
-    } catch {}
+     } catch (e) {
+      console.warn("[SOUND] play failed", e);
+    }
   }
 
   function safeStop(audio) {
@@ -91,7 +93,9 @@
     try {
       audio.pause();
       audio.currentTime = 0;
-    } catch {}
+    } catch (e) {
+      console.warn("[SOUND] play failed", e);
+    }
   }
 
   /* =========================================================
@@ -109,7 +113,9 @@
     try {
       a.volume = 0.001;
       safePlay(a);
-    } catch {}
+     } catch (e) {
+      console.warn("[SOUND] unlock failed", e);
+    }
   }
 
   function playOneShot(name, volume = 0.6) {
@@ -124,7 +130,9 @@
       a.loop = false;
       a.volume = clamp(volume);
       safePlay(a);
-    } catch {}
+    } catch (e) {
+      console.warn("[SOUND] playOneShot failed", e);
+    }
   }
 
   function playLoop(name, volume = 0.2) {
@@ -141,7 +149,8 @@
       safePlay(a);
       activeLoops.add(a);
       return a;
-    } catch {
+    } catch (e) {
+      console.warn("[SOUND] playLoop failed", e);
       return null;
     }
   }
