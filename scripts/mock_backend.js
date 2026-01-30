@@ -68,7 +68,9 @@
           crypto.getRandomValues(a);
           return Array.from(a).map(b => b.toString(16).padStart(2, "0")).join("");
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[MOCK BACKEND] crypto randToken failed", e);
+      }
       return (Math.random().toString(16).slice(2).padEnd(len * 2, "0")).slice(0, len * 2);
     }
   };
