@@ -163,11 +163,13 @@ function leaveTunnel(cb) {
   }
 
   // ---------- sound lifecycle (canonical only) ----------
+  const USE_LOCAL_AUDIO = !window.EPTEC_MASTER?.Audio?.cue;
   let audioUnlocked = false;
   let lastMode = null;
   let pendingMode = null;
 
   function unlockAudioOnce() {
+    if (!USE_LOCAL_AUDIO) return;
     if (audioUnlocked) return;
     audioUnlocked = true;
     safe(() => window.SoundEngine?.unlockAudio?.());
@@ -177,16 +179,19 @@ function leaveTunnel(cb) {
   }
 
   function startAmbient() {
+    if (!USE_LOCAL_AUDIO) return;
     if (!audioUnlocked) return;
     safe(() => window.SoundEngine?.startAmbient?.());
   }
 
   function stopTunnelSound() {
+     if (!USE_LOCAL_AUDIO) return;
     safe(() => window.SoundEngine?.stopTunnel?.());
     safe(() => window.SoundEngine?.stopAll?.());
   }
 
   function startTunnelSound() {
+    if (!USE_LOCAL_AUDIO) return;
     if (!audioUnlocked) return;
     safe(() => window.SoundEngine?.stopAmbient?.());
     safe(() => window.SoundEngine?.tunnelFall?.());
@@ -205,6 +210,7 @@ function leaveTunnel(cb) {
   }
 
   function applyMode(m, { force = false } = {}) {
+    if (!USE_LOCAL_AUDIO) return;
     if (!audioUnlocked) {
       pendingMode = m;
       lastMode = m;
@@ -225,12 +231,14 @@ function leaveTunnel(cb) {
   }
 
   function onState(st) {
+    if (!USE_LOCAL_AUDIO) return;
     const m = modeFromState(st);
     applyMode(m);
   }
 
   // Wind starts when user interacts with UI elements (not background)
   function bindUserInteractionAudio() {
+    if (!USE_LOCAL_AUDIO) return;
     const ids = [
       "login-username","login-password","admin-code",
       "btn-login","btn-register","btn-forgot","admin-submit",
