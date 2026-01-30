@@ -53,6 +53,13 @@ function getPlan() {
     const el = $(id);
     if (!el) return;
     el.classList.toggle("modal-hidden", !open);
+    if (open) {
+      el.style.display = "flex";
+      el.style.pointerEvents = "auto";
+    } else {
+      el.style.display = "none";
+      el.style.pointerEvents = "none";
+    }
   }
 
   function resolveFrameworkLang() {
