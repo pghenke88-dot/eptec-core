@@ -140,7 +140,7 @@ function leaveTunnel(cb) {
 
     if (!inp.style.paddingRight) inp.style.paddingRight = "44px";
 
-    btn.addEventListener("click", () => {
+ btn.addEventListener("click", () => {
       safe(() => window.SoundEngine?.uiConfirm?.());
       inp.type = (inp.type === "password") ? "text" : "password";
       btn.style.opacity = (inp.type === "password") ? "0.75" : "1";
@@ -165,15 +165,19 @@ function leaveTunnel(cb) {
   // ---------- sound lifecycle (canonical only) ----------
   let audioUnlocked = false;
   let lastMode = null;
+  let pendingMode = null;
 
   function unlockAudioOnce() {
     if (audioUnlocked) return;
     audioUnlocked = true;
     safe(() => window.SoundEngine?.unlockAudio?.());
+    const mode = pendingMode || modeFromState(getState());
+    pendingMode = null;
+    applyMode(mode, { force: true });
   }
 
   function startAmbient() {
-    unlockAudioOnce();
+    if (!audioUnlocked) return;
     safe(() => window.SoundEngine?.startAmbient?.());
   }
 
@@ -183,7 +187,7 @@ function leaveTunnel(cb) {
   }
 
   function startTunnelSound() {
-    unlockAudioOnce();
+    if (!audioUnlocked) return;
     safe(() => window.SoundEngine?.stopAmbient?.());
     safe(() => window.SoundEngine?.tunnelFall?.());
   }
@@ -200,9 +204,13 @@ function leaveTunnel(cb) {
     return "meadow";
   }
 
-  function onState(st) {
-    const m = modeFromState(st);
-    if (m === lastMode) return;
+  function applyMode(m, { force = false } = {}) {
+    if (!audioUnlocked) {
+      pendingMode = m;
+      lastMode = m;
+      return;
+    }
+    if (!force && m === lastMode) return;
 
     if (m === "tunnel") {
       startTunnelSound();
@@ -214,6 +222,11 @@ function leaveTunnel(cb) {
     }
 
     lastMode = m;
+  }
+
+  function onState(st) {
+    const m = modeFromState(st);
+    applyMode(m);
   }
 
   // Wind starts when user interacts with UI elements (not background)
