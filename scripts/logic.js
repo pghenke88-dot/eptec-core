@@ -1191,50 +1191,102 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
   };
 
   /* =========================================================
-     19) START SCREEN ENTRY PATHS (3 ways)
-     - Demo button
-     - User login -> tunnel -> doors
-     - Author start master -> tunnel -> doors
-     - Admin camera toggle is only a UI option; logic stores it
-     ========================================================= */
-  const Entry = {
-    setCameraOption(enabled) {
-      UI_STATE.set({ camera: !!enabled });
-      Compliance.log("ENTRY", "CAMERA_OPTION", { enabled: !!enabled });
-    },
+   19) START SCREEN ENTRY PATHS (3 ways) — NOTENHEFT ONLY
+   ---------------------------------------------------------
+   RULE (hard):
+   - Logic decides + updates state, but NEVER triggers scene rendering.
+   - No Dramaturgy.to / no Renderer.applyScene / no section display changes here.
+   - Returns a "plan hint" for the Dirigent (Clickmaster):
+     { ok, nextScene, tunnelMs, reason, mode }
+   ========================================================= */
 
-    demo() {
-      Auth.setMode(TERMS.modes.demo);
-      UI_STATE.set({ auth: { isAuthed: false, userId: "DEMO" } });
-      Compliance.log("ENTRY", "DEMO");
-      Dramaturgy.startToDoors();
-    },
+const Entry = {
+  userLogin(username, password) {
+    const u = Safe.str(username).trim();
+    const p = Safe.str(password).trim();
 
-    userLogin(username, password) {
-      const res = Auth.loginUser({ username, password });
-      if (!res?.ok) {
-        UI.toast(res?.message || "Login failed.", "error");
-        Compliance.log("AUTH", "LOGIN_FAIL", { username: Safe.str(username) });
-        return;
-      }
-      Auth.setMode(TERMS.modes.user);
-      UI_STATE.set({ auth: { isAuthed: true, userId: res.userId || null } });
-      Compliance.log("AUTH", "LOGIN_OK", { userId: res.userId });
-      Dramaturgy.startToDoors();
-    },
-
-    authorStartMaster(code) {
-      if (!Auth.verifyStartMaster(code)) {
-        UI.toast("Access denied.", "error");
-        Compliance.log("AUTH", "MASTER_START_DENIED");
-        return;
-      }
-      Auth.setMode(TERMS.modes.author);
-      UI_STATE.set({ auth: { isAuthed: true, userId: "AUTHOR" } });
-      Compliance.log("AUTH", "MASTER_START_OK");
-      Dramaturgy.startToDoors();
+    if (!u || !p) {
+      Compliance.log("AUTH", "LOGIN_BLOCKED_MISSING", { uPresent: !!u, pPresent: !!p });
+      UI.toast("Login nicht möglich.", "error");
+      return { ok: false, reason: "missing" };
     }
-  };
+
+    // Auth check (business logic)
+    const res = Safe.try(() => Auth.loginUser({ username: u, password: p }), "AUTH.loginUser") || {};
+    if (!res.ok) {
+      Compliance.log("AUTH", "LOGIN_FAIL", { username: u });
+      UI.toast("Login fehlgeschlagen.", "error");
+      return { ok: false, reason: "denied" };
+    }
+
+    // State + mode only
+    Auth.setMode(TERMS.modes.user);
+    UI_STATE.set({ auth: { isAuthed: true, userId: res.userId || null } });
+
+    Compliance.log("AUTH", "LOGIN_OK", { userId: res.userId || null });
+
+    // Plan hint for Clickmaster (Dirigent)
+    return {
+      ok: true,
+      mode: TERMS.modes.user,
+      nextScene: TERMS.scenes.tunnel,
+      tunnelMs: 3000,
+      reason: "login_ok"
+    };
+  },
+
+  demo() {
+    // State + mode only
+    Auth.setMode(TERMS.modes.demo);
+    UI_STATE.set({ auth: { isAuthed: false, userId: "DEMO" } });
+
+    Compliance.log("ENTRY", "DEMO_START", {});
+
+    return {
+      ok: true,
+      mode: TERMS.modes.demo,
+      nextScene: TERMS.scenes.tunnel,
+      tunnelMs: 3000,
+      reason: "demo_start"
+    };
+  },
+
+  authorStartMaster(code) {
+    const raw = Safe.str(code).trim();
+
+    const ok = Safe.try(() => Auth.verifyStartMaster(raw), "AUTH.verifyStartMaster");
+    if (!ok) {
+      Compliance.log("AUTH", "MASTER_START_DENIED", {});
+      UI.toast("Access denied.", "error");
+      return { ok: false, reason: "denied" };
+    }
+
+    // State + mode only
+    Auth.setMode(TERMS.modes.author);
+    UI_STATE.set({ auth: { isAuthed: true, userId: "AUTHOR" } });
+
+    Compliance.log("AUTH", "MASTER_START_OK", {});
+
+    return {
+      ok: true,
+      mode: TERMS.modes.author,
+      nextScene: TERMS.scenes.tunnel,
+      tunnelMs: 3000,
+      reason: "master_ok"
+    };
+  },
+
+  // Optional: for camera intent (logic only, no media start)
+  setCameraOption(enabled) {
+    const on = !!enabled;
+    UI_STATE.set({ camera: on });
+    Compliance.log("CAPTURE", on ? "INTENT_ON" : "INTENT_OFF", {});
+    return { ok: true, camera: on };
+  }
+};
+
+// expose
+EPTEC_MASTER.Entry = Entry;
 
   /* =========================================================
      20) APPEND-RECOGNITION (MODULE REGISTRY)
