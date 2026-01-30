@@ -47,10 +47,13 @@
   const UI_CONTROL = {
     __ACTIVE: true,
     __CLICKMASTER_ACTIVATED: false,
-    _triggerHandlers: Object.create(null) // triggerId -> [fn...]
+        __CLICK_ROUTER_ACTIVE: true,
+    __ROUTER_DEDUPE_MS: 800,
+    _actions: Object.create(null) // triggerId -> { handler, fn }
   };
   window.EPTEC_UI_CONTROL = UI_CONTROL;
-
+  window.EPTEC_CLICK_ROUTER_ACTIVE = true;
+   
   // ---------------------------------------------------------
   // Assistants (delegation only)
   // ---------------------------------------------------------
@@ -72,33 +75,42 @@
   // ---------------------------------------------------------
   // Trigger registration (union, no overwrite)
   // ---------------------------------------------------------
-  function register(triggerId, fn) {
+  function registerAction(triggerId, handler, fn) {
     if (!triggerId || !Safe.isFn(fn)) return false;
-    const arr = UI_CONTROL._triggerHandlers[triggerId] || [];
-    arr.push(fn);
-    UI_CONTROL._triggerHandlers[triggerId] = arr;
+    if (UI_CONTROL._actions[triggerId]) {
+      console.warn("[EPTEC_UICTRL]", "Duplicate action registration blocked.", { triggerId, handler });
+      return false;
+    }
+    UI_CONTROL._actions[triggerId] = { handler, fn };
     return true;
   }
 
   // ---------------------------------------------------------
   // Trigger resolver (DVO-first, safe fallbacks)
   // ---------------------------------------------------------
-  function resolveTriggerIdFromTarget(t) {
+  function resolveTriggerFromTarget(t) {
     if (!t) return null;
 
     // lang item: DVO preferred, fallback literal
-    if (t.classList?.contains("lang-item")) return TR("langItem") || "lang-item";
+    if (t.classList?.contains("lang-item")) {
+      return { id: TR("langItem") || "lang-item", ctx: { lang: t.getAttribute?.("data-lang") || null } };
+    }
 
     // data-logic-id is canonical
     const dl = Safe.try(() => t.getAttribute?.("data-logic-id"), "resolve.dataLogicId");
-    if (dl) return dl;
+    if (dl) return { id: dl, ctx: {} };
 
     // id fallback
     const id = t.id;
     if (id) {
-      if (id === "admin-camera-toggle") return t.checked ? (TR("cameraOn") || "admin-camera-toggle:on") : (TR("cameraOff") || "admin-camera-toggle:off");
-      if (id.startsWith("btn-logout")) return TR("logoutAny") || "logout.any";
-      return id;
+      if (id === "admin-camera-toggle") {
+        return {
+          id: t.checked ? (TR("cameraOn") || "admin-camera-toggle:on") : (TR("cameraOff") || "admin-camera-toggle:off"),
+          ctx: { checked: !!t.checked }
+        };
+      }
+      if (id.startsWith("btn-logout")) return { id: TR("logoutAny") || "logout.any", ctx: { sourceId: id } };
+      return { id, ctx: {} };
     }
 
     return null;
@@ -107,39 +119,59 @@
   // ---------------------------------------------------------
   // Global capture dispatch (no decisions)
   // ---------------------------------------------------------
+   const DEDUPE = new Map();
+
+  function isDuplicate(actionId) {
+    const now = Date.now();
+    const last = DEDUPE.get(actionId) || 0;
+    if (last && (now - last) < UI_CONTROL.__ROUTER_DEDUPE_MS) {
+      console.warn("[EPTEC_DEDUPE]", actionId);
+      return true;
+    }
+    DEDUPE.set(actionId, now);
+    setTimeout(() => {
+      if (DEDUPE.get(actionId) === now) DEDUPE.delete(actionId);
+    }, UI_CONTROL.__ROUTER_DEDUPE_MS + 25);
+    return false;
+  }
   function dispatch(triggerId, ctx) {
-    const fns = UI_CONTROL._triggerHandlers[triggerId];
-    if (!fns || !fns.length) return false;
-    for (const fn of fns) Safe.try(() => fn(ctx), `DISPATCH:${triggerId}`);
-    return true;
+    const action = UI_CONTROL._actions[triggerId];
+    if (!action) return false;
+    const result = Safe.try(() => action.fn(ctx), `ACTION:${action.handler}`);
+    console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
   }
 
-  document.addEventListener("click", (e) => {
-    const triggerId = resolveTriggerIdFromTarget(e.target);
-    if (!triggerId) return;
+function route(triggerId, ctx) {
+    const clickmasterHandled = Safe.try(
+      () => window.EPTEC_CLICKMASTER?.run?.(triggerId, ctx),
+      "CLICKMASTER.run"
+    );
+    if (clickmasterHandled) return true;
+    return dispatch(triggerId, ctx);
+  }
 
+  function handleEvent(e) {
+    const resolved = resolveTriggerFromTarget(e.target);
+    if (!resolved) return;
+    const triggerId = resolved.id;
+    if (!triggerId) return;
+    if (isDuplicate(triggerId)) return;
+     
     // UI confirm sound is allowed as pure UI feedback
     AUDIO.uiConfirm();
 
-    const ok = dispatch(triggerId, { event: e, triggerId });
+    const ctx = { event: e, triggerId, ...resolved.ctx };
+    const ok = route(triggerId, ctx);
+    if (!ok) console.warn("[EPTEC_CLICK]", { triggerId, reason: "no_handler" });
     if (ok) {
       e.preventDefault?.();
       e.stopPropagation?.();
       e.stopImmediatePropagation?.();
     }
-  }, true);
+  }
 
-  document.addEventListener("change", (e) => {
-    const triggerId = resolveTriggerIdFromTarget(e.target);
-    if (!triggerId) return;
-
-    const ok = dispatch(triggerId, { event: e, triggerId });
-    if (ok) {
-      e.preventDefault?.();
-      e.stopPropagation?.();
-      e.stopImmediatePropagation?.();
-    }
-  }, true);
+  document.addEventListener("click", handleEvent, true);
+  document.addEventListener("change", handleEvent, true);
 
   // =========================================================
   // APPEND 1 — MASTER PASSWORDS v4
@@ -148,29 +180,20 @@
   // =========================================================
   const APPEND_1 = () => window.EPTEC_MASTER_PASSWORDS;
 
-  function wireAppend1_MasterRecovery() {
-    const btnCreate = Safe.byId("master-reset-link") || document.querySelector("[data-logic-id='master.reset.link']");
-    const btnApply  = Safe.byId("master-reset-apply") || document.querySelector("[data-logic-id='master.reset.apply']");
+  function registerAppend1_MasterRecovery() {
+    registerAction(TR("masterResetLink") || "master-reset-link", "APPEND1.requestReset", () => {
+      const identity = Safe.str(Safe.byId("master-identity")?.value).trim();
+      Safe.try(() => APPEND_1()?.requestReset?.(identity), "APPEND1.requestReset");
+    });;
 
-    if (btnCreate && !btnCreate.__eptec_bound) {
-      btnCreate.__eptec_bound = true;
-      btnCreate.addEventListener("click", () => {
-        const identity = Safe.str(Safe.byId("master-identity")?.value).trim();
-        Safe.try(() => APPEND_1()?.requestReset?.(identity), "APPEND1.requestReset");
-      }, true);
+    registerAction(TR("masterResetApply") || "master-reset-apply", "APPEND1.applyReset", () => {
+      const token = Safe.str(Safe.byId("master-reset-token")?.value).trim().toUpperCase();
+      const securityAnswer = Safe.str(Safe.byId("master-sec-answer")?.value).trim();
+      const newStartCode = Safe.str(Safe.byId("master-new-start")?.value).trim();
+      const newDoorCode  = Safe.str(Safe.byId("master-new-door")?.value).trim();
+      Safe.try(() => APPEND_1()?.applyReset?.({ token, securityAnswer, newDoorCode, newStartCode }), "APPEND1.applyReset");
+    });
     }
-
-    if (btnApply && !btnApply.__eptec_bound) {
-      btnApply.__eptec_bound = true;
-      btnApply.addEventListener("click", () => {
-        const token = Safe.str(Safe.byId("master-reset-token")?.value).trim().toUpperCase();
-        const securityAnswer = Safe.str(Safe.byId("master-sec-answer")?.value).trim();
-        const newStartCode = Safe.str(Safe.byId("master-new-start")?.value).trim();
-        const newDoorCode  = Safe.str(Safe.byId("master-new-door")?.value).trim();
-        Safe.try(() => APPEND_1()?.applyReset?.({ token, securityAnswer, newDoorCode, newStartCode }), "APPEND1.applyReset");
-      }, true);
-    }
-  }
 
   // =========================================================
   // APPEND 4/5/6/7 refs (delegation only)
@@ -185,14 +208,14 @@
   // =========================================================
   function registerCoreChannels() {
     // boot -> Dramaturgy.to(meadow)
-    register(TR("boot"), () => {
+    registerAction(TR("boot"), "Dramaturgy.boot", () => {
       const k = KERNEL();
       const meadow = SC("meadow");
       if (!meadow) return;
       Safe.try(() => k?.Dramaturgy?.to?.(meadow, { boot: true }), "KERNEL.Dramaturgy.to(meadow)");
     });
 
-    register(TR("login"), () => {
+    registerAction(TR("login"), "Entry.userLogin", () => {
       const k = KERNEL();
       const u = Safe.str(Safe.byId("login-username")?.value);
       const p = Safe.str(Safe.byId("login-password")?.value);
@@ -204,48 +227,60 @@
       Safe.try(() => k?.Entry?.demo?.(), "KERNEL.Entry.demo");
     });
 
-    register(TR("masterEnter"), () => {
+    registerAction(TR("register"), "Registration.open", () => {
+      const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
+      if (re?.open) return Safe.try(() => re.open({ mode: "new-user" }), "RegistrationEngine.open");
+      Safe.try(() => UI()?.set?.({ modal: "register" }), "UI_STATE.modal.register");
+    });
+
+    registerAction(TR("forgot"), "Registration.openForgot", () => {
+      const re = window.RegistrationEngine || window.EPTEC_REGISTRATION;
+      if (re?.openForgot) return Safe.try(() => re.openForgot({ securityQuestion: true }), "RegistrationEngine.openForgot");
+      Safe.try(() => UI()?.set?.({ modal: "forgot" }), "UI_STATE.modal.forgot");
+    });
+
+    registerAction(TR("masterEnter"), "Entry.authorStartMaster", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("admin-code")?.value);
       Safe.try(() => k?.Entry?.authorStartMaster?.(code), "KERNEL.Entry.authorStartMaster");
     });
 
-    register(TR("door1"), () => {
+    registerAction(TR("door1"), "Doors.clickDoor(door1)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door1 || "door1"), "KERNEL.Doors.clickDoor(door1)");
     });
 
-    register(TR("door2"), () => {
+    registerAction(TR("door2"), "Doors.clickDoor(door2)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door2 || "door2"), "KERNEL.Doors.clickDoor(door2)");
     });
 
-    register(TR("imprint"), () => LEGAL.open(DOC("imprint")));
-    register(TR("terms"), () => LEGAL.open(DOC("terms")));
-    register(TR("support"), () => LEGAL.open(DOC("support")));
-    register(TR("privacyFooter"), () => LEGAL.open(DOC("privacy")));
-
-    register(TR("logoutAny") || "logout.any", () => {
+    registerAction(TR("imprint"), "LEGAL.open(imprint)", () => LEGAL.open(DOC("imprint")));
+    registerAction(TR("terms"), "LEGAL.open(terms)", () => LEGAL.open(DOC("terms")));
+    registerAction(TR("support"), "LEGAL.open(support)", () => LEGAL.open(DOC("support")));
+    registerAction(TR("privacyFooter"), "LEGAL.open(privacy)", () => LEGAL.open(DOC("privacy")));
+     
+    registerAction(TR("logoutAny") || "logout.any", "Auth.logout", () => {
       const k = KERNEL();
       Safe.try(() => k?.Auth?.logout?.(), "KERNEL.Auth.logout");
     });
 
     // Room1 savepoint trigger
-    register("r1.savepoint", () => {
+    registerAction("r1.savepoint", "Room1.savepoint", () => {
       const api = APPEND_4();
       if (api?.savepoint) return Safe.try(() => api.savepoint(), "APPEND4.savepoint");
       Safe.try(() => KERNEL()?.Room1?.savepointDownload?.(), "KERNEL.Room1.savepointDownload");
     });
 
     // Room2 plant backup
-    register("r2.plant.backup", () => {
+    registerAction("r2.plant.backup", "Room2.plant.backup", () => {
       const api = APPEND_5();
       if (api?.exportBackup) return Safe.try(() => api.exportBackup(), "APPEND5.exportBackup");
       Safe.try(() => KERNEL()?.Room2?.openBackupProtocol?.(), "KERNEL.Room2.openBackupProtocol");
     });
 
     // Language item -> APPEND 7 apply
-    register(TR("langItem") || "lang-item", (ctx) => {
+    registerAction(TR("langItem") || "lang-item", "I18N.apply", (ctx) => {
       const t = ctx?.event?.target;
       const btn = t?.closest?.(".lang-item,[data-lang]");
       const code = Safe.str(btn?.getAttribute?.("data-lang") || "").trim();
@@ -254,7 +289,7 @@
     });
 
     // Language globe toggle (pure UI)
-    register(TR("langToggle"), () => {
+    registerAction(TR("langToggle"), "I18N.toggleRail", () => {
       const rail = Safe.byId("lang-rail");
       const wrap = Safe.byId("language-switcher");
       if (rail) rail.classList.toggle("open");
@@ -273,7 +308,7 @@
     }
 
     registerCoreChannels();
-    wireAppend1_MasterRecovery();
+    registerAppend1_MasterRecovery();
 
     Safe.try(() => KERNEL()?.Compliance?.log?.("UICTRL", "READY", { at: Safe.iso() }), "BOOT.log");
   }
