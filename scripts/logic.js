@@ -1327,7 +1327,12 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
     init() {
       if (document[this.onceKey]) return;
       document[this.onceKey] = true;
-
+      if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER) {
+        Compliance.log("SYSTEM", "BIND_SKIP", { reason: "click_router_active" });
+        AuthorOrb.init();
+        return;
+      }
+       
       // Start paths
       Hotspots.bindOnce(Safe.byId("btn-demo"), () => Entry.demo(), "btn_demo");
 
