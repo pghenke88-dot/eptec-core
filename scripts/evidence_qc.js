@@ -11,7 +11,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+   const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[EVIDENCE_QC] safe fallback", e);
+      return undefined;
+    }
+  };
 
   const LS = {
     audit: "EPTEC_AUDIT_EVENTS",
