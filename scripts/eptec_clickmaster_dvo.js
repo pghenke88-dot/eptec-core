@@ -978,6 +978,7 @@
      ========================= */
   function bindGlobalClickCapture() {
     document.addEventListener("click", (e) => {
+      if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE) return;
       const r = resolveTrigger(e);
       if (!r) return;
 
