@@ -14,7 +14,13 @@
   "use strict";
 
   const Safe = {
-    try(fn){ try { return fn(); } catch { return undefined; } },
+     try(fn){
+      try { return fn(); }
+      catch (e) {
+        console.warn("[AI_WIDGETS] safe fallback", e);
+        return undefined;
+      }
+    },
     qs(sel){ return document.querySelector(sel); },
   };
 
