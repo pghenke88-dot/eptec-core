@@ -21,7 +21,11 @@
   }
 
   function safe(fn) {
-    try { return fn(); } catch { return undefined; }
+    try { return fn(); }
+    catch (e) {
+      console.warn("[ACTIVITY_LOG] safe fallback", e);
+      return undefined;
+    }
   }
 
   function logAction(actionType, details = {}) {
