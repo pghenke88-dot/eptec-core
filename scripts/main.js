@@ -255,6 +255,10 @@ function leaveTunnel(cb) {
       regBtn.__eptec_bound = true;
       regBtn.addEventListener("click", () => {
         safe(() => window.SoundEngine?.uiConfirm?.());
+        if (window.RegistrationEngine?.open) {
+          window.RegistrationEngine.open();
+          return;
+        }
         setState({ modal: "register" });
       }, true);
     }
@@ -264,6 +268,10 @@ function leaveTunnel(cb) {
       forgotBtn.__eptec_bound = true;
       forgotBtn.addEventListener("click", () => {
         safe(() => window.SoundEngine?.uiConfirm?.());
+        if (window.RegistrationEngine?.openForgot) {
+          window.RegistrationEngine.openForgot();
+          return;
+        }
         setState({ modal: "forgot" });
       }, true);
     }
@@ -395,6 +403,18 @@ function leaveTunnel(cb) {
       return;
     }
 
+     const regEngine = window.RegistrationEngine;
+    const canUseEngine = regEngine && (typeof regEngine.open === "function" || typeof regEngine.openForgot === "function");
+    if (canUseEngine) {
+      if (modalKey === "register" && typeof regEngine.open === "function") {
+        regEngine.open();
+        return;
+      }
+      if (modalKey === "forgot" && typeof regEngine.openForgot === "function") {
+        regEngine.openForgot();
+        return;
+      }
+    }
     // Preferred: ask UI controller via state
     setState({ modal: modalKey });
 
@@ -434,8 +454,11 @@ function leaveTunnel(cb) {
   }
 
   function boot() {
-    bindOnce("btn-register", () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("register"); }, "reg");
-    bindOnce("btn-forgot",   () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("forgot");   }, "fp");
+       const hasRegEngine = !!(window.RegistrationEngine?.open || window.RegistrationEngine?.openForgot);
+    if (!hasRegEngine) {
+      bindOnce("btn-register", () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("register"); }, "reg");
+      bindOnce("btn-forgot",   () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("forgot");   }, "fp");
+    }
 
     if (!document.__eptec_a01_esc_bound) {
       document.__eptec_a01_esc_bound = true;
