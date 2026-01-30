@@ -973,23 +973,22 @@
     return null;
   }
 
-  /* =========================
-     14) BINDINGS (capture phase: first responder)
-     ========================= */
-  function bindGlobalClickCapture() {
-    document.addEventListener("click", (e) => {
-      if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE) return;
-      const r = resolveTrigger(e);
-      if (!r) return;
+ /* =========================
+   14) BINDINGS (capture phase: first responder)
+   ========================= */
+function bindGlobalClickCapture() {
+  document.addEventListener("click", (e) => {
+    const r = resolveTrigger(e);
+    if (!r) return;
 
-      const handled = Clickmaster.run(r.id, r.ctx);
-      if (handled) {
-        e.preventDefault?.();
-        e.stopPropagation?.();
-        e.stopImmediatePropagation?.();
-      }
-    }, true);
-  }
+    const handled = Clickmaster.run(r.id, r.ctx);
+    if (handled) {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      e.stopImmediatePropagation?.();
+    }
+  }, true);
+}
 
   /* =========================
      15) WAIT FOR KERNEL (so file can be loaded FIRST)
