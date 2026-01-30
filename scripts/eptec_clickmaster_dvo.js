@@ -43,7 +43,7 @@
      1) CONFIG
      ========================= */
   const CFG = Object.freeze({
-    TUNNEL_MS: 20000,          // fixed: 20 seconds (as you decided)
+    TUNNEL_MS: 3000,           // shorter for responsive demo flow
     WHITEOUT_MS: 380,          // your typical white flash duration
     CAPTURE_DOWNLOAD_ON_STOP: false, // keep false by default
     LOCAL_LEGAL_BASE: "./assets/legal", // Local-first docs path
@@ -882,7 +882,29 @@
     function room2(action) {
       Audit.log("R2", "CLICK_ACTION", { action });
 
-      if (Guard.isDemo()) return blockedDemo();
+            if (Guard.isDemo()) {
+        const demoRoom2 = window.EPTEC_ROOM2 || {};
+        if (action === "plant.backup" && typeof demoRoom2.openTraffic === "function") {
+          demoRoom2.openTraffic();
+          return;
+        }
+
+        const slotMap = {
+          "hotspot.center": "contract",
+          "hotspot.left1": "left1",
+          "hotspot.left2": "left2",
+          "hotspot.right1": "right1",
+          "hotspot.right2": "right2"
+        };
+        const slotKey = slotMap[action] || "";
+        if (slotKey && typeof demoRoom2.openSlot === "function") {
+          demoRoom2.openSlot(slotKey);
+          return;
+        }
+
+        console.warn("[EPTEC_GUARD]", { area: "room2.demo", action, reason: "missing_demo_hooks" });
+        return blockedDemo();
+      }
 
       const k = K();
       if (action === "plant.backup") return Safe.try(() => k?.Room2?.openBackupProtocol?.(), "Room2.openBackupProtocol");
@@ -960,7 +982,7 @@
       if (!r) return;
 
       const handled = Clickmaster.run(r.id, r.ctx);
-      if (handled && r.id !== "lang-toggle") {
+      if (handled) {
         e.preventDefault?.();
         e.stopPropagation?.();
         e.stopImmediatePropagation?.();
