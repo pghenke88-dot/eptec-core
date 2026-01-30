@@ -55,10 +55,26 @@
       <button data-close style="border:none;background:transparent;cursor:pointer;font-size:16px;opacity:.6;">×</button>
     </div>
     <div data-body style="margin-top:8px;"></div>`;
-    el.querySelector("[data-close]").onclick = ()=>{ el.style.display="none"; };
+    el.querySelector("[data-close]").onclick = ()=>{ markClosed(id); el.style.display="none"; };
     return el;
   }
 
+  function closedKey(id){
+    return `EPTEC_WIDGET_CLOSED_${id}`;
+  }
+
+  function markClosed(id){
+    try { localStorage.setItem(closedKey(id), "1"); } catch (e) { console.warn("[AI_WIDGETS] close state store failed", e); }
+    const el = document.getElementById(id);
+    if (el) el.dataset.eptecClosed = "true";
+  }
+
+  function isClosed(id){
+    const el = document.getElementById(id);
+    if (el?.dataset?.eptecClosed === "true") return true;
+    try { return localStorage.getItem(closedKey(id)) === "1"; } catch (e) { console.warn("[AI_WIDGETS] close state load failed", e); }
+    return false;
+  }
   function ensureStart(){
     if (document.getElementById("eptec-contractboy")) return;
     const lab = labels();
@@ -113,9 +129,9 @@
     const r1 = document.getElementById("eptec-room1-ai");
     const r2 = document.getElementById("eptec-room2-ai");
 
-    if (start) start.style.display = (v==="meadow" || v==="start" || !v) ? "block" : "none";
-    if (r1) r1.style.display = (v==="room1") ? "block" : "none";
-    if (r2) r2.style.display = (v==="room2") ? "block" : "none";
+    if (start) start.style.display = (!isClosed("eptec-contractboy") && (v==="meadow" || v==="start" || !v)) ? "block" : "none";
+    if (r1) r1.style.display = (!isClosed("eptec-room1-ai") && (v==="room1")) ? "block" : "none";
+    if (r2) r2.style.display = (!isClosed("eptec-room2-ai") && (v==="room2")) ? "block" : "none";
   }
 
   window.addEventListener("DOMContentLoaded", tick);
