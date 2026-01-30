@@ -2387,6 +2387,8 @@ const safe = (fn) => { try { return fn(); } catch (e) { console.warn("[EPTEC LOG
       // auto-close rail if present
       const sw = $("language-switcher");
       if (sw) sw.classList.remove("lang-open");
+      const rail = $("lang-rail");
+      if (rail) rail.classList.remove("open");
     }, true); // <-- capture phase
   }
 
