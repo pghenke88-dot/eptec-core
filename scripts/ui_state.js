@@ -50,12 +50,15 @@
     try {
       const v = localStorage.getItem(STORAGE_LANG);
       if (v) return normLang(v);
-    } catch {}
+    } catch (e) {
+      console.warn("[UI_STATE] loadLang failed", e);
+    }
     return null;
   }
 
   function saveLang(lang) {
-    try { localStorage.setItem(STORAGE_LANG, String(lang || "")); } catch {}
+    try { localStorage.setItem(STORAGE_LANG, String(lang || "")); }
+    catch (e) { console.warn("[UI_STATE] saveLang failed", e); }
   }
 
   // ---------------------------------------------------------
@@ -187,7 +190,8 @@
 
     const snap = snapshot();
     for (const fn of listeners) {
-      try { fn(snap); } catch {}
+     try { fn(snap); }
+      catch (e) { console.warn("[UI_STATE] subscriber failed", e); }
     }
     notifying = false;
 
@@ -201,7 +205,8 @@
   function subscribe(fn) {
     if (typeof fn !== "function") return () => {};
     listeners.add(fn);
-    try { fn(snapshot()); } catch {}
+    try { fn(snapshot()); }
+    catch (e) { console.warn("[UI_STATE] subscribe snapshot failed", e); }
     return () => listeners.delete(fn);
   }
 
