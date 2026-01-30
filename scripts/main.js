@@ -250,6 +250,8 @@ function leaveTunnel(cb) {
   // Optional: Main may set modals, but must NOT implement register/forgot logic.
   // Those are routed via UI-Control / appends.
   function bindModalShortcuts() {
+    if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER) return;
+
     const regBtn = $("btn-register");
     if (regBtn && !regBtn.__eptec_bound) {
       regBtn.__eptec_bound = true;
@@ -455,7 +457,8 @@ function leaveTunnel(cb) {
 
   function boot() {
        const hasRegEngine = !!(window.RegistrationEngine?.open || window.RegistrationEngine?.openForgot);
-    if (!hasRegEngine) {
+    const routerActive = !!(window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER);
+    if (!hasRegEngine && !routerActive) {
       bindOnce("btn-register", () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("register"); }, "reg");
       bindOnce("btn-forgot",   () => { safe(() => window.SoundEngine?.uiConfirm?.()); openModal("forgot");   }, "fp");
     }
@@ -587,6 +590,7 @@ function leaveTunnel(cb) {
   }
 
   function bindLegalLinks() {
+    if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER) return;
     const bindLink = (id, key) => {
       const el = $(id);
       if (!el || el.__eptec_a02_bound) return;
@@ -612,6 +616,7 @@ function leaveTunnel(cb) {
   }
 
   function bindClose() {
+    if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER) return;
     const btn = $("legal-close");
     if (btn && !btn.__eptec_a02_close_bound) {
       btn.__eptec_a02_close_bound = true;
@@ -700,6 +705,7 @@ function leaveTunnel(cb) {
     const btn = $("lang-toggle");
     const rail = $("lang-rail");
     if (!btn || !rail || btn.__eptec_lang_bound) return;
+    if (window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE || window.EPTEC_CLICKMASTER) return;
     btn.__eptec_lang_bound = true;
     btn.addEventListener("click", () => {
       const last = Number(rail.getAttribute("data-eptec-lang-toggle-ts") || 0);
