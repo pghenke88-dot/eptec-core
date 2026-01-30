@@ -256,7 +256,9 @@
     // Language globe toggle (pure UI)
     register(TR("langToggle"), () => {
       const rail = Safe.byId("lang-rail");
+      const wrap = Safe.byId("language-switcher");
       if (rail) rail.classList.toggle("open");
+      if (wrap) wrap.classList.toggle("lang-open");
     });
   }
 
