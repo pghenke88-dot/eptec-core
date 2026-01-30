@@ -10,7 +10,10 @@ function enterTunnel() {
 function leaveTunnel(cb) {
   const elapsed = Date.now() - __tunnelEnteredAt;
   const wait = Math.max(0, MIN_TUNNEL_MS - elapsed);
-  setTimeout(() => { try { cb && cb(); } catch(e){} }, wait);
+  setTimeout(() => {
+    try { cb && cb(); }
+    catch (e) { console.warn("[EPTEC MAIN] leaveTunnel callback failed", e); }
+  }, wait);
 }
 // =============================================
 
@@ -767,7 +770,8 @@ function leaveTunnel(cb) {
   function boot() {
     apply();
     // re-apply on language change (safe)
-    try { window.EPTEC_UI_STATE?.subscribe?.(apply); } catch {}
+    try { window.EPTEC_UI_STATE?.subscribe?.(apply); }
+    catch (e) { console.warn("[EPTEC MAIN APPEND 03] subscribe failed", e); }
     console.log("EPTEC MAIN APPEND 03 active: Door placeholders (Aktions/VIP/Master)");
   }
 
