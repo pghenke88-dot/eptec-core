@@ -13,7 +13,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[SECURITY_LAYER] safe fallback", e);
+      return undefined;
+    }
+  };
 
   function toast(msg, type = "error", ms = 2800) {
     // optional UI hook if present
@@ -96,4 +102,3 @@
   });
 
 })();
-
