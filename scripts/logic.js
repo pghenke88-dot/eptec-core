@@ -62,7 +62,7 @@
 
     // Fixed timings (single truth)
     durations: Object.freeze({
-      tunnelMs: 20000,   // you decided: 20 seconds (change ONLY here)
+      tunnelMs: 3000,   // shortened for demo flow responsiveness
       whiteoutMs: 380
     }),
 
