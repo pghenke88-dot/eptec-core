@@ -1286,7 +1286,7 @@ const Entry = {
 };
 
 // expose
-EPTEC_MASTER.Entry = Entry;
+window.EPTEC_MASTER.Entry = Entry;
 
   /* =========================================================
      20) APPEND-RECOGNITION (MODULE REGISTRY)
@@ -1519,7 +1519,7 @@ EPTEC_MASTER.Entry = Entry;
     Backup,
     TrafficLight,
     Modules
-  };
+  });
 
 })();
 
