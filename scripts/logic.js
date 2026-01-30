@@ -921,8 +921,8 @@ if (window.EPTEC_INPUT_LAYER === "LEGACY_BIND") {
     // meadow → tunnel → doors
     startToDoors() {
       this.to(TERMS.scenes.tunnel, { from: "meadow" });
-      // tunnel duration (you used 650ms earlier)
-      setTimeout(() => this.to(TERMS.scenes.doors, { from: "tunnel" }), 650);
+      const tunnelMs = Number(DVO?.durations?.tunnelMs) || 650;
+      setTimeout(() => this.to(TERMS.scenes.doors, { from: "tunnel" }), tunnelMs);
     },
 
     // doors → whiteout → room
