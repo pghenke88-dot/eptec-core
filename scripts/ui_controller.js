@@ -145,7 +145,6 @@
     if (!action) return false;
     const result = Safe.try(() => action.fn(ctx), `ACTION:${action.handler}`);
     console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
-    return true; // FIX: so route() returns truthy when handled
   }
 
   function route(triggerId, ctx) {
@@ -252,13 +251,12 @@
       Safe.try(() => k?.Entry?.authorStartMaster?.(code), "KERNEL.Entry.authorStartMaster");
     });
 
-    // FIX: fallback registration ids so doors still work if DVO trigger keys are missing
-    registerAction(TR("door1") || "door1", "Doors.clickDoor(door1)", () => {
+    registerAction(TR("door1"), "Doors.clickDoor(door1)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door1 || "door1"), "KERNEL.Doors.clickDoor(door1)");
     });
 
-    registerAction(TR("door2") || "door2", "Doors.clickDoor(door2)", () => {
+    registerAction(TR("door2"), "Doors.clickDoor(door2)", () => {
       const k = KERNEL();
       Safe.try(() => k?.Doors?.clickDoor?.(k?.TERMS?.doors?.door2 || "door2"), "KERNEL.Doors.clickDoor(door2)");
     });
@@ -325,5 +323,4 @@
   else boot();
 
 })();
-
 
