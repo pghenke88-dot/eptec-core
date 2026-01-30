@@ -24,6 +24,12 @@
 
 (() => {
   "use strict";
+   
+  // =========================================================
+  // EPTEC MASTER BOOTSTRAP (MUST EXIST BEFORE ANY REFERENCE)
+  // =========================================================
+  window.EPTEC_MASTER = window.EPTEC_MASTER || {};
+  const EPTEC_MASTER = window.EPTEC_MASTER;
 
   // Idempotent: never redefine/overwrite
   if (window.EPTEC_KAMEL_HEAD && window.EPTEC_KAMEL_HEAD.__ACTIVE) return;
