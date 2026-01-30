@@ -19,7 +19,10 @@
   if (window.EPTEC_UI_CONTROL && window.EPTEC_UI_CONTROL.__ACTIVE) return;
 
   const Safe = {
-    try(fn, scope = "UICTRL") { try { return fn(); } catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; } },
+    try(fn, scope = "UICTRL") {
+      try { return fn(); }
+      catch (e) { console.error(`[EPTEC:${scope}]`, e); return undefined; }
+    },
     isFn(x) { return typeof x === "function"; },
     str(x) { return String(x ?? ""); },
     byId(id) { return document.getElementById(id); },
@@ -85,11 +88,6 @@
     return true;
   }
 
-  // Compatibility helper (older code path)
-  function register(triggerId, fn) {
-    return registerAction(triggerId, "REGISTER", fn);
-  }
-
   // ---------------------------------------------------------
   // Trigger resolver (DVO-first, safe fallbacks)
   // ---------------------------------------------------------
@@ -145,6 +143,7 @@
     if (!action) return false;
     const result = Safe.try(() => action.fn(ctx), `ACTION:${action.handler}`);
     console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
+    return true;
   }
 
   function route(triggerId, ctx) {
@@ -159,6 +158,7 @@
   function handleEvent(e) {
     const resolved = resolveTriggerFromTarget(e.target);
     if (!resolved) return;
+
     const triggerId = resolved.id;
     if (!triggerId) return;
     if (isDuplicate(triggerId)) return;
@@ -168,7 +168,9 @@
 
     const ctx = { event: e, triggerId, ...resolved.ctx };
     const ok = route(triggerId, ctx);
+
     if (!ok) console.warn("[EPTEC_CLICK]", { triggerId, reason: "no_handler" });
+
     if (ok) {
       e.preventDefault?.();
       e.stopPropagation?.();
@@ -228,7 +230,7 @@
       Safe.try(() => k?.Entry?.userLogin?.(u, p), "KERNEL.Entry.userLogin");
     });
 
-    register(TR("demo"), () => {
+    registerAction(TR("demo"), "Entry.demo", () => {
       const k = KERNEL();
       Safe.try(() => k?.Entry?.demo?.(), "KERNEL.Entry.demo");
     });
