@@ -13,7 +13,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+   const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[SECURITY_VAULT] safe fallback", e);
+      return undefined;
+    }
+  };
   const enc = new TextEncoder();
   const dec = new TextDecoder();
 
@@ -101,7 +107,8 @@
       try {
         const bytes = await decryptBytes(pkg, passphrase);
         return { ok: true, bytes };
-      } catch {
+      } catch (e) {
+        console.warn("[SECURITY_VAULT] decrypt failed", e);
         return { ok: false, reason: "DECRYPT_FAILED" };
       }
     },
@@ -116,5 +123,3 @@
 
   window.SecurityVault = window.SecurityVault || Vault;
 })();
-
-
