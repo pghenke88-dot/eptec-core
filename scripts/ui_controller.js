@@ -65,6 +65,37 @@
     }
   };
 
+  const FEEDBACK = (() => {
+    const TOAST_ID = "eptec-ui-fallback-toast";
+    function ensureToast() {
+      let el = Safe.byId(TOAST_ID);
+      if (el) return el;
+      el = document.createElement("div");
+      el.id = TOAST_ID;
+      el.style.position = "fixed";
+      el.style.bottom = "18px";
+      el.style.left = "50%";
+      el.style.transform = "translateX(-50%)";
+      el.style.padding = "10px 14px";
+      el.style.borderRadius = "10px";
+      el.style.background = "rgba(20,20,20,0.85)";
+      el.style.color = "#fff";
+      el.style.fontSize = "13px";
+      el.style.fontFamily = "system-ui, Arial, sans-serif";
+      el.style.zIndex = "999999";
+      el.style.display = "none";
+      document.body.appendChild(el);
+      return el;
+    }
+    function toast(msg, tone = "info") {
+      const el = ensureToast();
+      el.textContent = Safe.str(msg);
+      el.style.border = tone === "warn" ? "1px solid #f1c40f" : "1px solid rgba(255,255,255,0.18)";
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 2200);
+    }
+    return { toast };
+  })(); 
   const LEGAL = {
     // Delegation target: scripts/transparency_ui.js (optional)
     open(docKey) {
@@ -141,6 +172,12 @@
     console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
   }
 
+ function fallbackNotice(triggerId, ctx, message) {
+    const msg = message || `Kein Handler für ${triggerId}.`;
+    console.warn("[EPTEC_FALLBACK]", { triggerId, ctx, message: msg });
+    FEEDBACK.toast(msg, "warn");
+  }   
+   
 function route(triggerId, ctx) {
     const clickmasterHandled = Safe.try(
       () => window.EPTEC_CLICKMASTER?.run?.(triggerId, ctx),
@@ -222,7 +259,7 @@ function route(triggerId, ctx) {
       Safe.try(() => k?.Entry?.userLogin?.(u, p), "KERNEL.Entry.userLogin");
     });
 
-    register(TR("demo"), () => {
+    registerAction(TR("demo"), "Entry.demo", () => {
       const k = KERNEL();
       Safe.try(() => k?.Entry?.demo?.(), "KERNEL.Entry.demo");
     });
@@ -242,7 +279,11 @@ function route(triggerId, ctx) {
     registerAction(TR("masterEnter"), "Entry.authorStartMaster", () => {
       const k = KERNEL();
       const code = Safe.str(Safe.byId("admin-code")?.value);
-      Safe.try(() => k?.Entry?.authorStartMaster?.(code), "KERNEL.Entry.authorStartMaster");
+      if (k?.Entry?.authorStartMaster) {
+        Safe.try(() => k.Entry.authorStartMaster(code), "KERNEL.Entry.authorStartMaster");
+        return;
+      }
+      fallbackNotice(TR("masterEnter") || "admin-submit", { code: code ? "***" : "" }, "Master-Start nicht verfügbar.");
     });
 
     registerAction(TR("door1"), "Doors.clickDoor(door1)", () => {
@@ -285,7 +326,11 @@ function route(triggerId, ctx) {
       const btn = t?.closest?.(".lang-item,[data-lang]");
       const code = Safe.str(btn?.getAttribute?.("data-lang") || "").trim();
       if (!code) return;
-      Safe.try(() => APPEND_7()?.apply?.(code), "APPEND7.apply");
+     if (APPEND_7()?.apply) {
+        Safe.try(() => APPEND_7().apply(code), "APPEND7.apply");
+        return;
+      }
+      fallbackNotice(TR("langItem") || "lang-item", { code }, "Sprache kann nicht umgestellt werden.");
     });
 
     // Language globe toggle (pure UI)
@@ -295,6 +340,84 @@ function route(triggerId, ctx) {
       if (rail) rail.classList.toggle("open");
       if (wrap) wrap.classList.toggle("lang-open");
     });
+        registerAction("admin-code", "UI.masterCode.focus", (ctx) => {
+      const value = Safe.str(Safe.byId("admin-code")?.value || "");
+      fallbackNotice("admin-code", ctx, value ? "Master-Code erfasst. Mit „Admin Submit“ bestätigen." : "Master-Code Feld aktiv.");
+    });
+
+    registerAction("door1-present", "Doors.present.input", (ctx) => {
+      fallbackNotice("door1-present", ctx, "Door 1: Geschenkcode eingeben, dann „Apply“.");
+    });
+    registerAction("door1-vip", "Doors.vip.input", (ctx) => {
+      fallbackNotice("door1-vip", ctx, "Door 1: VIP-Code eingeben, dann „Apply“.");
+    });
+    registerAction("door1-master", "Doors.master.input", (ctx) => {
+      fallbackNotice("door1-master", ctx, "Door 1: Master-Code eingeben, dann „Apply“.");
+    });
+    registerAction("door2-present", "Doors.present.input", (ctx) => {
+      fallbackNotice("door2-present", ctx, "Door 2: Geschenkcode eingeben, dann „Apply“.");
+    });
+    registerAction("door2-vip", "Doors.vip.input", (ctx) => {
+      fallbackNotice("door2-vip", ctx, "Door 2: VIP-Code eingeben, dann „Apply“.");
+    });
+    registerAction("door2-master", "Doors.master.input", (ctx) => {
+      fallbackNotice("door2-master", ctx, "Door 2: Master-Code eingeben, dann „Apply“.");
+    });
+
+    registerAction("door1-present-apply", "Doors.applyPresent(door1)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door1-present")?.value);
+      if (k?.Doors?.applyPresent) {
+        Safe.try(() => k.Doors.applyPresent(k?.TERMS?.doors?.door1 || "door1", code), "KERNEL.Doors.applyPresent(door1)");
+        return;
+      }
+      fallbackNotice("door1-present-apply", { code: code ? "***" : "" }, "Door 1 Geschenkcode kann nicht verarbeitet werden.");
+    });
+    registerAction("door1-vip-apply", "Doors.applyVip(door1)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door1-vip")?.value);
+      if (k?.Doors?.applyVip) {
+        Safe.try(() => k.Doors.applyVip(k?.TERMS?.doors?.door1 || "door1", code), "KERNEL.Doors.applyVip(door1)");
+        return;
+      }
+      fallbackNotice("door1-vip-apply", { code: code ? "***" : "" }, "Door 1 VIP-Code kann nicht verarbeitet werden.");
+    });
+    registerAction("door1-master-apply", "Doors.applyMaster(door1)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door1-master")?.value);
+      if (k?.Doors?.applyMaster) {
+        Safe.try(() => k.Doors.applyMaster(k?.TERMS?.doors?.door1 || "door1", code), "KERNEL.Doors.applyMaster(door1)");
+        return;
+      }
+      fallbackNotice("door1-master-apply", { code: code ? "***" : "" }, "Door 1 Master-Code kann nicht verarbeitet werden.");
+    });
+    registerAction("door2-present-apply", "Doors.applyPresent(door2)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door2-present")?.value);
+      if (k?.Doors?.applyPresent) {
+        Safe.try(() => k.Doors.applyPresent(k?.TERMS?.doors?.door2 || "door2", code), "KERNEL.Doors.applyPresent(door2)");
+        return;
+      }
+      fallbackNotice("door2-present-apply", { code: code ? "***" : "" }, "Door 2 Geschenkcode kann nicht verarbeitet werden.");
+    });
+    registerAction("door2-vip-apply", "Doors.applyVip(door2)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door2-vip")?.value);
+      if (k?.Doors?.applyVip) {
+        Safe.try(() => k.Doors.applyVip(k?.TERMS?.doors?.door2 || "door2", code), "KERNEL.Doors.applyVip(door2)");
+        return;
+      }
+      fallbackNotice("door2-vip-apply", { code: code ? "***" : "" }, "Door 2 VIP-Code kann nicht verarbeitet werden.");
+    });
+    registerAction("door2-master-apply", "Doors.applyMaster(door2)", () => {
+      const k = KERNEL();
+      const code = Safe.str(Safe.byId("door2-master")?.value);
+      if (k?.Doors?.applyMaster) {
+        Safe.try(() => k.Doors.applyMaster(k?.TERMS?.doors?.door2 || "door2", code), "KERNEL.Doors.applyMaster(door2)");
+        return;
+      }
+      fallbackNotice("door2-master-apply", { code: code ? "***" : "" }, "Door 2 Master-Code kann nicht verarbeitet werden.");
+    }); 
   }
 
   // ---------------------------------------------------------
