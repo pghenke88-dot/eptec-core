@@ -1,19 +1,16 @@
-/* Verhindert, dass App 1 und App 2 gleichzeitig sichtbar sind */
-.hidden {
-    display: none !important;
+/* Modals & Overlays bleiben hart versteckbar */
+.modal-hidden,
+.modal.hidden,
+.overlay.hidden {
+  display: none !important;
 }
 
-/* Grundstyling für die Overlays (Haftung & Paywall) */
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+/* Generisches hidden OHNE !important */
+.hidden {
+  display: none;
 }
-.modal-hidden { display: none !important; }
+
+/* Scenes dürfen niemals durch .hidden blockiert werden */
+section.scene.hidden {
+  display: block !important;
+}
