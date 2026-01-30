@@ -28,7 +28,8 @@
   const STORAGE = {
     files: "EPTEC_R2_FILES",          // {slot:{name,type,dataUrl,ts}}
     traffic: "EPTEC_R2_TRAFFIC",      // {color, yellowStage, ts}
-    log: "EPTEC_R2_LOG"               // [{ts,action,detail}]
+    log: "EPTEC_R2_LOG",              // [{ts,action,detail}]
+    fileTraffic: "EPTEC_R2_FILE_TRAFFIC" // {slot:{status,ts,reason}}
   };
 
   const SLOTS = [
@@ -42,7 +43,9 @@
   function nowTs() { return Date.now(); }
 
   function readJSON(key, fallback) {
-      try { return JSON.parse(localStorage.getItem(key) || ""); }
+      const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    try { return JSON.parse(raw); }
     catch (e) {
       console.warn("[R2] readJSON failed", { key, error: e });
       return fallback;
