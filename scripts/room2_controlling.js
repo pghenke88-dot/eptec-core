@@ -40,6 +40,8 @@
     { key:"right2",   label:"Evidence Right 2" }
   ];
 
+  let escalationCache = null;
+  
   function nowTs() { return Date.now(); }
 
   function readJSON(key, fallback) {
@@ -134,6 +136,13 @@ function setModal(id, open) {
     const el = $(id);
     if (!el) return;
     el.classList.toggle("modal-hidden", !open);
+   if (open) {
+      el.style.display = "flex";
+      el.style.pointerEvents = "auto";
+    } else {
+      el.style.display = "none";
+      el.style.pointerEvents = "none";
+    }
   }
 
   function bytesInfo(str) {
@@ -255,6 +264,21 @@ if (selTraffic) {
     $("r2-slot-current").value = slotKey;
     renderSlot(slotKey);
     setModal("r2-slot-modal", true);
+  }
+
+  function ensureDemoHooks() {
+    window.EPTEC_ROOM2 = window.EPTEC_ROOM2 || {};
+    if (typeof window.EPTEC_ROOM2.openSlot !== "function") {
+      window.EPTEC_ROOM2.openSlot = openSlot;
+    }
+    if (typeof window.EPTEC_ROOM2.openTraffic !== "function") {
+      window.EPTEC_ROOM2.openTraffic = () => {
+        const esc = escalationCache || { traffic: {} };
+        setModal("r2-traffic-modal", true);
+        renderTraffic(esc);
+        renderAnnexJm(esc);
+      };
+    }
   }
 
   async function handleUpload() {
@@ -770,12 +794,14 @@ async function init() {
 
     let esc;
     try { esc = await loadEscalation(); } catch (e) { console.error("[R2]", e); esc = { traffic:{} }; }
-
+    escalationCache = esc;
+  
     wireRoom2UI(esc);
     renderPlant();
     renderTraffic(esc);
     applyRoom2ButtonClasses();
     pushLog("init", "room2_ready");
+    ensureDemoHooks();
   }
 
   // Plant backup button opens Traffic Light (Ampel)
