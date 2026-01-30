@@ -308,7 +308,15 @@
     async function loadLocalDoc(docKey) {
       const l = lang();
       const url = `${CFG.LOCAL_LEGAL_BASE}/${l}/${docKey}.html`;
-      return await fetchText(url);
+       try {
+        return await fetchText(url);
+      } catch (err) {
+        if (l !== "en") {
+          const fallbackUrl = `${CFG.LOCAL_LEGAL_BASE}/en/${docKey}.html`;
+          return await fetchText(fallbackUrl);
+        }
+        throw err;
+      }
     }
 
     async function loadDockDoc(docKey) {
