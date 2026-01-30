@@ -20,7 +20,13 @@
 (() => {
   "use strict";
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+  const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[OCR] safe fallback", e);
+      return undefined;
+    }
+  };
 
   async function processImage(imageFile) {
     if (!imageFile) {
