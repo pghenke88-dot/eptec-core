@@ -15,7 +15,13 @@
   if (window.__EPTEC_UICTRL_CAPTURE_MODE__) return;
   window.__EPTEC_UICTRL_CAPTURE_MODE__ = true;
 
-  const safe = (fn) => { try { return fn(); } catch { return undefined; } };
+ const safe = (fn) => {
+    try { return fn(); }
+    catch (e) {
+      console.warn("[UI_CAPTURE_INTENT] safe fallback", e);
+      return undefined;
+    }
+  };;
 
   // ---------------------------------------------------------
   // UI_STATE access (read/write intent only)
