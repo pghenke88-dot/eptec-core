@@ -906,16 +906,14 @@ function bindGlobalClickCapture() {
    15) BOOT (robust): clicks arrive immediately
    ========================= */
 function bootClickmaster() {
-  const start = Safe.now();
-
-  // 1) Bind click capture immediately (never wait for kernel/state)
+  // 1) bind click capture immediately (never wait for kernel/state)
   if (!document.__eptec_clickmaster_capture_bound) {
     document.__eptec_clickmaster_capture_bound = true;
     bindGlobalClickCapture();
     Audit.log("SYSTEM", "CLICKMASTER_CAPTURE_BOUND", { at: Safe.iso() });
   }
 
-  // 2) Run boot chain once DOM is ready (no dependency on kernel readiness here)
+  // 2) boot chain once DOM is ready
   if (!document.__eptec_clickmaster_dom_boot_bound) {
     document.__eptec_clickmaster_dom_boot_bound = true;
     document.addEventListener("DOMContentLoaded", () => {
@@ -923,22 +921,9 @@ function bootClickmaster() {
       Audit.log("SYSTEM", "CLICKMASTER_BOOT_RAN", { at: Safe.iso() });
     }, { once: true });
   }
-
-  // 3) Optional readiness log (doesn't block anything)
-  const tick = () => {
-    const k = K();
-    const u = UI();
-    if (k && u && typeof u.get === "function" && typeof u.set === "function") {
-      Audit.log("SYSTEM", "CLICKMASTER_READY", { afterMs: Safe.now() - start });
-      return;
-    }
-    setTimeout(tick, 25);
-  };
-  tick();
 }
 
 bootClickmaster();
-
 
   /* =========================
      16) EXTRA INTERNAL CHAINS (consent accept)
