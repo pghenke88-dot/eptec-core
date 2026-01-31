@@ -1521,7 +1521,7 @@ Object.assign(window.EPTEC_MASTER, {
   Backup,
   TrafficLight,
   Modules
-});
+};
 
 })();
 
