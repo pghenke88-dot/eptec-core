@@ -166,12 +166,46 @@
   // Global capture dispatch (no decisions)
   // ---------------------------------------------------------
   const DEDUPE = new Map();
+  const LOG_BUFFER = [];
+  const LOG_MAX = 6;
+
+  function ensureLogPane() {
+    const existing = Safe.byId("eptec-router-log");
+    if (existing) return existing;
+    const pane = document.createElement("div");
+    pane.id = "eptec-router-log";
+    pane.style.position = "fixed";
+    pane.style.right = "12px";
+    pane.style.bottom = "12px";
+    pane.style.zIndex = "9999";
+    pane.style.maxWidth = "280px";
+    pane.style.padding = "8px 10px";
+    pane.style.background = "rgba(0,0,0,0.75)";
+    pane.style.color = "#fff";
+    pane.style.fontSize = "12px";
+    pane.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    pane.style.borderRadius = "8px";
+    pane.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+    pane.style.pointerEvents = "none";
+    pane.setAttribute("aria-live", "polite");
+    document.body.appendChild(pane);
+    return pane;
+  }
+
+  function logVisible(message, meta) {
+    const line = `${Safe.iso()} ${message}`;
+    console.info("[EPTEC_ROUTER]", message, meta || {});
+    LOG_BUFFER.unshift(line);
+    while (LOG_BUFFER.length > LOG_MAX) LOG_BUFFER.pop();
+    const pane = ensureLogPane();
+    if (pane) pane.innerHTML = LOG_BUFFER.map((l) => `<div>${l}</div>`).join("");
+  }
 
   function isDuplicate(actionId) {
     const now = Date.now();
     const last = DEDUPE.get(actionId) || 0;
     if (last && (now - last) < UI_CONTROL.__ROUTER_DEDUPE_MS) {
-      console.warn("[EPTEC_DEDUPE]", actionId);
+      logVisible("DEDUPE_BLOCK", { actionId, deltaMs: now - last });
       return true;
     }
     DEDUPE.set(actionId, now);
@@ -185,7 +219,7 @@
     const action = UI_CONTROL._actions[triggerId];
     if (!action) return false;
     const result = Safe.try(() => action.fn(ctx), `ACTION:${action.handler}`);
-    console.info("[EPTEC_FLOW]", { intent: triggerId, handler: action.handler, result });
+    logVisible("DISPATCH", { intent: triggerId, handler: action.handler, result });
     return true;
   }
 
@@ -194,7 +228,10 @@
       () => window.EPTEC_CLICKMASTER?.run?.(triggerId, ctx),
       "CLICKMASTER.run"
     );
-    if (clickmasterHandled) return true;
+    if (clickmasterHandled) {
+      logVisible("CLICKMASTER_HANDLED", { triggerId });
+      return true;
+    }
     return dispatch(triggerId, ctx);
   }
 
@@ -211,19 +248,16 @@
 
     const ctx = { event: e, triggerId, ...resolved.ctx };
     const ok = route(triggerId, ctx);
-    console.debug("[EPTEC_CLICK → delegated]", triggerId, { ok });
+    logVisible(ok ? "ROUTE_OK" : "ROUTE_MISS", { triggerId });
 
-    // IMPORTANT: UI-Control is change-only; it must not block global click routing.
+    // IMPORTANT: UI-Control must not block global click routing.
     // Therefore no preventDefault/stopPropagation here.
   }
 
   // =========================================================
-  // ENT-SCHÄRFUNG:
-  // UI-Control darf niemanden mehr beim Click-Routing behindern.
-  // -> Capture-phase click listener that does not block propagation.
+  // SINGLE CLICK ROUTER (global capture, deduped)
   // =========================================================
-  document.addEventListener("click", handleEvent, true); 
-  document.addEventListener("change", handleEvent, true);
+  document.addEventListener("click", handleEvent, true);
 
   // =========================================================
   // APPEND 1 — MASTER PASSWORDS v4
@@ -369,3 +403,4 @@
   else boot();
 
 })();
+
