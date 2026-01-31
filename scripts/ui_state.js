@@ -5,25 +5,30 @@
  * ------------------------------------------------------------
  * REFERENZ (Terminologie, 1:1):
  * - Canonical scenes/views: meadow | tunnel | doors | whiteout | room1 | room2
- * - DVO-scene language: EPTEC_KAMEL_HEAD.DVO.scenes (UI-Control references)
  *
- * AUFTRAG (Kernel):
+ * HARD RULES:
  * - Pure state only (NO DOM, NO backend, NO audio)
- * - Provide stable store API:
+ * - Export exactly ONE stable store:
  *   window.EPTEC_UI_STATE.get() / set() / subscribe() / onChange()
- * - Canonical i18n:
- *   i18n.lang + i18n.dir are authoritative; legacy alias "lang" accepted
- *
- * BITTE UM AUSFÜHRUNG (Endabnehmer / Export):
- * - This file itself is the endabnehmer:
- *   it MUST export window.EPTEC_UI_STATE with the stable API above,
- *   so UI-Control + Kernel + APPENDS can rely on it deterministically.
+ * - Must be available immediately (no DOMContentLoaded dependency)
  */
 
 (() => {
   "use strict";
 
+  // ---------------------------------------------------------
+  // Idempotency: if UI_STATE already exists and is usable, keep it
+  // ---------------------------------------------------------
+  if (window.EPTEC_UI_STATE &&
+      typeof window.EPTEC_UI_STATE.get === "function" &&
+      typeof window.EPTEC_UI_STATE.set === "function" &&
+      typeof window.EPTEC_UI_STATE.subscribe === "function") {
+    console.log("[EPTEC_UI_STATE] already ready (kept existing)");
+    return;
+  }
+
   const STORAGE_LANG = "EPTEC_LANG";
+
   const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 
   function deepMerge(base, patch) {
@@ -51,14 +56,14 @@
       const v = localStorage.getItem(STORAGE_LANG);
       if (v) return normLang(v);
     } catch (e) {
-      console.warn("[UI_STATE] loadLang failed", e);
+      console.warn("[EPTEC_UI_STATE] loadLang failed", e);
     }
     return null;
   }
 
   function saveLang(lang) {
     try { localStorage.setItem(STORAGE_LANG, String(lang || "")); }
-    catch (e) { console.warn("[UI_STATE] saveLang failed", e); }
+    catch (e) { console.warn("[EPTEC_UI_STATE] saveLang failed", e); }
   }
 
   // ---------------------------------------------------------
@@ -71,9 +76,11 @@
     if (x === "meadow") return "meadow";
     if (x === "tunnel") return "tunnel";
     if (x === "doors") return "doors";
-    if (x === "whiteout") return "doors"; // whiteout is a transition; view stays doors-default
     if (x === "room1") return "room1";
     if (x === "room2") return "room2";
+
+    // whiteout is a transition; view stays doors-default
+    if (x === "whiteout") return "doors";
 
     // legacy aliases -> canonical
     if (x === "wiese" || x === "start" || x === "entry") return "meadow";
@@ -86,7 +93,6 @@
 
   // ---------------------------------------------------------
   // CANONICAL SCENE NORMALIZER (strict output)
-  // NOTE: scene is canonical too (no start/viewdoors output anymore)
   // ---------------------------------------------------------
   function normScene(raw) {
     const x = String(raw || "").trim().toLowerCase();
@@ -106,7 +112,8 @@
     if (x === "r1") return "room1";
     if (x === "r2") return "room2";
 
-    return x; // no-crash: allow unknown strings, but caller should not rely on them
+    // allow unknown strings (no crash)
+    return x;
   }
 
   const DEFAULTS = {
@@ -120,8 +127,11 @@
     // canonical i18n
     i18n: { lang: "en", dir: "ltr" },
 
-    // Kernel may use richer mode objects; keep flexible
+    // flexible modes/auth/doors/consent (kernel may add more)
     modes: {},
+    auth: { isAuthed: false, userId: null },
+    doors: {},
+    consent: {},
 
     transition: { tunnelActive: false, whiteout: false, last: null }
   };
@@ -130,6 +140,7 @@
   const listeners = new Set();
 
   function snapshot() {
+    // stable copy to prevent accidental external mutation
     return JSON.parse(JSON.stringify(state));
   }
 
@@ -144,7 +155,6 @@
     n.scene = normScene(n.scene);
 
     if (n.scene) {
-      // whiteout is a transition: keep view canonical (default doors)
       if (n.scene === "whiteout") n.view = normView(n.view || "doors");
       else n.view = normView(n.scene); // scene drives view deterministically
     } else {
@@ -166,6 +176,9 @@
     n.lang = lang;
 
     n.modes = isObj(n.modes) ? n.modes : {};
+    n.auth = isObj(n.auth) ? n.auth : { isAuthed: false, userId: null };
+    n.doors = isObj(n.doors) ? n.doors : {};
+    n.consent = isObj(n.consent) ? n.consent : {};
     n.transition = isObj(n.transition) ? n.transition : { tunnelActive: false, whiteout: false, last: null };
 
     return n;
@@ -190,8 +203,8 @@
 
     const snap = snapshot();
     for (const fn of listeners) {
-     try { fn(snap); }
-      catch (e) { console.warn("[UI_STATE] subscriber failed", e); }
+      try { fn(snap); }
+      catch (e) { console.warn("[EPTEC_UI_STATE] subscriber failed", e); }
     }
     notifying = false;
 
@@ -206,7 +219,7 @@
     if (typeof fn !== "function") return () => {};
     listeners.add(fn);
     try { fn(snapshot()); }
-    catch (e) { console.warn("[UI_STATE] subscribe snapshot failed", e); }
+    catch (e) { console.warn("[EPTEC_UI_STATE] subscribe snapshot failed", e); }
     return () => listeners.delete(fn);
   }
 
@@ -214,11 +227,12 @@
     return subscribe(fn);
   }
 
+  // init normalized default state
   state = normalize(state);
   lastJson = JSON.stringify(state);
 
   // ---------------------------------------------------------
-  // ENDABNEHMER / EXPORT (MUST EXIST)
+  // EXPORT (single source of truth)
   // ---------------------------------------------------------
   window.EPTEC_UI_STATE = {
     get,
@@ -228,4 +242,7 @@
     get state() { return snapshot(); },
     snapshot
   };
+
+  console.log("[EPTEC_UI_STATE] ready (single store)");
 })();
+
