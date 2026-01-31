@@ -169,7 +169,8 @@
     const ctx = { event: e, triggerId, ...resolved.ctx };
     const ok = route(triggerId, ctx);
 
-    if (!ok) console.warn("[EPTEC_CLICK]", { triggerId, reason: "no_handler" });
+    route(triggerId, ctx);
+console.debug("[EPTEC_CLICK → delegated]", triggerId);
 
     // IMPORTANT: UI-Control is change-only; it must not block global click routing.
     // Therefore no preventDefault/stopPropagation here.
