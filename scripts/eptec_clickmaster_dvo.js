@@ -554,14 +554,16 @@ const CHAINS = {
         length: code.length
       });
 
-    const k = K();
-      const plan =
-        Safe.try(() => k?.Entry?.authorStartMaster?.(code), "LOGIC.Entry.authorStartMaster") || {};
-
-      if (!plan.ok) {
+         const main = window.EPTEC_MAIN;
+      if (main?.handleMasterSubmit) {
+        const plan = Safe.try(() => main.handleMasterSubmit(code), "MAIN.handleMasterSubmit") || {};
+        if (!plan.ok) {
+          Visual.markInvalid("admin-code", "Master verweigert.", "login-message");
+          Audit.log("AUTH", "MASTER_DENIED", {});
+          return;
+        }
         Visual.markInvalid("admin-code", "Master verweigert.", "login-message");
-        Audit.log("AUTH", "MASTER_DENIED", {});
-        return;
+      Audit.log("AUTH", "MASTER_DENIED", { reason: "main_missing" });
       }
 
       Audit.log("AUTH", "MASTER_OK", { mode: plan.mode || null });
@@ -618,6 +620,10 @@ const CHAINS = {
         }
         Phase.switchTo("meadow", "logout");
       }
+        ]
+  }),
+};
+
   /* =========================
      9) DOORS (codes + enter + consent gate)
      ========================= */
@@ -860,6 +866,8 @@ const CHAINS = {
 
   // expose optional (debug)
   window.EPTEC_CLICKMASTER = Clickmaster;
+  window.EPTEC_PHASE = window.EPTEC_PHASE || Phase;
+  window.EPTEC_CLICKMASTER_PHASE = window.EPTEC_CLICKMASTER_PHASE || Phase;
   
 /* =========================
    13) TRIGGER RESOLUTION (robust)
@@ -904,6 +912,10 @@ function resolveTrigger(e) {
    14) BINDINGS (capture phase: first responder)
    ========================= */
 function bindGlobalClickCapture() {
+  if (window.EPTEC_CLICK_ROUTER_ACTIVE || window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE) {
+    Audit.log("SYSTEM", "CLICKMASTER_CAPTURE_SKIPPED", { reason: "router_active" });
+    return;
+  }  
   document.addEventListener("click", (e) => {
     if (window.EPTEC_CLICK_ROUTER_ACTIVE || window.EPTEC_UI_CONTROL?.__CLICK_ROUTER_ACTIVE) {
       return;
@@ -927,8 +939,10 @@ function bootClickmaster() {
   // 1) bind click capture immediately (never wait for kernel/state)
   if (!document.__eptec_clickmaster_capture_bound) {
     document.__eptec_clickmaster_capture_bound = true;
-    bindGlobalClickCapture();
-    Audit.log("SYSTEM", "CLICKMASTER_CAPTURE_BOUND", { at: Safe.iso() });
+    setTimeout(() => {
+      bindGlobalClickCapture();
+      Audit.log("SYSTEM", "CLICKMASTER_CAPTURE_BOUND", { at: Safe.iso() });
+    }, 50);
   }
 
   // 2) boot chain once DOM is ready
