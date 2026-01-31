@@ -549,6 +549,7 @@ const CHAINS = {
 
       () => {
         const code = Safe.str(Safe.byId("admin-code")?.value).trim();
+        console.log("[EPTEC|MASTER] input capture", { source: "clickmaster.admin-submit", length: code.length });
         const k = K();
 
         const plan =
@@ -569,6 +570,18 @@ const CHAINS = {
     ]
   }),
 
+  /* ---------- DOOR MASTER APPLY ---------- */
+  "door1-master-apply": () => ({
+    steps: [
+      () => Doors.applyCode("door1", "master")
+    ]
+  }),
+
+  "door2-master-apply": () => ({
+    steps: [
+      () => Doors.applyCode("door2", "master")
+    ]
+  }),
   /* ---------- TUNNEL TIMER ---------- */
   "timer.tunnel.expired": () => ({
     steps: [
