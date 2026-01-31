@@ -651,3 +651,53 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+// main.js (additiv, möglichst am Ende oder direkt vor init-Aufrufen)
+(() => {
+  "use strict";
+
+  const MAX_WAIT_MS = 4000;
+  const STEP_MS = 25;
+
+  function depsReady() {
+    const dvoOk = !!(window.EPTEC_KAMEL_HEAD && window.EPTEC_KAMEL_HEAD.DVO);
+    const kFnOk = typeof window.K === "function";
+    let masterOk = false;
+
+    try {
+      const k = kFnOk ? window.K() : null;
+      masterOk = typeof k?.Entry?.authorStartMaster === "function";
+    } catch (_) {
+      masterOk = false;
+    }
+
+    return dvoOk && kFnOk && masterOk;
+  }
+
+  function whenReady(cb) {
+    const start = Date.now();
+    (function tick() {
+      if (depsReady()) return cb();
+      if (Date.now() - start > MAX_WAIT_MS) {
+        console.warn("[EPTEC|BOOT] deps not ready after wait; continuing with best effort");
+        return cb(); // best effort statt deadlock
+      }
+      setTimeout(tick, STEP_MS);
+    })();
+  }
+
+  whenReady(() => {
+    // HIER: nur das, was vorher "main geregelt" hat.
+    // z.B. Clickmaster/UI-Control initialisieren oder "bind()" aufrufen
+    try {
+      if (window.EPTEC_CLICKMASTER && typeof window.EPTEC_CLICKMASTER.init === "function") {
+        window.EPTEC_CLICKMASTER.init();
+      }
+      if (window.EPTEC_UI_CONTROL && typeof window.EPTEC_UI_CONTROL.init === "function") {
+        window.EPTEC_UI_CONTROL.init();
+      }
+      console.log("[EPTEC|BOOT] init complete");
+    } catch (e) {
+      console.error("[EPTEC|BOOT] init failed", e);
+    }
+  });
+})();
