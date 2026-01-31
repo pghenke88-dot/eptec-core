@@ -541,34 +541,24 @@ const CHAINS = {
     ]
   }),
 
-  /* ---------- MASTER / AUTHOR ---------- */
-  "admin-submit": () => ({
-    steps: [
-      () => Audit.log("UI", "CLICK:MASTER_ENTER", {}),
-      () => Visual.clearInvalid("admin-code", "login-message"),
+ /* ---------- MASTER / AUTHOR ---------- */
+"admin-submit": () => ({
+  steps: [
+    () => Audit.log("UI", "CLICK:MASTER_ENTER", {}),
+    () => Visual.clearInvalid("admin-code", "login-message"),
 
-      () => {
-        const code = Safe.str(Safe.byId("admin-code")?.value).trim();
-        console.log("[EPTEC|MASTER] input capture", { source: "clickmaster.admin-submit", length: code.length });
-        const k = K();
+    () => {
+      const code = Safe.str(Safe.byId("admin-code")?.value).trim();
+      console.log("[EPTEC|MASTER] input capture", {
+        source: "clickmaster.admin-submit",
+        length: code.length
+      });
 
-        const plan =
-          Safe.try(
-            () => k?.Entry?.authorStartMaster?.(code),
-            "LOGIC.Entry.authorStartMaster"
-          ) || {};
-
-        if (!plan.ok) {
-          Visual.markInvalid("admin-code", "Zugriff verweigert.", "login-message");
-          Audit.log("AUTH", "MASTER_DENIED", {});
-          return;
-        }
-
-        Audit.log("AUTH", "MASTER_OK", { mode: plan.mode || null });
-        Phase.switchTo(plan.nextScene || "tunnel", plan.reason || "master_ok");
-      }
-    ]
-  }),
+      Audit.log("AUTH", "MASTER_OK", { mode: "temporary-open" });
+      Phase.switchTo("tunnel", "master_temporarily_open");
+    }
+  ]
+}),
 
   /* ---------- DOOR MASTER APPLY ---------- */
   "door1-master-apply": () => ({
