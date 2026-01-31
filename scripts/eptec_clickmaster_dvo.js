@@ -843,43 +843,41 @@ const CHAINS = {
 
   // expose optional (debug)
   window.EPTEC_CLICKMASTER = Clickmaster;
+  
 /* =========================
-   13) TRIGGER RESOLUTION
+   13) TRIGGER RESOLUTION (robust)
    ========================= */
 function resolveTrigger(e) {
-  let t = e?.target;
-  if (!t) return null;
+  const t0 = e?.target;
+  if (!t0) return null;
 
-  // climb up DOM tree (CRITICAL – buttons contain spans/icons!)
-  while (t && t !== document.body) {
+  // climb DOM: allow clicks on span/svg/etc inside buttons
+  const t = t0.closest?.(
+    "[data-logic-id], .lang-item, #admin-camera-toggle, [id]"
+  ) || t0;
 
-    // language selector
-    if (t.classList?.contains("lang-item")) {
-      return {
-        id: "lang-item",
-        ctx: { lang: t.getAttribute("data-lang") }
-      };
+  // language selector
+  if (t.classList?.contains("lang-item")) {
+    return { id: "lang-item", ctx: { lang: t.getAttribute("data-lang") } };
+  }
+
+  // data-logic-id wins
+  const dl = t.getAttribute?.("data-logic-id");
+  if (dl) return { id: dl, ctx: {} };
+
+  // explicit ids
+  const id = t.id;
+  if (id) {
+    if (id === "admin-camera-toggle") {
+      const checked = !!t.checked;
+      return { id: checked ? "admin-camera-toggle:on" : "admin-camera-toggle:off", ctx: { checked } };
     }
 
-    // canonical logic id
-    const dl = Safe.try(() => t.getAttribute?.("data-logic-id"), "resolve.dataLogicId");
-    if (dl) {
-      return { id: dl, ctx: {} };
+    if (id.startsWith("btn-logout")) {
+      return { id: "logout.any", ctx: { sourceId: id } };
     }
 
-    // explicit IDs
-    const id = t.id;
-    if (id) {
-      // logout buttons anywhere
-      if (id.startsWith("btn-logout")) {
-        return { id: "logout.any", ctx: { sourceId: id } };
-      }
-
-      // default: use id directly
-      return { id, ctx: {} };
-    }
-
-    t = t.parentElement;
+    return { id, ctx: {} };
   }
 
   return null;
