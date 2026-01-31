@@ -98,57 +98,84 @@
     }
   };
 
-  const Visual = {
-    hideAllSections() {
-      Safe.try(() => Safe.qsa("section").forEach(s => (s.style.display = "none")), "Visual.hideAll");
-    },
-    showScene(scene) {
-      const k = K();
-      // Prefer your kernel renderer if present
-      if (k?.Renderer?.applyScene) return Safe.try(() => k.Renderer.applyScene(scene), "Visual.Renderer.applyScene");
+ /* =========================
+   VISUAL (SCENE VISIBILITY ONLY)
+   ========================= */
+const Visual = {
+  hideAllSections() {
+    Safe.try(
+      () => Safe.qsa("section").forEach(s => (s.style.display = "none")),
+      "Visual.hideAll"
+    );
+  },
 
-      // fallback mapping by your known IDs
-      const map = {
-        start: "meadow-view",
-        tunnel: "tunnel-view",
-        viewdoors: "doors-view",
-        room1: "room-1-view",
-        room2: "room-2-view"
-      };
-      const id = map[scene];
-      Visual.hideAllSections();
-      const el = id ? Safe.byId(id) : null;
-      if (el) el.style.display = "block";
-    },
-    whiteoutOn() {
-      const el = Safe.byId("eptec-white-flash");
-      if (!el) return;
-      el.classList.remove("whiteout-hidden");
-    },
-    whiteoutOff() {
-      const el = Safe.byId("eptec-white-flash");
-      if (!el) return;
-      el.classList.add("whiteout-hidden");
-    },
-    markInvalid(elOrId, message, messageTargetId = "login-message") {
-      const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
-      if (el) el.classList.add("field-invalid");
-      const msgEl = Safe.byId(messageTargetId);
-      if (msgEl && message) {
-        msgEl.textContent = message;
-        msgEl.classList.add("show");
-      }
-    },
-    clearInvalid(elOrId, messageTargetId = "login-message") {
-      const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
-      if (el) el.classList.remove("field-invalid");
-      const msgEl = Safe.byId(messageTargetId);
-      if (msgEl) {
-        msgEl.textContent = "";
-        msgEl.classList.remove("show");
-      }
+  showScene(scene) {
+    const k = K();
+
+    // Kernel renderer MAY exist, but must NEVER block fallback
+    if (k?.Renderer?.applyScene) {
+      Safe.try(
+        () => k.Renderer.applyScene(scene),
+        "Visual.Renderer.applyScene"
+      );
     }
-  };
+
+    // Canonical + backward-compatible mapping
+    const map = {
+      meadow: "meadow-view",
+      tunnel: "tunnel-view",
+      doors: "doors-view",
+      room1: "room-1-view",
+      room2: "room-2-view",
+
+      // legacy safety
+      start: "meadow-view",
+      viewdoors: "doors-view"
+    };
+
+    const key = String(scene || "").toLowerCase();
+    const id = map[key];
+
+    Visual.hideAllSections();
+
+    const el = id ? Safe.byId(id) : null;
+    if (el) el.style.display = "block";
+  },
+
+  whiteoutOn() {
+    const el = Safe.byId("eptec-white-flash");
+    if (!el) return;
+    el.classList.remove("whiteout-hidden");
+  },
+
+  whiteoutOff() {
+    const el = Safe.byId("eptec-white-flash");
+    if (!el) return;
+    el.classList.add("whiteout-hidden");
+  },
+
+  markInvalid(elOrId, message, messageTargetId = "login-message") {
+    const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
+    if (el) el.classList.add("field-invalid");
+
+    const msgEl = Safe.byId(messageTargetId);
+    if (msgEl && message) {
+      msgEl.textContent = message;
+      msgEl.classList.add("show");
+    }
+  },
+
+  clearInvalid(elOrId, messageTargetId = "login-message") {
+    const el = typeof elOrId === "string" ? Safe.byId(elOrId) : elOrId;
+    if (el) el.classList.remove("field-invalid");
+
+    const msgEl = Safe.byId(messageTargetId);
+    if (msgEl) {
+      msgEl.textContent = "";
+      msgEl.classList.remove("show");
+    }
+  }
+};
 
   /* =========================
      4) PHASE ENGINE (hard switch + tunnel timer)
@@ -816,40 +843,47 @@ const CHAINS = {
 
   // expose optional (debug)
   window.EPTEC_CLICKMASTER = Clickmaster;
+/* =========================
+   13) TRIGGER RESOLUTION
+   ========================= */
+function resolveTrigger(e) {
+  let t = e?.target;
+  if (!t) return null;
 
-  /* =========================
-     13) TRIGGER RESOLUTION
-     ========================= */
-  function resolveTrigger(e) {
-    const t = e?.target;
-    if (!t) return null;
+  // climb up DOM tree (CRITICAL – buttons contain spans/icons!)
+  while (t && t !== document.body) {
 
-    // language item
+    // language selector
     if (t.classList?.contains("lang-item")) {
-      return { id: "lang-item", ctx: { lang: t.getAttribute("data-lang") } };
+      return {
+        id: "lang-item",
+        ctx: { lang: t.getAttribute("data-lang") }
+      };
     }
 
-    // data-logic-id first
+    // canonical logic id
     const dl = Safe.try(() => t.getAttribute?.("data-logic-id"), "resolve.dataLogicId");
-    if (dl) return { id: dl, ctx: {} };
+    if (dl) {
+      return { id: dl, ctx: {} };
+    }
 
-    // explicit ids
+    // explicit IDs
     const id = t.id;
     if (id) {
-      // camera toggle: ON/OFF separated
-      if (id === "admin-camera-toggle") {
-        const checked = !!t.checked;
-        return { id: checked ? "admin-camera-toggle:on" : "admin-camera-toggle:off", ctx: { checked } };
+      // logout buttons anywhere
+      if (id.startsWith("btn-logout")) {
+        return { id: "logout.any", ctx: { sourceId: id } };
       }
 
-      // logout buttons anywhere
-      if (id.startsWith("btn-logout")) return { id: "logout.any", ctx: { sourceId: id } };
-
+      // default: use id directly
       return { id, ctx: {} };
     }
 
-    return null;
+    t = t.parentElement;
   }
+
+  return null;
+}
 
  /* =========================
    14) BINDINGS (capture phase: first responder)
@@ -868,31 +902,43 @@ function bindGlobalClickCapture() {
   }, true);
 }
 
-  /* =========================
-     15) WAIT FOR KERNEL (so file can be loaded FIRST)
-     ========================= */
-  function waitForKernelAndBoot() {
-    const start = Safe.now();
-    const timeoutMs = 15000;
+/* =========================
+   15) BOOT (robust): clicks arrive immediately
+   ========================= */
+function bootClickmaster() {
+  const start = Safe.now();
 
-    const tick = () => {
-      const k = K();
-      const u = UI();
-      if (k && u && typeof u.get === "function" && typeof u.set === "function") {
-        bindGlobalClickCapture();
-        // boot chain
-        document.addEventListener("DOMContentLoaded", () => Clickmaster.run("system.boot", { at: Safe.iso() }), { once: true });
-        Audit.log("SYSTEM", "CLICKMASTER_READY", { afterMs: Safe.now() - start });
-        return;
-      }
-      
-      setTimeout(tick, 25);
-    };
-
-    tick();
+  // 1) Bind click capture immediately (never wait for kernel/state)
+  if (!document.__eptec_clickmaster_capture_bound) {
+    document.__eptec_clickmaster_capture_bound = true;
+    bindGlobalClickCapture();
+    Audit.log("SYSTEM", "CLICKMASTER_CAPTURE_BOUND", { at: Safe.iso() });
   }
 
-  waitForKernelAndBoot();
+  // 2) Run boot chain once DOM is ready (no dependency on kernel readiness here)
+  if (!document.__eptec_clickmaster_dom_boot_bound) {
+    document.__eptec_clickmaster_dom_boot_bound = true;
+    document.addEventListener("DOMContentLoaded", () => {
+      Clickmaster.run("system.boot", { at: Safe.iso() });
+      Audit.log("SYSTEM", "CLICKMASTER_BOOT_RAN", { at: Safe.iso() });
+    }, { once: true });
+  }
+
+  // 3) Optional readiness log (doesn't block anything)
+  const tick = () => {
+    const k = K();
+    const u = UI();
+    if (k && u && typeof u.get === "function" && typeof u.set === "function") {
+      Audit.log("SYSTEM", "CLICKMASTER_READY", { afterMs: Safe.now() - start });
+      return;
+    }
+    setTimeout(tick, 25);
+  };
+  tick();
+}
+
+bootClickmaster();
+
 
   /* =========================
      16) EXTRA INTERNAL CHAINS (consent accept)
