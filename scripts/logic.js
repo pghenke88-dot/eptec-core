@@ -1503,8 +1503,7 @@ window.EPTEC_MASTER.Entry = Entry;
   /* =========================================================
      23) PUBLIC API (optional)
      ========================================================= */
- window.EPTEC_MASTER = window.EPTEC_MASTER || {};
-
+   
 Object.assign(window.EPTEC_MASTER, {
   TERMS,
   Safe,
