@@ -598,12 +598,16 @@ const CHAINS = {
   /* ---------- LOGOUT (ANY) ---------- */
   "logout.any": () => ({
     steps: [
-      () => Audit.log("AUTH", "LOGOUT", {}),
-      () => Phase.switchTo("meadow", "logout")
-    ]
-  })
-};
-
+           (ctx) => Audit.log("AUTH", "LOGOUT", { sourceId: ctx?.sourceId || null }),
+      (ctx) => {
+        const sourceId = Safe.str(ctx?.sourceId);
+        const isRoomBack = sourceId === "btn-logout-room1" || sourceId === "btn-logout-room2";
+        if (isRoomBack && Guard.isDemo()) {
+          Phase.switchTo("doors", "demo_back");
+          return;
+        }
+        Phase.switchTo("meadow", "logout");
+      }
   /* =========================
      9) DOORS (codes + enter + consent gate)
      ========================= */
