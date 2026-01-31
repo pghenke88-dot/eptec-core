@@ -81,6 +81,10 @@
     try {
       const p = audio.play();
       if (p && typeof p.catch === "function") {
+              p.catch((e) => {
+          if (e && e.name === "AbortError") return;
+          console.warn("[SOUND] play failed", e);
+        });  
       }
      } catch (e) {
       console.warn("[SOUND] play failed", e);
