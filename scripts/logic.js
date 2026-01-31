@@ -1255,6 +1255,7 @@ const Entry = {
     const raw = Safe.str(code).trim();
 
     const ok = Safe.try(() => Auth.verifyStartMaster(raw), "AUTH.verifyStartMaster");
+    console.log("[EPTEC|MASTER] check executed", { source: "Auth.verifyStartMaster", ok }); 
     if (!ok) {
       Compliance.log("AUTH", "MASTER_START_DENIED", {});
       UI.toast("Access denied.", "error");
@@ -1264,6 +1265,7 @@ const Entry = {
     // State + mode only
     Auth.setMode(TERMS.modes.author);
     UI_STATE.set({ auth: { isAuthed: true, userId: "AUTHOR" } });
+    console.log("[EPTEC|MASTER] result applied", { mode: TERMS.modes.author, userId: "AUTHOR" });
 
     Compliance.log("AUTH", "MASTER_START_OK", {});
 
