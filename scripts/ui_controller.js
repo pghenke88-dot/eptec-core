@@ -168,9 +168,7 @@
 
     const ctx = { event: e, triggerId, ...resolved.ctx };
     const ok = route(triggerId, ctx);
-
-    route(triggerId, ctx);
-console.debug("[EPTEC_CLICK → delegated]", triggerId);
+    console.debug("[EPTEC_CLICK → delegated]", triggerId, { ok });
 
     // IMPORTANT: UI-Control is change-only; it must not block global click routing.
     // Therefore no preventDefault/stopPropagation here.
@@ -179,8 +177,9 @@ console.debug("[EPTEC_CLICK → delegated]", triggerId);
   // =========================================================
   // ENT-SCHÄRFUNG:
   // UI-Control darf niemanden mehr beim Click-Routing behindern.
-  // -> KEIN click listener mehr, nur change bleibt aktiv.
+  // -> Capture-phase click listener that does not block propagation.
   // =========================================================
+  document.addEventListener("click", handleEvent, true); 
   document.addEventListener("change", handleEvent, true);
 
   // =========================================================
@@ -327,4 +326,3 @@ console.debug("[EPTEC_CLICK → delegated]", triggerId);
   else boot();
 
 })();
-
