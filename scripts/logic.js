@@ -1286,6 +1286,7 @@ const Entry = {
 };
 
 // expose
+window.EPTEC_MASTER = window.EPTEC_MASTER || {};   
 window.EPTEC_MASTER.Entry = Entry;
 
   /* =========================================================
@@ -1311,7 +1312,7 @@ window.EPTEC_MASTER.Entry = Entry;
       Room2,
       UI,
       Auth
-    };
+    });
 
     function registerModule(mod) {
       if (!Safe.isObj(mod)) return false;
@@ -1502,24 +1503,26 @@ window.EPTEC_MASTER.Entry = Entry;
   /* =========================================================
      23) PUBLIC API (optional)
      ========================================================= */
-  window.EPTEC_MASTER = {
-    TERMS,
-    Safe,
-    UI_STATE,
-    Compliance,
-    Audio,
-    I18N,
-    Auth,
-    Guard,
-    Paywall,
-    Doors,
-    Dramaturgy,
-    Room1,
-    Room2,
-    Backup,
-    TrafficLight,
-    Modules
-  });
+ window.EPTEC_MASTER = window.EPTEC_MASTER || {};
+
+Object.assign(window.EPTEC_MASTER, {
+  TERMS,
+  Safe,
+  UI_STATE,
+  Compliance,
+  Audio,
+  I18N,
+  Auth,
+  Guard,
+  Paywall,
+  Doors,
+  Dramaturgy,
+  Room1,
+  Room2,
+  Backup,
+  TrafficLight,
+  Modules
+});
 
 })();
 
