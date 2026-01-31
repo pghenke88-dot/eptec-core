@@ -1312,7 +1312,7 @@ window.EPTEC_MASTER.Entry = Entry;
       Room2,
       UI,
       Auth
-    });
+    };
 
     function registerModule(mod) {
       if (!Safe.isObj(mod)) return false;
