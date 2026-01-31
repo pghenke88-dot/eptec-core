@@ -554,8 +554,18 @@ const CHAINS = {
         length: code.length
       });
 
-      Audit.log("AUTH", "MASTER_OK", { mode: "temporary-open" });
-      Phase.switchTo("tunnel", "master_temporarily_open");
+    const k = K();
+      const plan =
+        Safe.try(() => k?.Entry?.authorStartMaster?.(code), "LOGIC.Entry.authorStartMaster") || {};
+
+      if (!plan.ok) {
+        Visual.markInvalid("admin-code", "Master verweigert.", "login-message");
+        Audit.log("AUTH", "MASTER_DENIED", {});
+        return;
+      }
+
+      Audit.log("AUTH", "MASTER_OK", { mode: plan.mode || null });
+      Phase.switchTo(plan.nextScene || "tunnel", plan.reason || "master_ok");
     }
   ]
 }),
