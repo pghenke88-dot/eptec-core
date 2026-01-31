@@ -65,6 +65,57 @@
     return () => clearInterval(t);
   }
 
+    function phaseEngine() {
+    return window.EPTEC_PHASE || window.EPTEC_CLICKMASTER_PHASE || window.EPTEC_CLICKMASTER?.Phase || null;
+  }
+
+  function applyEntryPlan(plan, meta = {}) {
+    if (!plan || !plan.ok) return false;
+    const nextScene = plan.nextScene || "tunnel";
+    const reason = plan.reason || meta?.source || "entry";
+    const phase = phaseEngine();
+    if (phase?.switchTo) {
+      safe(() => phase.switchTo(nextScene, reason), "Phase.switchTo");
+      return true;
+    }
+    const k = window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+    if (k?.Dramaturgy?.to) {
+      safe(() => k.Dramaturgy.to(nextScene, { reason }), "KERNEL.Dramaturgy.to");
+      return true;
+    }
+    setState({ scene: nextScene, view: nextScene });
+    return true;
+  }
+
+  function handleLoginSubmit(username, password) {
+    const k = window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+    const plan = safe(() => k?.Entry?.userLogin?.(username, password));
+    applyEntryPlan(plan, { source: "login" });
+    return plan;
+  }
+
+  function handleDemoSubmit() {
+    const k = window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+    const plan = safe(() => k?.Entry?.demo?.());
+    applyEntryPlan(plan, { source: "demo" });
+    return plan;
+  }
+
+  function handleMasterSubmit(code) {
+    const k = window.EPTEC_MASTER || window.EPTEC?.kernel || null;
+    const plan = safe(() => k?.Entry?.authorStartMaster?.(code));
+    applyEntryPlan(plan, { source: "master" });
+    return plan;
+  }
+
+  window.EPTEC_MAIN = window.EPTEC_MAIN || {};
+  Object.assign(window.EPTEC_MAIN, {
+    applyEntryPlan,
+    handleLoginSubmit,
+    handleDemoSubmit,
+    handleMasterSubmit
+  });
+  
   // ---------- language-aware placeholders (words only) ----------
   function langKey() {
     const st = getState();
