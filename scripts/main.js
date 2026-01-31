@@ -65,7 +65,7 @@
     return () => clearInterval(t);
   }
 
-    function phaseEngine() {
+  function phaseEngine() {
     return window.EPTEC_PHASE || window.EPTEC_CLICKMASTER_PHASE || window.EPTEC_CLICKMASTER?.Phase || null;
   }
 
