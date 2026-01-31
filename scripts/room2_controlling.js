@@ -797,6 +797,7 @@ async function init() {
     escalationCache = esc;
   
     wireRoom2UI(esc);
+    bindPlantBackupOpenTraffic(esc);
     renderPlant();
     renderTraffic(esc);
     applyRoom2ButtonClasses();
