@@ -30,6 +30,49 @@
     iso() { return new Date().toISOString(); }
   };
    
+ // ---------------------------------------------------------
+  // Visible router logs (on-screen)
+  // ---------------------------------------------------------
+  const ROUTER_LOG = {
+    id: "eptec-router-log",
+    max: 6,
+    ensurePanel() {
+      let panel = Safe.byId(this.id);
+      if (panel) return panel;
+      panel = document.createElement("div");
+      panel.id = this.id;
+      panel.setAttribute("role", "log");
+      panel.style.position = "fixed";
+      panel.style.right = "10px";
+      panel.style.bottom = "10px";
+      panel.style.zIndex = "999999";
+      panel.style.background = "rgba(0,0,0,0.7)";
+      panel.style.color = "#fff";
+      panel.style.fontFamily = "monospace";
+      panel.style.fontSize = "11px";
+      panel.style.lineHeight = "1.35";
+      panel.style.padding = "8px 10px";
+      panel.style.borderRadius = "6px";
+      panel.style.maxWidth = "46vw";
+      panel.style.pointerEvents = "none";
+      panel.style.boxShadow = "0 2px 10px rgba(0,0,0,0.35)";
+      panel.innerHTML = "<div><strong>EPTEC ROUTER</strong></div>";
+      document.body.appendChild(panel);
+      return panel;
+    },
+    add(type, message, payload) {
+      const panel = this.ensurePanel();
+      const line = document.createElement("div");
+      const ts = new Date().toLocaleTimeString();
+      const detail = payload ? ` ${JSON.stringify(payload)}` : "";
+      line.textContent = `[${ts}] ${type}: ${message}${detail}`;
+      panel.appendChild(line);
+      while (panel.childNodes.length > this.max + 1) {
+        panel.removeChild(panel.childNodes[1]);
+      }
+    }
+  };
+
   // ---------------------------------------------------------
   // Canonical references
   // ---------------------------------------------------------
